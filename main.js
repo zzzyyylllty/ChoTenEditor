@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const appVersion = require('./package.json').version;
 
 let mainWindow;
 let settingsWindow;
@@ -10,6 +11,7 @@ function createWindow() {
     width: 1280,
     height: 860,
     frame: false,
+    icon: path.join(__dirname, 'icon.png'),
     backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -151,6 +153,9 @@ ipcMain.on('window:close', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) win.close();
 });
+ipcMain.handle('app:getVersion', () => appVersion);
+ipcMain.on('app:getVersionSync', (event) => { event.returnValue = appVersion; });
+
 ipcMain.handle('window:isMaximized', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   return win ? win.isMaximized() : false;

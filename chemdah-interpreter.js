@@ -346,6 +346,7 @@ window.ChemdahInterpreter = (() => {
     // === 底部操作栏（左侧底部） ===
     html += `<div class="cv-toolbar">
       <button class="cv-btn cv-btn-primary" data-action="sync-to-source">同步到源码</button>
+      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> 自动同步</label>
       <span class="cv-toolbar-hint">修改将在点击"同步到源码"后应用到编辑器</span>
     </div>`;
 
@@ -767,6 +768,20 @@ window.ChemdahInterpreter = (() => {
           _syncConversationToSource(parsed);
           break;
 
+        // ===== 切换自动同步 =====
+        case 'toggle-visual-autosync':
+          window.__keAutoSync = btn.checked;
+          // 更新本地存储配置
+          (function updateAutoSyncConfig(val) {
+            try {
+              var stored = localStorage.getItem('editorConfig');
+              var config = stored ? JSON.parse(stored) : {};
+              config.autoSync = val;
+              localStorage.setItem('editorConfig', JSON.stringify(config));
+            } catch (e) {}
+          })(window.__keAutoSync);
+          break;
+
         // ===== 删除 flag =====
         case 'remove-flag': {
           const tag = btn.parentElement.dataset.tag;
@@ -929,6 +944,16 @@ window.ChemdahInterpreter = (() => {
           if (field === 'option.reply') d.options[idx].reply = input.value;
           else if (field === 'option.if') d.options[idx].if = input.value;
           else if (field === 'option.then') d.options[idx].then = input.value;
+        }
+      }
+    });
+
+    // --- 自动同步（字段编辑后自动同步到源码） ---
+    container.addEventListener('change', function (e) {
+      if (window.__keAutoSync && e.target) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+          _syncConversationToSource(parsed);
         }
       }
     });
@@ -1504,6 +1529,7 @@ window.ChemdahInterpreter = (() => {
     // 底部操作栏
     html += `<div class="cv-toolbar">
       <button class="cv-btn cv-btn-primary" data-action="q-sync-to-source">同步到源码</button>
+      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> 自动同步</label>
       <span class="cv-toolbar-hint">修改将在点击"同步到源码"后应用到编辑器</span>
     </div>`;
 
@@ -3100,6 +3126,19 @@ window.ChemdahInterpreter = (() => {
         case 'q-sync-to-source':
           _syncQuestToSource(parsed);
           break;
+
+        // ===== 切换自动同步 =====
+        case 'toggle-visual-autosync':
+          window.__keAutoSync = btn.checked;
+          (function updateAutoSyncConfig(val) {
+            try {
+              var stored = localStorage.getItem('editorConfig');
+              var config = stored ? JSON.parse(stored) : {};
+              config.autoSync = val;
+              localStorage.setItem('editorConfig', JSON.stringify(config));
+            } catch (e) {}
+          })(window.__keAutoSync);
+          break;
       }
     };
 
@@ -3186,6 +3225,16 @@ window.ChemdahInterpreter = (() => {
 
     // 处理 textarea 文本变更（change 事件对 textarea 足够）
     // 已经包含在 change 事件代理中
+
+    // --- 自动同步（字段编辑后自动同步到源码） ---
+    container.addEventListener('change', function (e) {
+      if (window.__keAutoSync && e.target) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+          _syncQuestToSource(parsed);
+        }
+      }
+    });
   }
 
   function _setNestedValue(obj, path, value) {
@@ -3705,7 +3754,11 @@ window.ChemdahInterpreter = (() => {
       // 存储渲染函数以便重新渲染（从当前 parsed 数据重绘，不丢失未同步修改）
       const reRender = () => {
         const current = containerEl._cvParsed;
-        if (current) renderConversationVisual(current, containerEl);
+        if (current) {
+          renderConversationVisual(current, containerEl);
+          // 自动同步到源码（通过 window.__keAutoSync 控制）
+          if (window.__keAutoSync) _syncConversationToSource(current);
+        }
       };
       window._cvRenderFn = reRender;
 
@@ -3722,7 +3775,11 @@ window.ChemdahInterpreter = (() => {
       // 存储渲染函数以便重新渲染（从当前 parsed 数据重绘，不丢失未同步修改）
       const reRender = () => {
         const current = containerEl._qvParsed;
-        if (current) renderQuestVisual(current, containerEl);
+        if (current) {
+          renderQuestVisual(current, containerEl);
+          // 自动同步到源码（通过 window.__keAutoSync 控制）
+          if (window.__keAutoSync) _syncQuestToSource(current);
+        }
       };
       window._cvRenderFn = reRender;
 

@@ -203,7 +203,7 @@ body {
 .title-bar-text {
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: #ff69b4;
   letter-spacing: 0.5px;
 }
 .title-bar-controls {
@@ -1772,6 +1772,8 @@ body {
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
+
+
   transition: background 0.15s;
 }
 .qv-task-editor-tabs .cv-btn:hover {
@@ -1964,4 +1966,18 @@ body {
   font-size: 14px;
   padding: 0 8px;
   line-height: 1;
+}
+
+/* ---- 全局按钮重置：去除圆角、缩小过大的按钮 ---- */
+button, .btn, .btn-secondary, .tb-btn, .ke-btn, .cv-btn,
+.mode-btn, .nav-btn, .settings-btn, .preset-btn,
+.ke-open-btn, .ke-b-del, .ke-branch-del, .ke-branch-add,
+.ke-quote-btn-inline, .ke-detail-close, .ke-toolbox-close,
+.ke-slot-add-btn, .feedback-btn, .ke-ctx-item,
+.ke-welcome-btn, .ke-btn-primary {
+  border-radius: 0 !important;
+}
+.btn, .btn-secondary {
+  padding: 5px 10px;
+  font-size: 12px;
 }

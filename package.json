@@ -7,10 +7,33 @@
   "type": "commonjs",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder && node -e \"const {rcedit}=require('rcedit');rcedit('release/ChotenEditor 1.0.0.exe',{icon:'icon.ico'}).then(()=>{const fs=require('fs');try{fs.rmSync('release/win-unpacked',{recursive:true,force:true});fs.unlinkSync('release/builder-debug.yml');}catch(e){}console.log('Done')})\""
+  },
+  "build": {
+    "appId": "com.choten.editor",
+    "productName": "ChotenEditor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "**/*",
+      "!release",
+      "!node_modules/electron",
+      "!node_modules/electron-builder"
+    ],
+    "icon": "icon.ico",
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
   },
   "devDependencies": {
-    "electron": "^41.0.2"
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1",
+    "rcedit": "^5.0.1"
   },
   "dependencies": {
     "codemirror": "^5.65.21",

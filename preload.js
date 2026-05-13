@@ -1,5 +1,4 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const { version } = require('./package.json');
 
 // 最简单的preload脚本 - 只暴露一个测试API
 try {
@@ -38,7 +37,7 @@ try {
   api.maximize = () => ipcRenderer.send('window:maximize');
   api.close = () => ipcRenderer.send('window:close');
   api.isMaximized = () => ipcRenderer.invoke('window:isMaximized');
-  api.appVersion = version;
+  api.appVersion = ipcRenderer.sendSync('app:getVersionSync');
   api.openExternal = (url) => ipcRenderer.invoke('shell:openExternal', url);
 
   contextBridge.exposeInMainWorld('electronAPI', api);

@@ -45,7 +45,13 @@
       "Read(//mnt/e/**)",
       "Bash(DISPLAY=:0 npm start)",
       "PowerShell(node --check \"E:\\\\ChotenEditor\\\\kether-editor.js\" 2>&1)",
-      "PowerShell(node --check \"E:\\\\ChotenEditor\\\\preload.js\" 2>&1; node --check \"E:\\\\ChotenEditor\\\\settings.js\" 2>&1; node --check \"E:\\\\ChotenEditor\\\\main.js\" 2>&1)"
+      "PowerShell(node --check \"E:\\\\ChotenEditor\\\\preload.js\" 2>&1; node --check \"E:\\\\ChotenEditor\\\\settings.js\" 2>&1; node --check \"E:\\\\ChotenEditor\\\\main.js\" 2>&1)",
+      "PowerShell(node --check \"E:\\\\ChotenEditor\\\\main.js\" 2>&1; node --check \"E:\\\\ChotenEditor\\\\preload.js\" 2>&1)",
+      "PowerShell(\\(Get-Item \"E:\\\\ChotenEditor\\\\icon.png\"\\).Length; Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"E:\\\\ChotenEditor\\\\icon.png\"\\); \"$\\($img.Width\\)x$\\($img.Height\\)\"; $img.Dispose\\(\\))",
+      "PowerShell(\\(Get-Content \"E:\\\\ChotenEditor\\\\styles.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"E:\\\\ChotenEditor\\\\icon.png\"\\); \"Size: $\\($img.Width\\)x$\\($img.Height\\)\"; \"Format: $\\($img.RawFormat\\)\"; $img.Dispose\\(\\))",
+      "PowerShell(magick *)",
+      "PowerShell(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")"
     ]
   }
 }

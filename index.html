@@ -17,29 +17,6 @@
   <link rel="stylesheet" href="kether-editor.css">
   
   <style>
-    /* 主题切换脚本需要的基础样式 */
-    #theme {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 1000;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--color-border);
-      background-color: var(--color-bg-tertiary);
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      font-size: 11px;
-      opacity: 0.6;
-      transition: all 0.15s ease;
-      appearance: none;
-    }
-    #theme:hover {
-      opacity: 1;
-      border-color: var(--color-primary);
-      color: var(--color-text-primary);
-    }
-
     /* ---- 欢迎弹窗 ---- */
     .ke-welcome-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -125,7 +102,7 @@
   <div id="app">
     <div class="title-bar" id="title-bar">
       <div class="title-bar-drag">
-        <span class="title-bar-icon">⚡</span>
+        <span class="title-bar-icon"><img src="icon.png" style="height:16px;width:16px;vertical-align:middle;"></span>
         <span class="title-bar-text">Choten Editor</span>
       </div>
       <div class="title-bar-controls">
@@ -203,13 +180,6 @@
     </div>
   </div>
 
-  <!-- 主题切换选择器 -->
-  <select id="theme">
-    <option value="dark">Dark</option>
-    <option value="light">Light</option>
-  </select>
-
-  <!-- 欢迎弹窗 -->
   <div class="ke-welcome-overlay" id="welcome-overlay" style="display:none;">
     <div class="ke-welcome-modal">
       <h2 class="ke-welcome-title">欢迎使用 ChoTenEditor!</h2>
@@ -251,14 +221,13 @@
   <script src="renderer.js"></script>
 
 <script>
-  const themeSelect = document.getElementById('theme');
-  const body = document.body;
+  var body = document.body;
 
   // 从 localStorage 读取保存的主题（优先级：本地配置 > localStorage > 默认值）
-  let savedTheme = localStorage.getItem('editorConfig');
+  var savedTheme = localStorage.getItem('editorConfig');
   if (savedTheme) {
     try {
-      const config = JSON.parse(savedTheme);
+      var config = JSON.parse(savedTheme);
       savedTheme = config.theme || 'dark';
     } catch (e) {
       savedTheme = localStorage.getItem('theme') || 'dark';
@@ -268,21 +237,6 @@
   }
 
   body.setAttribute('data-theme', savedTheme);
-  themeSelect.value = savedTheme;
-
-  // 主题切换事件监听
-  themeSelect.addEventListener('change', (e) => {
-    playSound('click');
-    const theme = e.target.value;
-    body.setAttribute('data-theme', theme);
-
-    // 同时更新 editorConfig
-    const stored = localStorage.getItem('editorConfig');
-    const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
-    config.theme = theme;
-    localStorage.setItem('editorConfig', JSON.stringify(config));
-    localStorage.setItem('theme', theme);
-  });
 
   // 应用保存的背景图片到 body
   (function applyBackground() {
@@ -302,10 +256,16 @@
     }
   })();
 
-  // 窗口控制
-  document.getElementById('tb-minimize').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.minimize(); });
-  document.getElementById('tb-maximize').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.maximize(); });
-  document.getElementById('tb-close').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.close(); });
+  document.getElementById('tb-minimize').addEventListener('click', function() { if (window.electronAPI) window.electronAPI.minimize(); });
+  document.getElementById('tb-maximize').addEventListener('click', function() { if (window.electronAPI) window.electronAPI.maximize(); });
+  document.getElementById('tb-close').addEventListener('click', async function() {
+    if (window.__hasDirtyTabs && window.__showDirtyConfirm) {
+      var result = await window.__showDirtyConfirm('');
+      if (result === 'cancel') return;
+    }
+    window.__allowUnload = true;
+    if (window.electronAPI) window.electronAPI.close();
+  });
 
   // 欢迎弹窗
   (function showWelcome() {
@@ -315,11 +275,15 @@
     if (!overlay) return;
     versionEl.textContent = '当前版本为 ' + version;
 
-    // 检查是否已在此版本确认过
+    // 本会话已弹过则跳过（设置页切换回来不重复弹）
+    if (sessionStorage.getItem('welcomeShown') === version) return;
+
+    // 检查是否已在此版本勾选"不再提示"
     var dismissed = localStorage.getItem('welcomeDismissed');
     if (dismissed === version) return;
 
     overlay.style.display = '';
+    sessionStorage.setItem('welcomeShown', version);
 
     document.getElementById('welcome-btn').onclick = function() {
       var noTip = document.getElementById('welcome-no-tip').checked;

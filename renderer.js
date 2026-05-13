@@ -66,6 +66,8 @@ function loadAutoSyncSetting() {
   } catch (e) {
     console.warn('[RENDERER] 加载自动同步设置失败:', e);
   }
+  // 同步到全局标志供可视化编辑器使用
+  window.__keAutoSync = autoSyncEnabled;
 }
 
 async function restoreAppState() {
@@ -297,6 +299,16 @@ function init() {
 
   // 恢复上次的会话
   restoreAppState();
+
+  // 监听页面关闭/刷新，防止丢失未保存更改
+  window.addEventListener('beforeunload', function (e) {
+    if (window.__allowUnload) return;
+    var hasDirty = Object.values(dirtyTabs).some(function(v) { return v === true; });
+    if (hasDirty) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   console.log('[RENDERER] 初始化完成');
 }
@@ -553,6 +565,7 @@ async function openFile(filePath) {
     }
     if (_closingTabs[filePath]) return;
   }
+
   if (currentFile === filePath && openTabs.includes(filePath)) {
     setActiveTab(filePath);
     return;
@@ -566,6 +579,18 @@ async function openFile(filePath) {
   }
 
   try {
+    // 检查当前文件是否有未保存更改（避免与 _openingFile 冲突）
+    if (currentFile && currentFile !== filePath && dirtyTabs[currentFile] && !_closingTabs[currentFile]) {
+      var switchResult = await showDirtyConfirmDialog(getFileName(currentFile));
+      if (switchResult === 'cancel') {
+        _openingFile = null;
+        return;
+      }
+      if (switchResult === 'save') {
+        await saveCurrentFile();
+      }
+    }
+
     const result = await _electronAPI.readFile(filePath);
     console.log('[RENDERER] 读取文件成功');
 
@@ -579,9 +604,6 @@ async function openFile(filePath) {
         addTab(filePath);
       }
 
-      // 激活标签页
-      setActiveTab(filePath);
-
       // 更新编辑器内容（临时禁止脏标记）
       if (codeMirrorEditor) {
         _loadingFile = true;
@@ -591,6 +613,9 @@ async function openFile(filePath) {
         updateTabDirtyIndicator(filePath);
         updateCodeMirrorMode(filePath);
       }
+
+      // 激活标签页（放于 setValue 之后，以使 renderVisualEditor 读到最新内容）
+      setActiveTab(filePath);
 
       // 更新编辑器模式
       updateEditorModeForFile(filePath);
@@ -719,6 +744,61 @@ async function setActiveTab(filePath) {
   }
 }
 
+async function showDirtyConfirmDialog(fileName) {
+  return await new Promise(function (resolve) {
+    var overlay = document.createElement('div');
+    overlay.className = 'cv-modal';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML =
+      '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;">未保存的更改</h3>' +
+        '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">' +
+          (fileName ? '文件 <strong>' + escapeHtml(fileName) + '</strong> 有未保存的更改。<br>' : '') + '是否保存？' +
+        '</p>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="cv-btn cv-btn-secondary" id="dirty-save" style="padding:6px 14px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-primary);cursor:pointer;">保存</button>' +
+          '<button class="cv-btn cv-btn-secondary" id="dirty-discard" style="padding:6px 14px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-secondary);cursor:pointer;">不保存</button>' +
+          '<button class="cv-btn cv-btn-primary" id="dirty-cancel" style="padding:6px 14px;border:none;background:var(--color-primary);color:#fff;cursor:pointer;">取消</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#dirty-save').addEventListener('click', function () {
+      overlay.remove(); resolve('save');
+    });
+    overlay.querySelector('#dirty-discard').addEventListener('click', function () {
+      overlay.remove(); resolve('discard');
+    });
+    overlay.querySelector('#dirty-cancel').addEventListener('click', function () {
+      overlay.remove(); resolve('cancel');
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === this) { this.remove(); resolve('cancel'); }
+    });
+  });
+}
+// 暴露给页面内脚本（如标题栏关闭按钮）
+window.__showDirtyConfirm = showDirtyConfirmDialog;
+window.__saveAllDirtyFiles = saveAllDirtyFiles;
+
+async function saveAllDirtyFiles() {
+  for (var p = 0; p < openTabs.length; p++) {
+    var fp = openTabs[p];
+    if (dirtyTabs[fp]) {
+      var oldFile = currentFile;
+      currentFile = fp;
+      // 获取对应内容（如果正好是当前 CodeMirror 的内容则直接保存）
+      if (fp === currentFile && codeMirrorEditor) {
+        await saveCurrentFile();
+      } else {
+        // 其他标签页的内容未在 CodeMirror 中加载，跳过（需要从磁盘读取再写入）
+        // 简化处理：只保存当前标签
+      }
+      currentFile = oldFile;
+    }
+  }
+}
+
 async function closeTab(filePath, force = false) {
   console.log('[RENDERER] 关闭标签页:', filePath);
 
@@ -728,38 +808,7 @@ async function closeTab(filePath, force = false) {
   // 检查是否有未保存的更改
   if (!force && dirtyTabs[filePath]) {
     const fileName = getFileName(filePath);
-    const result = await new Promise((resolve) => {
-      // 创建自定义确认对话框
-      const overlay = document.createElement('div');
-      overlay.className = 'cv-modal';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
-      overlay.innerHTML = `
-        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-          <h3 style="margin:0 0 12px;font-size:15px;">未保存的更改</h3>
-          <p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">
-            文件 <strong>${escapeHtml(fileName)}</strong> 有未保存的更改。<br>是否保存？
-          </p>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="cv-btn cv-btn-secondary" id="dirty-save" style="padding:6px 14px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-primary);cursor:pointer;">保存</button>
-            <button class="cv-btn cv-btn-secondary" id="dirty-discard" style="padding:6px 14px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-secondary);cursor:pointer;">不保存</button>
-            <button class="cv-btn cv-btn-primary" id="dirty-cancel" style="padding:6px 14px;border-radius:6px;border:none;background:var(--color-primary);color:#fff;cursor:pointer;">取消</button>
-          </div>
-        </div>`;
-      document.body.appendChild(overlay);
-
-      overlay.querySelector('#dirty-save').addEventListener('click', () => {
-        overlay.remove(); resolve('save');
-      });
-      overlay.querySelector('#dirty-discard').addEventListener('click', () => {
-        overlay.remove(); resolve('discard');
-      });
-      overlay.querySelector('#dirty-cancel').addEventListener('click', () => {
-        overlay.remove(); resolve('cancel');
-      });
-      overlay.addEventListener('click', function(e) {
-        if (e.target === this) { this.remove(); resolve('cancel'); }
-      });
-    });
+    const result = await showDirtyConfirmDialog(fileName);
 
     if (result === 'cancel') {
       delete _closingTabs[filePath]; return;
@@ -1264,6 +1313,7 @@ function updateTabDirtyIndicator(filePath) {
 
 function openSettings() {
   console.log('[RENDERER] 打开设置');
+  window.__allowUnload = true;
   setTimeout(() => { window.location.href = 'settings.html'; }, 120);
 }
 
@@ -1379,6 +1429,11 @@ function escapeHtml(text) {
 // ============================================
 // 导出状态用于调试
 // ============================================
+
+// 暴露脏状态供页面内脚本使用
+Object.defineProperty(window, '__hasDirtyTabs', {
+  get: function() { return Object.values(dirtyTabs).some(function(v) { return v === true; }); }
+});
 
 window.appState = {
   get currentProjectPath() {
