@@ -1,0 +1,778 @@
+/* ============================================
+   设置页面样式 — 深黑色主题
+   ============================================ */
+
+.title-bar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0a0a0a;
+  border-bottom: 1px solid var(--color-border);
+  user-select: none;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.title-bar-drag {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 14px;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.title-bar-icon {
+  font-size: 14px;
+  opacity: 0.6;
+}
+.title-bar-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.5px;
+}
+.title-bar-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.tb-btn {
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.tb-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--color-text-primary);
+}
+.tb-btn-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-bg-primary-alpha);
+  color: var(--color-text-primary);
+}
+
+.settings-header {
+  background-color: var(--color-bg-secondary-alpha);
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.settings-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(135deg, var(--color-text-primary), var(--color-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+}
+
+/* ============================================
+   设置部分
+   ============================================ */
+
+.settings-section {
+  margin-bottom: var(--spacing-2xl);
+  padding: var(--spacing-lg);
+  background-color: var(--color-bg-secondary-alpha);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
+}
+
+.settings-section:hover {
+  border-color: var(--color-border-light);
+}
+
+.settings-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.settings-section h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   设置组
+   ============================================ */
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.setting-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  display: block;
+}
+
+/* ============================================
+   下拉选择框
+   ============================================ */
+
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 300px;
+}
+
+select {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  padding-right: 32px;
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  transition: all var(--transition-fast);
+  font-weight: 500;
+}
+
+select:hover {
+  border-color: var(--color-border-light);
+  background-color: var(--color-bg-hover);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 152, 255, 0.15);
+}
+
+select option {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.select-icon {
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+/* ============================================
+   快捷键输入
+   ============================================ */
+
+.shortcut-input {
+  width: 100%;
+  max-width: 200px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.shortcut-input:hover {
+  border-color: var(--color-border-light);
+  background-color: var(--color-bg-hover);
+}
+
+.shortcut-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 152, 255, 0.15);
+  cursor: text;
+  user-select: auto;
+}
+
+.shortcut-input.editing {
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 152, 255, 0.2);
+}
+
+/* ============================================
+   颜色输入
+   ============================================ */
+
+.color-group {
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.color-group:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.color-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.color-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.color-item label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.color-input-wrapper {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.color-input {
+  width: 80px;
+  height: 44px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 2px;
+}
+
+.color-input:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 8px rgba(0, 152, 255, 0.2);
+}
+
+.color-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 12px rgba(0, 152, 255, 0.3);
+}
+
+.color-value {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  min-width: 70px;
+  text-align: center;
+  user-select: all;
+  cursor: copy;
+  transition: all var(--transition-fast);
+}
+
+.color-value:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+   预设主题
+   ============================================ */
+
+.preset-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.preset-btn {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-btn:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-hover);
+  transform: translateY(-2px);
+}
+
+.preset-btn:active {
+  transform: translateY(0);
+}
+
+.preset-btn.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 12px rgba(0, 152, 255, 0.3);
+}
+
+/* ============================================
+   按钮组
+   ============================================ */
+
+.button-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.button-group .btn,
+.button-group .btn-secondary {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+}
+
+.button-group .btn {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+}
+
+.button-group .btn:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-2px);
+}
+
+.button-group .btn-secondary {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.button-group .btn-secondary:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-light);
+}
+
+/* ============================================
+   预览区域
+   ============================================ */
+
+.preview-area {
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.preview-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.preview-buttons .btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 12px;
+}
+
+.preview-text {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.preview-text p {
+  margin: var(--spacing-sm) 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.preview-text p.secondary {
+  color: var(--color-text-secondary);
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+
+@media (max-width: 768px) {
+  .settings-content {
+    padding: var(--spacing-lg);
+  }
+
+  .settings-section {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+  }
+
+  .settings-header {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    text-align: center;
+  }
+
+  .settings-header h1 {
+    font-size: 20px;
+  }
+
+  .select-wrapper {
+    max-width: 100%;
+  }
+
+  .color-items {
+    grid-template-columns: 1fr;
+  }
+
+  .preset-themes {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+
+  .button-group {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-buttons {
+    flex-direction: column;
+  }
+
+  .preview-buttons .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   滚动条美化
+   ============================================ */
+
+.settings-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-bg-primary);
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
+}
+
+.settings-content::-webkit-scrollbar-corner {
+  background: var(--color-bg-primary);
+}
+
+/* ============================================
+   深色主题支持（默认）
+   ============================================ */
+
+body[data-theme="light"] .settings-section {
+  background-color: var(--color-bg-secondary-alpha);
+}
+
+body[data-theme="light"] .color-input-wrapper {
+  background-color: #fafafa;
+}
+
+body[data-theme="light"] select {
+  background-color: #ffffff;
+}
+
+body[data-theme="light"] select:hover {
+  background-color: #f9f9f9;
+}
+
+/* ============================================
+   浅色主题支持 - 增强版
+   ============================================ */
+
+body[data-theme="light"] {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+body[data-theme="light"] .settings-container {
+  background-color: var(--color-bg-primary-alpha);
+  color: var(--color-text-primary);
+}
+
+body[data-theme="light"] .settings-header {
+  background-color: var(--color-bg-secondary-alpha);
+  border-bottom-color: var(--color-border);
+}
+
+body[data-theme="light"] .settings-section {
+  background-color: var(--color-bg-secondary-alpha);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] .settings-section h2,
+body[data-theme="light"] .settings-section h3 {
+  color: var(--color-text-primary);
+}
+
+body[data-theme="light"] .setting-group label {
+  color: var(--color-text-secondary);
+}
+
+body[data-theme="light"] select,
+body[data-theme="light"] .color-input {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] select:focus {
+  border-color: var(--color-primary);
+}
+
+body[data-theme="light"] .color-value {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+body[data-theme="light"] .preset-btn {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] .preset-btn:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-hover);
+}
+
+body[data-theme="light"] .preset-btn.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+body[data-theme="light"] .preview-area {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] .preview-text {
+  background-color: var(--color-bg-primary);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] .preview-text p {
+  color: var(--color-text-primary);
+}
+
+body[data-theme="light"] .preview-text p.secondary {
+  color: var(--color-text-secondary);
+}
+
+body[data-theme="light"] .btn {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+body[data-theme="light"] .btn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+body[data-theme="light"] .btn-secondary {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+body[data-theme="light"] .btn-secondary:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-light);
+}
+
+/* ============================================
+   动画过渡
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   背景图片选择器
+   ============================================ */
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.bg-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.bg-grid-item:hover {
+  border-color: var(--color-border-light);
+  background: var(--color-bg-hover);
+  transform: translateY(-2px);
+}
+
+.bg-grid-item.active {
+  border-color: var(--color-primary);
+  background: rgba(0, 152, 255, 0.08);
+  box-shadow: 0 0 12px rgba(0, 152, 255, 0.2);
+}
+
+.bg-thumb {
+  width: 100%;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.bg-thumb-none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-primary);
+}
+
+.bg-name {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  word-break: break-all;
+  max-width: 100%;
+  line-height: 1.3;
+}
+
+.bg-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  max-width: 300px;
+}
+
+.bg-opacity-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+}
+
+.bg-opacity-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.bg-opacity-value {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  min-width: 40px;
+  text-align: center;
+}
+
+/* ============================================
+   打印样式
+   ============================================ */
+
+@media print {
+  .settings-header,
+  .button-group {
+    display: none;
+  }
+
+  .settings-content {
+    padding: 0;
+  }
+
+  .settings-section {
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+}

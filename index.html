@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHOTEN EDITOR</title>
+  <!-- 引入主样式表 -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- 引入设置样式表 -->
+  <link rel="stylesheet" href="settings-styles.css">
+  <!-- 引入Prism语法高亮样式 -->
+  <link rel="stylesheet" href="node_modules/prismjs/themes/prism-tomorrow.css">
+  <!-- 引入CodeMirror语法高亮编辑器样式 -->
+  <link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
+  <link rel="stylesheet" href="node_modules/codemirror/theme/dracula.css">
+  <link rel="stylesheet" href="node_modules/codemirror/theme/eclipse.css">
+  <link rel="stylesheet" href="kether-editor.css">
+  
+  <style>
+    /* 主题切换脚本需要的基础样式 */
+    #theme {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: all 0.15s ease;
+      appearance: none;
+    }
+    #theme:hover {
+      opacity: 1;
+      border-color: var(--color-primary);
+      color: var(--color-text-primary);
+    }
+
+    /* ---- 欢迎弹窗 ---- */
+    .ke-welcome-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 999999;
+      display: flex; align-items: center; justify-content: center;
+      animation: ke-fade-in 0.2s ease;
+    }
+    .ke-welcome-modal {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      max-width: 480px;
+      width: 90%;
+      padding: 28px 32px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: ke-slide-up 0.25s ease;
+    }
+    .ke-welcome-title {
+      font-size: 20px; font-weight: 700;
+      margin: 0 0 4px; text-align: center;
+    }
+    .ke-welcome-version {
+      font-size: 12px; color: var(--color-text-tertiary);
+      text-align: center; margin-bottom: 18px;
+    }
+    .ke-welcome-body {
+      font-size: 13px; line-height: 1.7;
+      color: var(--color-text-primary);
+      margin-bottom: 18px;
+    }
+    .ke-welcome-body p { margin: 8px 0; }
+    .ke-welcome-channels {
+      background: var(--color-bg-tertiary);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    .ke-welcome-channels a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+    .ke-welcome-channels a:hover {
+      text-decoration: underline;
+    }
+    .ke-welcome-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+    .ke-welcome-check {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--color-text-secondary);
+      cursor: pointer;
+    }
+    .ke-welcome-check input {
+      accent-color: var(--color-primary);
+    }
+    .ke-welcome-btn {
+      padding: 8px 24px;
+      border-radius: 6px;
+      border: none;
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .ke-welcome-btn:hover { opacity: 0.85; }
+    .ke-welcome-settings-hint {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div id="app">
+    <div class="title-bar" id="title-bar">
+      <div class="title-bar-drag">
+        <span class="title-bar-icon">⚡</span>
+        <span class="title-bar-text">Choten Editor</span>
+      </div>
+      <div class="title-bar-controls">
+        <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化">─</button>
+        <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化">□</button>
+        <button class="tb-btn tb-btn-close" id="tb-close" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="header">
+      <h1>Choten Editor</h1>
+      <div class="header-controls">
+        <button id="open-project-btn" class="btn">📁 打开项目</button>
+        <button id="new-file-btn" class="btn">📄 新文件</button>
+        <button id="save-btn" class="btn">💾 保存</button>
+        <button id="settings-btn" class="btn btn-secondary">⚙️ 设置</button>
+      </div>
+    </div>
+
+    <div class="main-container">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>项目文件</h3>
+            <div class="sidebar-nav">
+              <button id="nav-back-btn" class="nav-btn" title="返回"></button>
+              <button id="nav-up-btn" class="nav-btn" title="上个文件"></button>
+            </div>
+          </div>
+          <div class="breadcrumbs" id="breadcrumbs">
+            <!-- Breadcrumbs will be rendered here -->
+          </div>
+        </div>
+        <div class="sidebar-content">
+          <ul id="file-tree" class="file-tree">
+            <!-- 文件树将通过 JavaScript 动态生成 -->
+          </ul>
+        </div>
+      </div>
+
+      <div class="editor-container">
+        <div class="editor-toolbar">
+          <div class="editor-tabs">
+            <!-- 标签页将通过 JavaScript 动态生成 -->
+          </div>
+          <div class="editor-mode-toggle">
+            <button id="source-mode-btn" class="mode-btn active">源代码</button>
+            <button id="visual-mode-btn" class="mode-btn">可视化</button>
+          </div>
+          <div class="editor-type-selector" id="editor-type-selector" style="display:none;">
+            <select id="interpreter-type-select" class="type-select">
+              <option value="auto">自动检测</option>
+              <option value="conversation">对话</option>
+              <option value="quest">任务</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="editor-area">
+          <div id="source-editor" class="source-editor">
+            <div id="editor-textarea"></div>
+          </div>
+          <div id="visual-editor" class="visual-editor">
+            <div class="empty-state">
+              <h2>可视化编辑</h2>
+              <p>可视化编辑器已经禁用</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span id="status-info">Ready</span>
+      <span id="file-path"></span>
+    </div>
+  </div>
+
+  <!-- 主题切换选择器 -->
+  <select id="theme">
+    <option value="dark">Dark</option>
+    <option value="light">Light</option>
+  </select>
+
+  <!-- 欢迎弹窗 -->
+  <div class="ke-welcome-overlay" id="welcome-overlay" style="display:none;">
+    <div class="ke-welcome-modal">
+      <h2 class="ke-welcome-title">欢迎使用 ChoTenEditor!</h2>
+      <div class="ke-welcome-version" id="welcome-version"></div>
+      <div class="ke-welcome-body">
+        <p>本编辑器旨在提供通用的 Minecraft 插件编辑工具，目前只适配 <strong>Chemdah</strong> 一个插件，后续将添加 Sertraline、LithiumCarbon 等插件。</p>
+        <div class="ke-welcome-channels">
+          <strong>如有任何问题、意见，欢迎通过以下渠道反馈：</strong><br>
+          📢 QQ群：<a href="https://qm.qq.com/q/f7l7qPlY60" target="_blank">858827523</a><br>
+          🌐 Discord：<a href="https://discord.com/invite/VHs958jJXj" target="_blank">discord.com/invite/VHs958jJXj</a><br>
+          💬 添加 QQ <strong>3631901756</strong> 备注来意
+        </div>
+        <p style="font-size:12px;color:var(--color-text-tertiary);">您可在设置页面再次找到反馈渠道。</p>
+      </div>
+      <div class="ke-welcome-footer">
+        <label class="ke-welcome-check">
+          <input type="checkbox" id="welcome-no-tip"> 不再提示
+        </label>
+        <button class="ke-welcome-btn" id="welcome-btn">确定</button>
+      </div>
+      <div class="ke-welcome-settings-hint">勾选"不再提示"后，本弹窗只在版本更新时再次弹出。</div>
+    </div>
+  </div>
+
+  <script src="node_modules/prismjs/prism.js"></script>
+  <script src="node_modules/prismjs/components/prism-yaml.js"></script>
+  <script src="node_modules/prismjs/components/prism-json.js"></script>
+  <!-- 引入CodeMirror语法高亮编辑器 -->
+  <script src="node_modules/codemirror/lib/codemirror.js"></script>
+  <script src="node_modules/codemirror/mode/yaml/yaml.js"></script>
+  <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
+  <script src="node_modules/codemirror/mode/xml/xml.js"></script>
+  <script src="node_modules/codemirror/mode/css/css.js"></script>
+  <script src="node_modules/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="node_modules/js-yaml/dist/js-yaml.min.js"></script>
+  <script src="sound.js"></script>
+  <script src="chemdah-interpreter.js"></script>
+  <script src="kether-editor.js"></script>
+  <script src="renderer.js"></script>
+
+<script>
+  const themeSelect = document.getElementById('theme');
+  const body = document.body;
+
+  // 从 localStorage 读取保存的主题（优先级：本地配置 > localStorage > 默认值）
+  let savedTheme = localStorage.getItem('editorConfig');
+  if (savedTheme) {
+    try {
+      const config = JSON.parse(savedTheme);
+      savedTheme = config.theme || 'dark';
+    } catch (e) {
+      savedTheme = localStorage.getItem('theme') || 'dark';
+    }
+  } else {
+    savedTheme = localStorage.getItem('theme') || 'dark';
+  }
+
+  body.setAttribute('data-theme', savedTheme);
+  themeSelect.value = savedTheme;
+
+  // 主题切换事件监听
+  themeSelect.addEventListener('change', (e) => {
+    playSound('click');
+    const theme = e.target.value;
+    body.setAttribute('data-theme', theme);
+
+    // 同时更新 editorConfig
+    const stored = localStorage.getItem('editorConfig');
+    const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
+    config.theme = theme;
+    localStorage.setItem('editorConfig', JSON.stringify(config));
+    localStorage.setItem('theme', theme);
+  });
+
+  // 应用保存的背景图片到 body
+  (function applyBackground() {
+    try {
+      const stored = localStorage.getItem('editorConfig');
+      if (!stored) return;
+      const config = JSON.parse(stored);
+      if (!config.background || !config.background.filename) return;
+      const bg = config.background;
+      const theme = document.body.getAttribute('data-theme') || 'dark';
+      var opacity = bg.opacity != null ? bg.opacity : 0.3;
+      var alpha = Math.round((1 - opacity) * 60) / 100;
+      var bgColor = theme === 'light' ? 'rgba(255,255,255,' + alpha + ')' : 'rgba(0,0,0,' + alpha + ')';
+      document.body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
+    } catch (e) {
+      // 静默失败
+    }
+  })();
+
+  // 窗口控制
+  document.getElementById('tb-minimize').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.minimize(); });
+  document.getElementById('tb-maximize').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.maximize(); });
+  document.getElementById('tb-close').addEventListener('click', () => { if (window.electronAPI) window.electronAPI.close(); });
+
+  // 欢迎弹窗
+  (function showWelcome() {
+    var version = (window.electronAPI && window.electronAPI.appVersion) || '1.0.0';
+    var overlay = document.getElementById('welcome-overlay');
+    var versionEl = document.getElementById('welcome-version');
+    if (!overlay) return;
+    versionEl.textContent = '当前版本为 ' + version;
+
+    // 检查是否已在此版本确认过
+    var dismissed = localStorage.getItem('welcomeDismissed');
+    if (dismissed === version) return;
+
+    overlay.style.display = '';
+
+    document.getElementById('welcome-btn').onclick = function() {
+      var noTip = document.getElementById('welcome-no-tip').checked;
+      if (noTip) {
+        localStorage.setItem('welcomeDismissed', version);
+      }
+      overlay.style.display = 'none';
+    };
+  })();
+</script>
+</body>
+</html>

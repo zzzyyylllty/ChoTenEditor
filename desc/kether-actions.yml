@@ -1,0 +1,2359 @@
+"Kether:all":
+  id: "all"
+  name: "All"
+  desc: "判断动作列表的所有{返回值}是否均为{是}。"
+  syntax: "all {action list}"
+  example: "all [ player op player sneaking ]<br>all [ permission userA permission userB permission userC ]"
+  semantic: "全部条件 {0}"
+
+"Kether:any":
+  id: "any"
+  name: "Any"
+  desc: "判断动作列表的所有{返回值}是否含有{是}。"
+  syntax: "any {action list}"
+  example: "any [ player op player sneaking ]<br>any [ permission userA permission userB permission userC ]"
+  semantic: "任一条件 {0}"
+
+"Kether:async":
+  id: "async"
+  name: "Async"
+  desc: "在不受生命周期控制的{异步}计划中执行动作。<br>当程序运行结束后，所有未完成的 {#Async} 动作会被直接关闭。"
+  syntax: "async {action}"
+  example: "async \\{\\{ sleep 1s print \"Hello\" \\}\\} print \"World!\""
+  semantic: "异步执行 {0}"
+
+"Kether:await":
+  id: "await"
+  name: "Await"
+  desc: "等待动作完成。"
+  syntax: "await {action}"
+  example: "await print \"Hello World!\""
+  semantic: "等待 {0}"
+
+"Kether:await_all":
+  id: "await_all"
+  name: "Await All"
+  desc: "等待{动作列表}中的{所有动作}完成。"
+  syntax: "await_all {action list}"
+  example: "await_all [ print \"Hello\" sleep 1s ] print \"World!\""
+  semantic: "等待所有 {0}"
+
+"Kether:await_any":
+  id: "await_any"
+  name: "Await Any"
+  desc: "等待{动作列表}中的{任意动作}完成。"
+  syntax: "await_any {action list}"
+  example: "await_any [ print \"Hello\" sleep 1s ] print \"World!\""
+  semantic: "等待任一 {0}"
+
+"Kether:call":
+  id: "call"
+  name: "Call"
+  desc: "{在 Shell 模式下该语句无任何意义。}<br>调用已声明的任何函数，包括 {main} 函数。"
+  syntax: "call {token}"
+  example: "call function_0"
+  semantic: "调用 {0}"
+
+"Kether:exit":
+  id: "exit"
+  name: "Exit"
+  desc: "退出程序。"
+  syntax: "exit (success|pause|cooldown)"
+  example: "exit success <br>exit pause"
+  semantic: "退出 {0}"
+
+"Kether:goto":
+  id: "goto"
+  name: "Goto"
+  desc: "{在 Shell 模式下该语句无任何意义。}<br>跳转到已声明的任何函数，包括 {main} 函数。"
+  syntax: "goto {token}"
+  example: "goto function_0"
+  semantic: "跳转 {0}"
+
+"Kether:if_else":
+  id: "if_else"
+  name: "If & Else"
+  desc: "基础逻辑语句。<br>当一个动作的{返回值}为{是}时，执行第二个动作，反之执行第三个动作。"
+  syntax: "If {action} then {action} [else {action}]"
+  example: "if permission \"admin\" then tell \"success\"<br>if permission \"admin\" then tell \"success\" else tell \"denied\""
+  semantic: "如果 {0} 则 {1} 否则 {2}"
+
+"Kether:literal":
+  id: "literal"
+  name: "Literal"
+  desc: "创建并返回一个{字符串}。<br>当字符串中存在空格时需将内容写在{双引号}或{单引号}中，若内容中不含空格则允许省略引号。<br><br>{注意：}<br>即使是 {literal 100} 也并非整数类型，如有需要请使用 {#Type} 动作。"
+  syntax: "literal {token} | {token}"
+  example: "literal Hello<br>Hello<br>\" Hello 'World'! \"<br>' Hello \"Kether\"! '"
+  semantic: "字面量 {0}"
+
+"Kether:not":
+  id: "not"
+  name: "Not"
+  desc: "判断动作的{返回值}是否为{否}，即否定动作的结果。"
+  syntax: "not {action}"
+  example: "not player op<br>not permission userA<br>not not not not not not not not not not not true"
+  semantic: "非 {0}"
+
+"Kether:repeat":
+  id: "repeat"
+  name: "Repeat"
+  desc: "重复一个动作数次。"
+  syntax: "repeat {int} {action}"
+  example: "repeat 10 print \"Hello World!\""
+  semantic: "重复执行 {0} 次 {1}"
+
+"Kether:sleep":
+  id: "sleep"
+  name: "Sleep"
+  desc: "堵塞工作线程特定时间段。"
+  syntax: "(sleep|delay|wait) {duration}"
+  example: "sleep 0.1s<br>sleep 1.5s"
+  semantic: "睡眠 {0}"
+
+"Kether:variable_get":
+  id: "variable_get"
+  name: "Variable Get"
+  desc: "获取变量。"
+  syntax: "get {token} | &{token}"
+  example: "get test<br>&test"
+  semantic: "获取变量 {0}"
+
+"Kether:variable_set":
+  id: "variable_set"
+  name: "Variable Set"
+  desc: "将变量设置为{基本类型}或一个动作的{返回值}。"
+  syntax: "set {token} {token} | set {token} to {action}"
+  example: "set test yes<br>set test to yes"
+  semantic: "设置变量 {0} 为 {1}"
+
+"Kether:while":
+  id: "while"
+  name: "While"
+  desc: "基础逻辑语句。<br>当一个动作的{返回值}为{是}时，重复第二个动作直到第一个动作的的{返回值}为{否}。"
+  syntax: "while {action} then {action}"
+  example: "while player sneaking then \\{\\{ tell sneaking sleep 1s \\}\\}"
+  semantic: "当 {0} 时循环执行 {1}"
+
+"TabooLib:absorption_amount":
+  id: "absorption_amount"
+  name: "Absorption Amount"
+  desc: "获取或设置玩家的额外生命"
+  syntax: "player absorption amount [(add|to) {action}]"
+  example: "player absorption amount<br>player absorption amount to 100<br>player absorption amount add 100"
+  semantic: "玩家额外生命 {0} {1}"
+
+"TabooLib:action_bar":
+  id: "action_bar"
+  name: "Action Bar"
+  desc: "将动作的{返回值}作为{动作栏}信息发送给{执行者}。"
+  syntax: "actionbar {action}"
+  example: "actionbar \"Hello World!\""
+  semantic: "发送动作栏 {0}"
+
+"TabooLib:address":
+  id: "address"
+  name: "Address"
+  desc: "获取玩家的 IP 地址。"
+  syntax: "player address"
+  example: "player address"
+  semantic: "获取玩家IP地址"
+
+"TabooLib:allow_flight":
+  id: "allow_flight"
+  name: "Allow Flight"
+  desc: "判断或修改玩家是否允许飞行"
+  syntax: "player allow flight [to {action}]"
+  example: "player allow flight<br>player allow flight to true"
+  semantic: "玩家允许飞行 {0}"
+
+"TabooLib:array":
+  id: "array"
+  name: "Array"
+  desc: "将动作列表的所有{返回值}作为{集合}返回。"
+  syntax: "array {action list}"
+  example: "array [ 1 1 2 3 4 ]"
+  semantic: "创建数组 {0}"
+
+"TabooLib:attack_cooldown":
+  id: "attack_cooldown"
+  name: "Attack Cooldown"
+  desc: "获取玩家的攻击冷却。"
+  syntax: "player attack cooldown"
+  example: "{player} dead"
+  semantic: "获取玩家攻击冷却"
+
+"TabooLib:bed_spawn":
+  id: "bed_spawn"
+  name: "Bed Spawn"
+  desc: "获取或修改玩家的出生点（床），需要对应方块材质为床。"
+  syntax: "player bed spawn [to {action}]"
+  example: "player bed spawn<br>player bed spawn to location world 0 0 0"
+  semantic: "玩家床出生点 {0}"
+
+"TabooLib:bed_spawn_x,y,z":
+  id: "bed_spawn_x,y,z"
+  name: "Bed Spawn X,Y,Z"
+  desc: "获取玩家出生点（床）的坐标轴。"
+  syntax: "player bed spawn (x|y|z)"
+  example: "player bed spawn x<br>player bed spawn y<br>player bed spawn z"
+  semantic: "玩家床出生点 {0} 坐标"
+
+"TabooLib:blocking":
+  id: "blocking"
+  name: "Blocking"
+  desc: "判断玩家是否在格挡状态。"
+  syntax: "player blocking"
+  example: "player blocking"
+  semantic: "玩家是否格挡"
+
+"TabooLib:break":
+  id: "break"
+  name: "Break"
+  desc: "该方法用于在特定循环语句 ({ForEach, Join, Map, While}) 中使用，结束循环体。"
+  syntax: "break"
+  example: "while true then \\{ print 1 break \\}"
+  semantic: "中断循环"
+
+"TabooLib:case & when":
+  id: "case & when"
+  name: "Case & When"
+  desc: "一种复杂的选择语句, 相比于 #IF 有更丰富的特性。<br>完整的选择语句需要包含至少一项选择分支, 也就是 {when block}。<br><br>每个标准的选择分支由 {when} {{条件}} -> {{表达式}} 组成。<br>也可使用 {else} {{表达}} 作为默认分支。<br><br>{先看一段示例:}<br>set number to 3<br>set numberProvided to case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> \"One\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> \"Two\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> \"Three\"<br>&nbsp;&nbsp;&nbsp;&nbsp;else \"One\"<br>]<br>log inline \"You provide {{ &numberProvided }}\"<br><br>{运行后得到结果:}<br>You provide Three<br><br>{也可以像其他语句一样正常使用:}<br>set number to 3<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> log \"One\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> log \"Two\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> log \"Three\"<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"One\"<br>]<br><br>{或是包含多条语句:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Monday\"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"First day of the week\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when [ 2 3 4 5 6 7 ] -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Sunday\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"Other days\"<br>]<br><br>{或是进行逻辑判断:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when < 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Small\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when > 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Big\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"Other\"<br>]"
+  syntax: "case {action} [ {when block} ... ]"
+  example: "case &mat [<br>&nbsp;&nbsp;&nbsp;&nbsp;when \"diamond\" -> 1<br>&nbsp;&nbsp;&nbsp;&nbsp;when [ \"iron\", \"gold\" ] -> 2<br>&nbsp;&nbsp;&nbsp;&nbsp;else false<br>]"
+  semantic: "条件分支 {0} 匹配 {1}"
+
+"TabooLib:check":
+  id: "check"
+  name: "Check"
+  desc: "将两个动作的{返回值}进行对比，支持多种判定方式。<br><br>1. 等于（{==}、{is}）：指两个值{字面意思}上相同。<br>2. 不等于（{!=}、{not}）：指两个值{字面意思}上不同。<br>3. 相似等于（{=?}、{is?}）：指两个值{字面意思}上{忽略大小写}的条件下相同。<br>4. 绝对等于（{=!}、{is!}）：指两个值{内存路径}上相同。<br>5. 大于（{>}、{gt}）：指第一个值{大于}第二个值。<br>6. 大于等于（{>=}）：指第一个值{大于}或{等于}第二个值。<br>7. 小于（{<}、{lt}）：指第一个值{小于}第二个值。<br>8. 小于等于（{<=}）：指第一个值{小于}或{等于}第二个值。<br>9. 右含左(in)：第二个值是否含有第一个值的内容。<br>10. 左含右(has)：第一个值是否含有第二个值的内容。<br><br>{注意：}<br>在使用{等于}条件进行判断时，左右两个参数会自动附加 {#Type} 类型推断动作。"
+  syntax: "check {action} {symbol} {action}"
+  example: "if check 1 is 1 then print yes else print no<br>if check 2 gt 1 then print yes else print no<br>if check 2 lt 1 then print yes else print no"
+  semantic: "检查 {0} {1} {2}"
+
+"TabooLib:color":
+  id: "color"
+  name: "Color Text"
+  desc: "替换动作的{返回值}中所有{颜色代码}。<br>支持由 {TabooLib} 提供的高级颜色代码。"
+  syntax: "color[ed] {action}"
+  example: "color \"&a a test message\"<br>color \"&GREEN a test message\"<br>color \"&#7FB80E a test message\"<br>color \"&000,255,000 a test message\""
+  semantic: "颜色格式化 {0}"
+
+"TabooLib:command":
+  id: "command"
+  name: "Command"
+  desc: "将动作的{返回值}作为命令执行，默认以{玩家}为执行者。"
+  syntax: "command {action} [as (console|player|op)]"
+  example: "command \"gamemode survival\"<br>command \"gamemode creative\" as op"
+  semantic: "执行命令 {0} 以 {1} 身份"
+
+"TabooLib:compass_target":
+  id: "compass_target"
+  name: "Compass Target"
+  desc: "获取或修改玩家的指南针目标。"
+  syntax: "player compass target [to {action}]"
+  example: "player compass target<br>player compass target to location world 0 0 0"
+  semantic: "玩家指南针目标 {0}"
+
+"TabooLib:compass_x,y,z":
+  id: "compass_x,y,z"
+  name: "Compass X,Y,Z"
+  desc: "获取玩家指南针目标的坐标轴。"
+  syntax: "player compass (x|y|z)"
+  example: "player compass x<br>player compass y<br>player compass z"
+  semantic: "玩家指南针 {0} 坐标"
+
+"TabooLib:conversing":
+  id: "conversing"
+  name: "Conversing"
+  desc: "Tests to see of a Conversable object is actively engaged in a conversation.<br><br>{Returns:}<br>True if a conversation is in progress"
+  syntax: "player conversing"
+  example: "player conversing"
+  semantic: "玩家是否对话中"
+
+"TabooLib:date_day":
+  id: "date_day"
+  name: "Date Day"
+  desc: "本年、本月、本周中的天数。<br>年：（{1} ~ {365}）<br>月：（{1} ~ {31}）<br>周：（{1} ~ {7}）"
+  syntax: "day of (year|month|week)"
+  example: "day in year<br>day in week"
+  semantic: "获取 {0} 中的天数"
+
+"TabooLib:date_hour":
+  id: "date_hour"
+  name: "Date Hour"
+  desc: "当前小时（{0} ~ {23}）。"
+  syntax: "hour[s]"
+  example: "hour"
+  semantic: "当前小时"
+
+"TabooLib:date_minute":
+  id: "date_minute"
+  name: "Date Minute"
+  desc: "当前分钟（{0} ~ {59}）。"
+  syntax: "minute[s]"
+  example: "minute"
+  semantic: "当前分钟"
+
+"TabooLib:date_month":
+  id: "date_month"
+  name: "Date Month"
+  desc: "当前月份（{1} ~ {12}）。"
+  syntax: "month[s]"
+  example: "print month"
+  semantic: "当前月份"
+
+"TabooLib:date_second":
+  id: "date_second"
+  name: "Date Second"
+  desc: "当前秒（{0} ~ {59}）。"
+  syntax: "second[s]"
+  example: "second"
+  semantic: "当前秒"
+
+"TabooLib:date_year":
+  id: "date_year"
+  name: "Date Year"
+  desc: "当前年份（{MIN_YEAR} ~ {MAX_YEAR}）。"
+  syntax: "year[s]"
+  example: "year"
+  semantic: "当前年份"
+
+"TabooLib:dead":
+  id: "dead"
+  name: "Dead"
+  desc: "判断玩家是否死亡。"
+  syntax: "player dead"
+  example: "player dead"
+  semantic: "玩家是否死亡"
+
+"TabooLib:element":
+  id: "element"
+  name: "Element"
+  desc: "将动作的{返回值}作为{列表}获取指定元素。"
+  syntax: "element {action} of {action}"
+  example: "element 0 in range 1 to 10"
+  semantic: "获取 {0} 中的元素 {1}"
+
+"TabooLib:exhaustion":
+  id: "exhaustion"
+  name: "Exhaustion"
+  desc: "获取或修改玩家的疲劳度。"
+  syntax: "player exhaustion [(add|to) {action}]"
+  example: "player exhaustion<br>player exhaustion to 100<br>player exhaustion add 100"
+  semantic: "玩家疲劳度 {0} {1}"
+
+"TabooLib:exp":
+  id: "exp"
+  name: "Exp"
+  desc: "获取或修改玩家的经验相关数据，只有 {player exp} 允许修改。"
+  syntax: "player exp [until next level|at level|to level] [(add|to) {action}]"
+  example: "player exp<br>player exp add 10<br>player exp until next level"
+  semantic: "玩家经验 {0} {1}"
+
+"TabooLib:first_played":
+  id: "first_played"
+  name: "First Played"
+  desc: "返回玩家的首次游戏时间。"
+  syntax: "player first played"
+  example: "player first played"
+  semantic: "玩家首次游戏时间"
+
+"TabooLib:fly___walk_speed":
+  id: "fly___walk_speed"
+  name: "Fly & Walk Speed"
+  desc: "获取或修改玩家的飞行或移动速度。"
+  syntax: "player (fly|walk) speed [(add|to) {action}]"
+  example: "player fly speed<br>player fly speed to 100<br>player walk speed add 100"
+  semantic: "玩家 {0} 速度 {1} {2}"
+
+"TabooLib:flying":
+  id: "flying"
+  name: "Flying"
+  desc: "判断或修改玩家是否在飞行状态。"
+  syntax: "player flying [to {action}]"
+  example: "player flying<br>player flying to true"
+  semantic: "玩家飞行状态 {0}"
+
+"TabooLib:food_level":
+  id: "food_level"
+  name: "Food Level"
+  desc: "获取或修改玩家的饥饿值。"
+  syntax: "player food level [(add|to) {action}]"
+  example: "player food level<br>player food level to 100<br>player food level add 100"
+  semantic: "玩家饥饿值 {0} {1}"
+
+"TabooLib:foreach":
+  id: "foreach"
+  name: "ForEach"
+  desc: "遍历第一个动作的{返回值}中所有{成员}，并作为{临时变量}传入第二个动作。"
+  syntax: "for {token} in {action} then {action}"
+  example: "for i in range 1 to 10 then print &i<br>for i in players then print &i"
+  semantic: "遍历 {0} 于 {1} 执行 {2}"
+
+"TabooLib:format_time":
+  id: "format_time"
+  name: "Format Time"
+  desc: "使用特定的方式{格式化}特定的时间。<br><br>"
+  syntax: "format {action} (by|with) {token}"
+  example: "format date with \"yyyy-MM-dd HH:mm\"<br>format 1628773023000 with \"yyyy-MM-dd HH:mm\""
+  semantic: "格式化时间 {0} 使用 {1}"
+
+"TabooLib:gamemode":
+  id: "gamemode"
+  name: "GameMode"
+  desc: "获取或修改玩家的游戏模式。<br><br>可用模式：<br>{生存}：SURVIVAL, 0<br>{创造}：CREATIVE, 1<br>{冒险}：ADVENTURE, 2<br>{观察}：SPECTATOR, 3"
+  syntax: "player gamemode [to {action}]"
+  example: "player gamemode<br>player gamemode to survival"
+  semantic: "玩家游戏模式 {0}"
+
+"TabooLib:gliding":
+  id: "gliding"
+  name: "Gliding"
+  desc: "判断或修改玩家是否在滑翔状态。"
+  syntax: "player gliding [to {action}]"
+  example: "player gliding<br>player gliding to true"
+  semantic: "玩家滑翔状态 {0}"
+
+"TabooLib:glowing":
+  id: "glowing"
+  name: "Glowing"
+  desc: "判断或修改玩家是否在发光状态。"
+  syntax: "player glowing [to {action}]"
+  example: "player glowing<br>player glowing to true"
+  semantic: "玩家发光状态 {0}"
+
+"TabooLib:gravity":
+  id: "gravity"
+  name: "Gravity"
+  desc: "判断或修改玩家是否拥有重力。"
+  syntax: "player gravity [(add|to) {action}]"
+  example: "player gravity<br>player gravity to true"
+  semantic: "玩家重力 {0} {1}"
+
+"TabooLib:health":
+  id: "health"
+  name: "Health"
+  desc: "获取或修改玩家的生命或最大生命。"
+  syntax: "player [max ]health [(add|to) {action}]"
+  example: "player health<br>player health to 100<br>player max health add 100"
+  semantic: "玩家{0}生命 {1} {2}"
+
+"TabooLib:inline":
+  id: "inline"
+  name: "Inline"
+  desc: "替换动作的{返回值}中所有{内联脚本}。 <br>内联脚本指在字符串中使用 {\\{\\{} ... {\\}\\}} 插入脚本代码。"
+  syntax: "inline {action} | function {action}"
+  example: "inline \"my name is \\{\\{\\{ sender \\}\\}\\}\"<br>inline \"permission \\{\\{\\{ permission admin \\}\\}\\}\""
+  semantic: "内联解析 {0}"
+
+"TabooLib:inside_vehicle":
+  id: "inside_vehicle"
+  name: "Inside Vehicle"
+  desc: "判断玩家是否在载具中。"
+  syntax: "player inside vehicle"
+  example: "player inside vehicle"
+  semantic: "玩家是否在载具中"
+
+"TabooLib:javascript":
+  id: "javascript"
+  name: "JavaScript"
+  desc: "运行 {JavaScript} 代码，并{返回}结果。<br>并传入当前程序的所有变量，以及事件 ({event})、执行者 ({sender})、服务器 ({server})。"
+  syntax: "(javascript|js|$) {token}"
+  example: "if $ sender.isOp() then print \"success\"<br>if $ 'sender.getName() == \"CONSOLE\"' then print \"is console\"<br><br>javascript 'sender.sendMessage(\"Hello World!\")'"
+  semantic: "执行JS {0}"
+
+"TabooLib:join":
+  id: "join"
+  name: "Join"
+  desc: "将动作列表的所有{返回值}合并为{字符串}返回，默认使用{空格}作为分隔。"
+  syntax: "join {action list} [by {token}]"
+  example: "join [ 1 1 2 3 4 ]<br>join [ 1 1 2 3 4 ] by \"-\""
+  semantic: "连接列表 {0} 分隔符 {1}"
+
+"TabooLib:jumping":
+  id: "jumping"
+  name: "Jumping"
+  desc: "判断或修改玩家是否在跳跃状态。"
+  syntax: "player jumping [to {action}]"
+  example: "player jumping<br>player jumping to true"
+  semantic: "玩家跳跃状态 {0}"
+
+"TabooLib:last_played":
+  id: "last_played"
+  name: "Last Played"
+  desc: "返回玩家的最后游戏、登陆时间。"
+  syntax: "player last (played|login)"
+  example: "player last played<br>player last login"
+  semantic: "玩家最后 {0} 时间"
+
+"TabooLib:leashed":
+  id: "leashed"
+  name: "Leashed"
+  desc: "Returns whether the entity is currently leashed."
+  syntax: "player leashed"
+  example: "player leashed"
+  semantic: "玩家是否被拴绳"
+
+"TabooLib:level":
+  id: "level"
+  name: "Level"
+  desc: "获取或修改玩家的等级。"
+  syntax: "player level [(add|to) {action}]"
+  example: "player level<br>player level to 10<br>player level add 10"
+  semantic: "玩家等级 {0} {1}"
+
+"TabooLib:locale":
+  id: "locale"
+  name: "Locale"
+  desc: "获取玩家的客户端语言。"
+  syntax: "player locale"
+  example: "player locale"
+  semantic: "玩家客户端语言"
+
+"TabooLib:location":
+  id: "location"
+  name: "Location"
+  desc: "构建一个坐标。"
+  syntax: "location {action} {action} {action} {action} [and {action} {action}]"
+  example: "location world 0 0 0<br>location world 0 0 0 and 0 0"
+  semantic: "构建坐标 {0} {1} {2} {3} 朝向 {4} {5}"
+
+"TabooLib:location1":
+  id: "location1"
+  name: "Location"
+  desc: "获取或修改玩家的坐标。"
+  syntax: "player location [to {location}]"
+  example: "player location<br>player location to location world 0 0 0"
+  semantic: "玩家坐标 {0}"
+
+"TabooLib:location_angle":
+  id: "location_angle"
+  name: "Location Angle"
+  desc: "获取或修改玩家的角度。"
+  syntax: "player (yaw|pitch) [(add|to) {action}]"
+  example: "player yaw<br>player yaw to 0<br>player pitch add 10"
+  semantic: "玩家 {0} 角度 {1} {2}"
+
+"TabooLib:location_x,y,z":
+  id: "location_x,y,z"
+  name: "Location X,Y,Z"
+  desc: "获取玩家的坐标轴。使用 {block} 则返回整数（方块）坐标。"
+  syntax: "player [block ](x|y|z)"
+  example: "player x<br>player y<br>player block z"
+  semantic: "玩家{0}坐标 {1}"
+
+"TabooLib:map":
+  id: "map"
+  name: "Map"
+  desc: "遍历第一个动作的{返回值}中所有{成员}，并作为{临时变量}传入第二个动作。<br>最终将所有第二个动作的{返回值}作为{集合}返回。<br><br>与 {#ForEach} 动作不同的是，{#Map} 则会整理每一次{非空}的处理结果。<br><br>Returns a list containing the results of applying the given transform function to each element in the original collection."
+  syntax: "map {token} in {action} with {action}"
+  example: "map i in range 1 to 10 with $ \"i  10\"<br>map i in range 1 to 10 with math  [ &i 10 ]"
+  semantic: "映射 {0} 于 {1} 应用 {2}"
+
+"TabooLib:math":
+  id: "math"
+  name: "Math"
+  desc: "使用{数学运算符}处理动作列表的所有{返回值}。<br><br>支持的运算符:<br>{加}：+, add, plus<br>{减}：-, sub, minus<br>{乘}：, mul, times<br>{除}：/, div, divided<br>"
+  syntax: "math {symbol} {action list}"
+  example: "math add [ 1 2 3 ]<br>math mul [ 1 2 3 ]"
+  semantic: "数学运算 {0} {1}"
+
+"TabooLib:name":
+  id: "name"
+  name: "Name"
+  desc: "获取玩家的游戏名称、展示名称或列表名称。"
+  syntax: "player [(display|list) ] name"
+  example: "player name<br>player list name<br>player display name"
+  semantic: "玩家{0}名称"
+
+"TabooLib:no_damage_tick":
+  id: "no_damage_tick"
+  name: "No Damage Ticks"
+  desc: "获取或修改玩家的无敌时间。"
+  syntax: "player no damage ticks [(add|to) {action}]"
+  example: "player no damage ticks<br>player no damage ticks to 100<br>player no damage ticks add 100"
+  semantic: "玩家无敌时间 {0} {1}"
+
+"TabooLib:null":
+  id: "null"
+  name: "Null"
+  desc: "返回一个{空}值。"
+  syntax: "null"
+  example: "check &test is null<br>check &test not null"
+  semantic: "空值"
+
+"TabooLib:on_guard":
+  id: "on_guard"
+  name: "On Ground"
+  desc: "判断玩家是否在地面上，该数据由客户端返回，可能会被篡改。"
+  syntax: "player on ground"
+  example: "player on ground"
+  semantic: "玩家是否在地面"
+
+"TabooLib:op":
+  id: "op"
+  name: "Op"
+  desc: "判断或修改玩家是否为 OP 权限。"
+  syntax: "player op [to {action}]"
+  example: "player op<br>player op to true"
+  semantic: "玩家OP状态 {0}"
+
+"TabooLib:optional":
+  id: "optional"
+  name: "Optional"
+  desc: "对动作的{返回值}进行非空判断。"
+  syntax: "optional {action} else {action}"
+  example: "optional null else yes"
+  semantic: "可选值 {0} 否则 {1}"
+
+"TabooLib:pass":
+  id: "pass"
+  name: "Pass"
+  desc: "返回一个{空字符串}。"
+  syntax: "pass"
+  example: "title \"Hello World!\" subtitle pass"
+  semantic: "空字符串"
+
+"TabooLib:pause":
+  id: "pause"
+  name: "Pause"
+  desc: "使程序的{生命周期}强制暂停，该操作不可被撤销，直到程序关闭。"
+  syntax: "pause"
+  example: "pause"
+  semantic: "暂停程序"
+
+"TabooLib:permission":
+  id: "permission"
+  name: "Permission"
+  desc: "将动作的{返回值}作为权限判断{执行者}是否持有该权限。"
+  syntax: "perm[ission] {action}"
+  example: "perm admin <br>permission admin"
+  semantic: "检测权限 {0}"
+
+"TabooLib:placeholderapi":
+  id: "placeholderapi"
+  name: "PlaceholderAPI"
+  desc: "替换动作的{返回值}中所有 {PlaceholderAPI} 变量。"
+  syntax: "papi {action} | placeholder {action}"
+  example: "papi \"%player_name%\"<br>placeholder \"%player_name%\""
+  semantic: "解析PAPI变量 {0}"
+
+"TabooLib:print":
+  id: "print"
+  name: "Print"
+  desc: "将动作的{返回值}作为信息发送给{控制台}。"
+  syntax: "print {action} | log {action}"
+  example: "print \"Hello World!\""
+  semantic: "控制台输出 {0}"
+
+"TabooLib:random":
+  id: "random"
+  name: "Random"
+  desc: "在一定的范围内{随机}返回一个{浮点数}，或从动作的{返回值}中{随机}返回一个{成员}。<br>在定义范围时可以省略第二个参数来选定 0 ~ 范围。"
+  syntax: "random {double} [to {double}] | random {action}"
+  example: "random 10<br>random 1 to 10<br>random range 1 to 10<br>random array [ 1 2 3 4 5 ]<br><br>random players"
+  semantic: "随机数 {0} 至 {1}"
+
+"TabooLib:random2":
+  id: "random2"
+  name: "Random2"
+  desc: "在一定的范围内{随机}返回一个{浮点数}或{整数}，相比于 #{random}，这个范围由{动作}的返回值表示。"
+  syntax: "random2 {action} to {action}"
+  example: "random2 1 to 10<br>random2 1 to random2 10 to 20<br>"
+  semantic: "随机数 {0} 至 {1}"
+
+"TabooLib:range":
+  id: "range"
+  name: "Range"
+  desc: "创建一组数字{集合}，当你{省略}步长或使用{整型}作为步长时，则创建的是整型集合，反之创建浮点数集合。<br>集合的类型取决于步长的类型，而不是范围数字类型。"
+  syntax: "range {number} to {number} [step {number}]"
+  example: "range 1 to 10<br>range 1 to 10 step 2<br>range 1 to 10 step 2.5"
+  semantic: "数字范围 {0} 至 {1} 步长 {2}"
+
+"TabooLib:remaining_air":
+  id: "remaining_air"
+  name: "Remaining Air"
+  desc: "获取或修改玩家的氧气。"
+  syntax: "player remaining air [(add|to) {action}]"
+  example: "player remaining air<br>player remaining air to 100<br>player remaining air add 100"
+  semantic: "玩家氧气值 {0} {1}"
+
+"TabooLib:riptiding":
+  id: "riptiding"
+  name: "Riptiding"
+  desc: "判断玩家是否在激流（三叉戟）状态。"
+  syntax: "player riptiding"
+  example: "player riptiding"
+  semantic: "玩家是否激流"
+
+"TabooLib:round":
+  id: "round"
+  name: "Round"
+  desc: "将动作的{返回值}作为{浮点数}并四舍五入为最接近的{整数}。"
+  syntax: "round {action}"
+  example: "round 100.5"
+  semantic: "四舍五入 {0}"
+
+"TabooLib:saturation":
+  id: "saturation"
+  name: "Saturation"
+  desc: "获取或修改玩家的饱食度。"
+  syntax: "player saturation [(add|to) {action}]"
+  example: "player saturation<br>player saturation to 100<br>player saturation add 100"
+  semantic: "玩家饱食度 {0} {1}"
+
+"TabooLib:scale":
+  id: "scale"
+  name: "Scaled"
+  desc: "将动作的{返回值}作为{浮点数}并保留小数点后两位。"
+  syntax: "scale[d] {action}"
+  example: "scale 100.5"
+  semantic: "保留两位小数 {0}"
+
+"TabooLib:size":
+  id: "size"
+  name: "Size"
+  desc: "将动作的{返回值}作为{列表}获取其长度。"
+  syntax: "size {action}"
+  example: "size range 1 to 10"
+  semantic: "获取长度 {0}"
+
+"TabooLib:sleep_ignored":
+  id: "sleep_ignored"
+  name: "Sleep Ignored"
+  desc: "Returns whether the player is sleeping ignored.<br><br>Sets whether the player is ignored as not sleeping. If everyone is either sleeping or has this flag set, then time will advance to the next day. If everyone has this flag set but no one is actually in bed, then nothing will happen."
+  syntax: "player sleep ignored [to {action}]"
+  example: "player sleep ignored<br>player sleep ignored to true"
+  semantic: "玩家忽略睡眠 {0}"
+
+"TabooLib:sleep_ticks":
+  id: "sleep_ticks"
+  name: "Sleep Ticks"
+  desc: "返回玩家的睡眠时间。"
+  syntax: "player sleep ticks"
+  example: "player sleep ticks"
+  semantic: "玩家睡眠刻数"
+
+"TabooLib:sleeping":
+  id: "sleeping"
+  name: "Sleeping"
+  desc: "判断玩家是否在睡眠状态。"
+  syntax: "player sleeping"
+  example: "player sleeping"
+  semantic: "玩家是否睡眠"
+
+"TabooLib:sneaking":
+  id: "sneaking"
+  name: "Sneaking"
+  desc: "判断玩家是否在潜行状态。"
+  syntax: "player sneaking"
+  example: "player sneaking"
+  semantic: "玩家是否潜行"
+
+"TabooLib:sound":
+  id: "sound"
+  name: "Sound"
+  desc: "将文本作为音效播放，默认音量与音调均为 {1.0}。<br>使用 \"{resource:}\" 作为前缀则播放{资源包}中的音效。"
+  syntax: "sound {token} [by {double} {double}]"
+  example: "sound AMBIENT_CAVE<br>sound AMBIENT_CAVE by 1 1<br>sound resource:custom.sound by 1 1"
+  semantic: "播放音效 {0} 音量 {1} 音调 {2}"
+
+"TabooLib:split":
+  id: "split"
+  name: "Split"
+  desc: "对动作的{返回值}作为字符串{切片}并返回。"
+  syntax: "split {action} [with {token}]"
+  example: "split \"yes\"<br>split \"yes\" with \"e\""
+  semantic: "分割字符串 {0} 分隔符 {1}"
+
+"TabooLib:sprinting":
+  id: "sprinting"
+  name: "Sprinting"
+  desc: "判断玩家是否在疾跑状态。"
+  syntax: "player sprinting"
+  example: "player sprinting"
+  semantic: "玩家是否疾跑"
+
+"TabooLib:subtitle":
+  id: "subtitle"
+  name: "Subtitle"
+  desc: "将动作的{返回值}作为{副标题}信息发送给{执行者}，默认的淡入淡出、停留、时间为{0}、{20}、{0}。"
+  syntax: "subtitle {action} [by {int} {int} {int}]"
+  example: "subtitle \"Hello Kether!\"<br>subtitle \"Hello Kether!\" by 10 20 10"
+  semantic: "发送副标题 {0} 淡入 {1} 停留 {2} 淡出 {3}"
+
+"TabooLib:swimming":
+  id: "swimming"
+  name: "Swimming"
+  desc: "判断或修改玩家是否在游泳状态。"
+  syntax: "player swimming [(add|to) {action}]"
+  example: "player swimming<br>player swimming to true"
+  semantic: "玩家游泳状态 {0} {1}"
+
+"TabooLib:switch":
+  id: "switch"
+  name: "Switch"
+  desc: "切换当前{观察者}到特定玩家。"
+  syntax: "switch {action}"
+  example: "switch bukkitObj"
+  semantic: "切换观察者 {0}"
+
+"TabooLib:tell":
+  id: "tell"
+  name: "Tell"
+  desc: "将动作的{返回值}作为信息发送给{执行者}。"
+  syntax: "tell {action} | send {action} | message {action}"
+  example: "tell \"Hello World!\"<br>send \"Hello World!\""
+  semantic: "发送消息 {0}"
+
+"TabooLib:time":
+  id: "time"
+  name: "Time"
+  desc: "当前系统时间。<br><br>Returns the current time in milliseconds. Note that while the unit of time of the return value is a millisecond, the granularity of the value depends on the underlying operating system and may be larger. For example, many operating systems measure time in units of tens of milliseconds.<br>See the description of the class Date for a discussion of slight discrepancies that may arise between \"computer time\" and coordinated universal time (UTC).<br><br>{Returns: }the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC."
+  syntax: "time | date"
+  example: "time<br>date"
+  semantic: "当前系统时间戳"
+
+"TabooLib:time_format":
+  id: "time_format"
+  name: "Time Format"
+  desc: "使用特定的方式{格式化}当前系统时间。<br><br>"
+  syntax: "time as {token} | date as {token}"
+  example: "time as \"yyyy-MM-dd\"<br>date as \"yyyy-MM-dd HH:mm:ss\""
+  semantic: "格式化当前时间为 {0}"
+
+"TabooLib:title":
+  id: "title"
+  name: "Title"
+  desc: "将动作的{返回值}作为{标题}信息发送给{执行者}，默认的淡入淡出、停留、时间为{0}、{20}、{0}。"
+  syntax: "title {action} [subtitle {action}] [by {int} {int} {int}]"
+  example: "title \"Hello World!\"<br>title \"Hello World!\" subtitle \"Hello Kether!\"<br>title \"Hello World!\" subtitle \"Hello Kether!\" by 10 20 10"
+  semantic: "发送标题 {0} 副标题 {1} 淡入 {2} 停留 {3} 淡出 {4}"
+
+"TabooLib:toast":
+  id: "toast"
+  name: "Toast"
+  desc: "将动作的{返回值}作为{成就信息}发送给{执行者}。<br>支持{列表}作为动作的返回值。<br><br>需要服务端版本高于 1.13"
+  syntax: "toast {material} {action} [(by|with) (task|goal|challenge)]"
+  example: "toast diamond array [ \"Hi\" \"Kether\" ]<br>toast diamond array [ \"Hi\" \"Kether\" ] by goal<br>toast diamond \"Hi Kether\" by challenge"
+  semantic: "发送成就Toast {0} {1} 类型 {2}"
+
+"TabooLib:type":
+  id: "type"
+  name: "Type"
+  desc: "创建并返回一个最接近的{字符串}、{整型}、{长整型}、{浮点数} 或 {布尔值}。<br>当字符串中存在空格时需将内容写在{双引号}或{单引号}中，若内容中不含空格则允许省略引号。 <br><br>或使用{指定类型}进行格式化（以动作作为参数）：<br>int, long, float, double, boolean"
+  syntax: "type {token} | type {type} {action}"
+  example: "type 100<br>type 100.5<br>type Hello<br>type \" Hello 'World'! \"<br>type ' Hello \"Kether\"! '<br><br>type int 1.0<br>type double 10.9 "
+  semantic: "类型转换 {0}"
+
+"TabooLib:variables":
+  id: "variables"
+  name: "Variables"
+  desc: "将所有变量的{节点}合并字符串{列表}返回。"
+  syntax: "vars | variables"
+  example: "vars"
+  semantic: "获取所有变量名列表"
+
+"TabooLib:warning":
+  id: "warning"
+  name: "Warning"
+  desc: "将动作的{返回值}作为警告发送给{控制台}。"
+  syntax: "warn[ing] {action}"
+  example: "warning \"Hello World!\""
+  semantic: "控制台警告 {0}"
+
+"TabooLib:whitelist":
+  id: "whitelist"
+  name: "Whitelist"
+  desc: "判断或修改玩家是否在白名单中。"
+  syntax: "player whitelist [to {action}]"
+  example: "player whitelist<br>player whitelist to true"
+  semantic: "玩家白名单状态 {0}"
+
+"TabooLib:world":
+  id: "world"
+  name: "World"
+  desc: "获取玩家的当前所在世界名称。"
+  syntax: "player world"
+  example: "player world"
+  semantic: "玩家当前世界"
+
+"TabooLib:import":
+  id: "import"
+  name: "Import"
+  desc: "导入命名空间。"
+  syntax: "import {token}"
+  example: "import invero"
+  semantic: "导入命名空间 {0}"
+
+"TabooLib:release":
+  id: "release"
+  name: "Release"
+  desc: "释放命名空间。"
+  syntax: "release {token}"
+  example: "release invero"
+  semantic: "释放命名空间 {0}"
+
+"Chemdah:block":
+  id: "block"
+  name: "Block"
+  desc: "获取坐标中的 X、Y、Z 轴整数值。"
+  syntax: "block (x|y|z) in {location}"
+  example: "block x in location world 0 0 0"
+  semantic: "获取方块坐标 {0} 于 {1}"
+
+"Chemdah:cancel":
+  id: "cancel"
+  name: "Cancel"
+  desc: "作用于{任务}或{对话}开始时的脚本代理中，可取消行为。"
+  syntax: "cancel"
+  example: "cancel"
+  semantic: "取消当前行为"
+
+"Chemdah:ceil":
+  id: "ceil"
+  name: "Ceil"
+  desc: "向上取整"
+  syntax: "ceil {action}"
+  example: "ceil 3.1"
+  semantic: "向上取整 {0}"
+
+"Chemdah:close":
+  id: "close"
+  name: "Close"
+  desc: "作用于{对话}的脚本代理中，可结束对话。"
+  syntax: "close"
+  example: "close"
+  semantic: "关闭对话"
+
+"Chemdah:distance":
+  id: "distance"
+  name: "Distance"
+  desc: "判断两个坐标之间的距离，若两坐标位于不同世界则返回 -1。"
+  syntax: "distance {location} to {location}"
+  example: "distance location world 0 0 0 to location world 10 10 10"
+  semantic: "计算距离 {0} 到 {1}"
+
+"Chemdah:equipment_check":
+  id: "equipment_check"
+  name: "Equipment Check"
+  desc: "检查玩家装备是否为特定物品，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。<br><br>可用位置：<br>{主手}：hand, mainhand<br>{副手}：offhand<br>{头盔}：head, helmet<br>{胸甲}：chest, chestplate<br>{护腿}：legs, leggings<br>{鞋子}：boots, feet"
+  syntax: "inventory {equipment} is {token} [amount {int}]"
+  example: "inventory helmet is \"minecraft:iron_helmet\"<br>inventory chestplate is \"minecraft:diamond_chestplate\" amount 1"
+  semantic: "检查装备 {0} 是否为 {1} 数量 {2}"
+
+"Chemdah:floor":
+  id: "floor"
+  name: "Floor"
+  desc: "向下取整"
+  syntax: "floor {action}"
+  example: "floor 3.9"
+  semantic: "向下取整 {0}"
+
+"Chemdah:goto":
+  id: "goto"
+  name: "Goto"
+  desc: "跳转到特定对话结构中。"
+  syntax: "goto {token}"
+  example: "goto conversation_0"
+  semantic: "跳转到 {0}"
+
+"Chemdah:inventory_count":
+  id: "inventory_count"
+  name: "Inventory Count"
+  desc: "获取玩家背包中的特定物品数量，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。"
+  syntax: "inventory (count|amount) {token}"
+  example: "inventory count \"minecraft:stone\""
+  semantic: "统计背包物品 {0} 数量"
+
+"Chemdah:inventory_check":
+  id: "inventory_check"
+  name: "Inventory Check"
+  desc: "检查玩家背包中是否含有特定物品，使用 {Chemdah} 物品表达式。 表达式帮助详见 {Chemdah} 文档。"
+  syntax: "inventory check {token} [amount {int}]"
+  example: "inventory check \"minecraft:stone\" inventory check \"minecraft:diamond\" amount 1"
+  semantic: "检查背包物品 {0} 数量 {1}"
+
+"Chemdah:inventory_close":
+  id: "inventory_close"
+  name: "Inventory Close"
+  desc: "关闭玩家当前页面。"
+  syntax: "inventory close"
+  example: "inventory close"
+  semantic: "关闭玩家背包界面"
+
+"Chemdah:inventory_slot_check":
+  id: "inventory_slot_check"
+  name: "Inv Slot Check"
+  desc: "检查玩家背包中某个位置是否为特定物品，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。"
+  syntax: "inventory slot {int} is {token} [amount {int}]"
+  example: "inventory slot 0 is \"minecraft:stone\"<br>inventory slot 1 is \"minecraft:diamond\" amount 1"
+  semantic: "检查背包槽位 {0} 是否为 {1} 数量 {2}"
+
+"Chemdah:inventory_take":
+  id: "inventory_take"
+  name: "Inventory Take"
+  desc: "检查玩家背包中是否含有特定物品并移除，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。"
+  syntax: "inventory (remove|take) {token} [amount {int}]"
+  example: "inventory take \"minecraft:stone\"<br>inventory take \"minecraft:diamond\" amount 1"
+  semantic: "移除背包物品 {0} 数量 {1}"
+
+"Chemdah:location_x,y,z":
+  id: "location_x,y,z"
+  name: "Location X,Y,Z"
+  desc: "获取坐标中的 X、Y、Z、Yaw、Pitch 或修改。"
+  syntax: "(x|y|z|yaw|pitch) in {locaiton} [(to|add) {action}]"
+  example: "x in location world 0 0 0<br>x in location world 0 0 0 to 10"
+  semantic: "获取坐标 {0} 于 {1} {2} {3}"
+
+"Chemdah:max":
+  id: "max"
+  name: "Max"
+  desc: "取两值之最大"
+  syntax: "max {action} {action}"
+  example: "max 1 10"
+  semantic: "最大值 {0} {1}"
+
+"Chemdah:min":
+  id: "min"
+  name: "Min"
+  desc: "取两值之最小"
+  syntax: "min {action} {action}"
+  example: "max 1 10"
+  semantic: "最小值 {0} {1}"
+
+"Chemdah:mmocore_attribute_point":
+  id: "mmocore_attribute_point"
+  name: "MMOCore Attribute Point"
+  desc: "获取玩家的 {MMOCore} 属性点数。"
+  syntax: "mmocore attribute point"
+  example: "mmocore attribute point"
+  semantic: "获取MMOCore属性点"
+
+"Chemdah:mmocore_class":
+  id: "mmocore_class"
+  name: "MMOCore Class"
+  desc: "获取玩家的 {MMOCore} 职业相关数据。"
+  syntax: "mmocore class (id|name|point)"
+  example: "mmocore class id<br>mmocore class name"
+  semantic: "获取MMOCore职业 {0}"
+
+"Chemdah:mmocore_level___exp":
+  id: "mmocore_level___exp"
+  name: "MMOCore Level & Exp"
+  desc: "获取玩家的 {MMOCore} 等级或经验值。"
+  syntax: "mmocore (level|experience|exp)"
+  example: "mmocore level<br>mmocore experience"
+  semantic: "获取MMOCore {0}"
+
+"Chemdah:mmocore_mana":
+  id: "mmocore_mana"
+  name: "MMOCore Mana"
+  desc: "获取玩家的 {MMOCore} 法力值。"
+  syntax: "mmocore mana"
+  example: "mmocore mana"
+  semantic: "获取MMOCore法力值"
+
+"Chemdah:mmocore_skill_point":
+  id: "mmocore_skill_point"
+  name: "MMOCore Skill Point"
+  desc: "获取玩家的 {MMOCore} 技能点数。"
+  syntax: "mmocore skill point"
+  example: "{mmocore skill point}"
+  semantic: "获取MMOCore技能点"
+
+"Chemdah:mmocore_stamina":
+  id: "mmocore_stamina"
+  name: "MMOCore Stamina"
+  desc: "获取玩家的 {MMOCore} 耐力值。"
+  syntax: "mmocore stamina"
+  example: "{mmocore stamina}"
+  semantic: "获取MMOCore耐力值"
+
+"Chemdah:mythicmobs_cast":
+  id: "mythicmobs_cast"
+  name: "MythicMobs Cast"
+  desc: "使玩家执行 {MythicMobs} 怪物技能。<br><br>可用的 {Trigger} 类型：<br>DEFAULT, API, ATTACK, BOW_HIT, BLOCK, BLOCK_PLACE, BLOCK_BREAK, <br>COMBAT, CONSUME, CROUCH, UNCROUCH, DAMAGED, DROPCOMBAT, DEATH, <br>DESPAWNED, ENTERCOMBAT, EXPLODE, INTERACT, KILL, KILLPLAYER, <br>PLAYERDEATH, SHOOT, SIGNAL, SPAWN, SPLASH_POTION, SWING, TARGETCHANGE, <br>TARGETED, TELEPORT, TIMER, USE, RIGHTCLICK, READY, CAST, FISH, <br>FISH_BITE, FISH_CATCH_FISH, FISH_CATCH_ENTITY, FISH_GROUND, FISH_REEL, <br>FISH_FAIL, TAME, TAME_FAIL, TRIDENT_THROW, TRIDENT_HIT, CUSTOM"
+  syntax: "(mythicmobs|mm) cast {token} [with {trigger}]"
+  example: "{mm cast} skill<br>{mm cast} skill {with} api"
+  semantic: "施放MythicMobs技能 {0} 触发器 {1}"
+
+"Chemdah:origin":
+  id: "origin"
+  name: "Origin"
+  desc: "作用于{对话}的脚本代理中，可获取对话 NPC 的头顶坐标。"
+  syntax: "origin"
+  example: "{origin}"
+  semantic: "获取NPC原点坐标"
+
+"Chemdah:particle_normal":
+  id: "particle_normal"
+  name: "Particle Normal"
+  desc: "在指定的坐标下播放粒子效果，若在结尾使用 {@self} 则只播放给自己。<br><br>{粒子表达式写法详见：}<br>https://wiki.ptms.ink/index.php?title=Chemdah_通用粒子表达式"
+  syntax: "particle normal {token} (at|on) {location} [@self]"
+  example: "{particle normal} \"flame 0 0 0 -count 10\" {at} location world 0 0 0<br>{particle normal} \"flame 0 0 0 -count 10 -speed 0.1\" {at} location world 0 0 0 {@self}"
+  semantic: "播放普通粒子 {0} {1} {2} 仅自身 {3}"
+
+"Chemdah:position":
+  id: "position"
+  name: "Position"
+  desc: "检测玩家是否在特定区域内，使用 {Chemdah} 坐标表达式。<br>表达式帮助详见 {Chemdah} 文档。"
+  syntax: "position in[side] {token}"
+  example: "{position inside} \"world 0 0 0 ~ 10\"<br>{position inside} \"world 0 0 0 > 10 10 10\"<br>"
+  semantic: "判断位置是否在区域 {0}"
+
+"Chemdah:profile_data":
+  id: "profile_data"
+  name: "Profile Data"
+  desc: "修改或获取玩家的变量。<br>玩家变量帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。"
+  syntax: "profile data {action} [(add|to) {action}] [default {action}]<br>profile data keys"
+  example: "{profile data} key<br>{profile data} key {default} 10<br>{profile data} key {to} 10<br>{profile data} key {add} 1<br>{profile data} key {add} 1 {default} 10<br>{profile data keys}"
+  semantic: "玩家档案数据 {0} {1} {2} 默认值 {3}"
+
+"Chemdah:profile_level":
+  id: "profile_level"
+  name: "Profile Level"
+  desc: "修改或获取玩家{自定义等级}中的等级或经验。<br>自定义等级帮助详见 {Chemdah} 文档。"
+  syntax: "profile level {action} (level|exp|exp-max) [(add|to) {action}]"
+  example: "{profile level} default {level}<br>{profile level} default {level} to 100<br>{profile level} default {exp}<br>{profile level} default {exp} add 100"
+  semantic: "玩家档案等级 {0} {1} {2} {3}"
+
+"Chemdah:quest_group_check":
+  id: "quest_group_check"
+  name: "Quest Group Check"
+  desc: "检测玩家是否接受或已完成任务组"
+  syntax: "quest-group (accepted|completed) {action}"
+  example: "{quest-group accepted} example-group"
+  semantic: "检测任务组状态 {0} {1}"
+
+"Chemdah:quest_check":
+  id: "quest_check"
+  name: "Quest Check"
+  desc: "检测玩家正在进行的或尚未接受的任务（已选择的）。<br><br>可用行为：<br>accept-check（允许接受）accepted（是否已经接受）completed（是否已经完成）"
+  syntax: "quest {check}"
+  example: "{quest accepted}<br>{quest completed}"
+  semantic: "检测任务 {0}"
+
+"Chemdah:quest_control":
+  id: "quest_control"
+  name: "Quest Control"
+  desc: "控制玩家正在进行的或尚未接受的任务 (已选择的）。<br><br>可用行为：<br>accept（接受任务）complete（完成任务）fail（放弃任务）restart（重置任务）stop（结束任务）"
+  syntax: "quest {control}"
+  example: "{quest accept}<br>{quest complete}"
+  semantic: "控制任务 {0}"
+
+"Chemdah:quest_progress":
+  id: "quest_progress"
+  name: "Quest Progress"
+  desc: "获取玩家当前任务（已选择的）或任务（已选择的）中的某项条目的进度信息。"
+  syntax: "quest progress (value|target|percent|percent100) [task {action}]"
+  example: "{quest progress value}<br>{quest progress target task} 0"
+  semantic: "获取任务进度 {0} 任务 {1}"
+
+"Chemdah:quest_select":
+  id: "quest_select"
+  name: "Quest Select"
+  desc: "选择任何一个服务器中存在的有效任务以供后续操作。"
+  syntax: "quest select {action}"
+  example: "{quest select} 10_diamond_ore"
+  semantic: "选择任务 {0}"
+
+"Chemdah:quest_data":
+  id: "quest_data"
+  name: "Quest Data"
+  desc: "修改或获取玩家当前任务（已选择的）中的变量。<br>任务变量帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。"
+  syntax: "quest data {action} [(add|to) {action}] [default {action}]<br>quest data keys"
+  example: "{quest data} key<br>{quest data} key {default} 10<br>{quest data} key {to} 10<br>{quest data} key {add} 1<br>{quest data} key {add} 1 {default} 10<br>{quest data keys}"
+  semantic: "任务数据 {0} {1} {2} 默认值 {3}"
+
+"Chemdah:quest_stats":
+  id: "quest_stats"
+  name: "Quest Stats"
+  desc: "隐藏或刷新任务（已选择的）或任务（已选择的）中某项条目的进度显示。<br>使用一个单独的 {} 代表所有条目。"
+  syntax: "quest stats (hide|refresh) [task {action}]"
+  example: "{quest stats} {hide}<br>{quest stats} {refresh} {task} {}<br>{quest stats} {refresh} {task} 0"
+  semantic: "任务统计 {0} 任务 {1}"
+
+"Chemdah:quest_tasks":
+  id: "quest_tasks"
+  name: "Quest Tasks"
+  desc: "获取某个任务 (已选择) 中的所有条目序号。"
+  syntax: "quest tasks"
+  example: "{quest tasks}"
+  semantic: "获取任务所有条目"
+
+"Chemdah:quest_this":
+  id: "quest_this"
+  name: "Quest This"
+  desc: "在 {Chemdah} 任务脚本代理中，返回当前任务或条目序号。"
+  syntax: "this [task]"
+  example: "{this}<br>{this task}"
+  semantic: "获取当前任务/条目"
+
+"Chemdah:quest_track":
+  id: "quest_track"
+  name: "Quest Track"
+  desc: "使玩家追踪任务（已选择的）"
+  syntax: "quest track"
+  example: "{quest track}"
+  semantic: "追踪当前任务"
+
+"Chemdah:quest_tracking":
+  id: "quest_tracking"
+  name: "Quest Tracking"
+  desc: "获取玩家正在追踪的任务名称"
+  syntax: "quest tracking"
+  example: "{quest tracking}"
+  semantic: "获取正在追踪的任务"
+
+"Chemdah:quests":
+  id: "quests"
+  name: "Quests"
+  desc: "获取玩家当前正在进行的所有任务，使用 {self} 则忽略共享（多人）任务。"
+  syntax: "quests [self]"
+  example: "{quests}<br>{quests} self"
+  semantic: "获取进行中的任务列表"
+
+"Chemdah:schematic":
+  id: "schematic"
+  name: "Schematic"
+  desc: "在 {#Location} 构建的坐标出生成特定 {WorldEdit} 建筑模板。或旋转、忽略空气。"
+  syntax: "schem[atic] {action} (at|on) {location} [rotation {int}] [ignore air]"
+  example: "set loc to location world 0 0 0<br><br>{schematic} ship {at} &loc<br>{schematic} ship {at} &loc {ignore air}<br>{schematic} ship {at} &loc {rotation} random array [ 0 90 180 270 ] {ignore air}"
+  semantic: "生成结构 {0} {1} {2} 旋转 {3} 忽略空气 {4}"
+
+"Chemdah:script":
+  id: "script"
+  name: "Script"
+  desc: "运行或停止某个脚本文件。"
+  syntax: "script (run|stop) {token}"
+  example: "{script run} def.ks<br>{script stop} def.ks<br>"
+  semantic: "脚本 {0} {1}"
+
+"Chemdah:skillapi_attribute_point":
+  id: "skillapi_attribute_point"
+  name: "SkillAPI Attribute"
+  desc: "获取玩家的 {SkillAPI} 属性或属性点数。"
+  syntax: "skillapi attribute (point|{token})"
+  example: "{skillapi attribute} foo<br>{skillapi attribute} bar<br>{skillapi attribute point}"
+  semantic: "获取SkillAPI属性 {0}"
+
+"Chemdah:skillapi_cast":
+  id: "skillapi_cast"
+  name: "SkillAPI Cast"
+  desc: "使玩家执行 {SkillAPI} 技能。<br>"
+  syntax: "skillapi cast {token}"
+  example: "{skillapi cast} skill<br>"
+  semantic: "施放SkillAPI技能 {0}"
+
+"Chemdah:skillapi_class":
+  id: "skillapi_class"
+  name: "SkillAPI Class"
+  desc: "获取玩家的 {SkillAPI} 职业相关数据。"
+  syntax: "skillapi class (main|size)"
+  example: "{skillapi class} main<br>{skillapi class} size"
+  semantic: "获取SkillAPI职业 {0}"
+
+"Chemdah:skillapi_exp":
+  id: "skillapi_exp"
+  name: "SkillAPI Exp"
+  desc: "获取玩家的 {SkillAPI} 当前经验值或升级所需经验。"
+  syntax: "skillapi exp (total|required)"
+  example: "{skillapi experience} total<br>{skillapi experience} required"
+  semantic: "获取SkillAPI经验 {0}"
+
+"Chemdah:skillapi_level":
+  id: "skillapi_level"
+  name: "SkillAPI Level"
+  desc: "获取玩家的 {SkillAPI} 等级或是否满级。"
+  syntax: "mmocore level [maxed]"
+  example: "{skillapi level}<br>{skillapi level maxed}"
+  semantic: "获取SkillAPI等级"
+
+"Chemdah:skillapi_mana":
+  id: "skillapi_mana"
+  name: "SkillAPI Mana"
+  desc: "获取玩家的 {SkillAPI} 法力值。"
+  syntax: "skillapi mana"
+  example: "{skillapi mana}"
+  semantic: "获取SkillAPI法力值"
+
+"Chemdah:skillapi_skill_point":
+  id: "skillapi_skill_point"
+  name: "SkillAPI Skill Point"
+  desc: "获取玩家的 {SkillAPI} 技能点数。"
+  syntax: "skillapi skill point"
+  example: "{skillapi skill point}"
+  semantic: "获取SkillAPI技能点"
+
+"Chemdah:talk":
+  id: "talk"
+  name: "Talk"
+  desc: "作用于 {agent:begin} 时：<br>增加 NPC 即将发送的对话内容。<br><br>作用于 {agent:refuse}, {agent:end}, {then} 时：<br>使 NPC 立即发送特定内容，常用于对话的收尾。"
+  syntax: "talk {token}"
+  example: "{talk} \"You win! number is \\{\\{ &number \\}\\}\"<br>{talk} \"All right, see you later.\""
+  semantic: "NPC对话 {0}"
+
+"Chemdah:trigger":
+  id: "trigger"
+  name: "Trigger"
+  desc: "唤起玩家的 {Trigger} 任务。<br>关于该任务类型的帮助详见 {Chemdah} 文档。"
+  syntax: "trigger {token}"
+  example: "{trigger} 10_diamond_ore"
+  semantic: "触发任务 {0}"
+
+"Chemdah:ui":
+  id: "ui"
+  name: "UI"
+  desc: "仅作用于 {UI} 模块的配置文件中，用于构建任务的完成进度。<br>关于 UI 模块的帮助详见 {Chemdah} 文档。"
+  syntax: "ui (percent|bar {token}) {token list} [exclude {token list}]"
+  example: "{ui bar} def {[} L3 {]}<br>{ui percent} {[} L1 L2 L3 {] exclude [} S1 {]}"
+  semantic: "界面进度 {0} {1} 排除 {2}"
+
+"Chemdah:variable":
+  id: "variable"
+  name: "Variable"
+  desc: "修改或获取全局变量。<br>全局帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。"
+  syntax: "var {action} [(add|to) {action}] [default {action}]<br>var keys"
+  example: "{var} key<br>{var} key {default} 10<br>{var} key {to} 10<br>{var} key {add} 1<br>{var} key {add} 1 {default} 10<br>{var keys}"
+  semantic: "全局变量 {0} {1} {2} 默认值 {3}"
+
+"Chemdah:wizard":
+  id: "wizard"
+  name: "Wizard"
+  desc: "唤起或停止 Wizard 引导"
+  syntax: "wizard (to {action}|cancel)"
+  example: "{wizard} to \"example_0\"<br>{wizard} cancel"
+  semantic: "向导 {0}"
+
+"Chemdah:workflow_fetch":
+  id: "workflow_fetch"
+  name: "Workflows Fetch"
+  desc: "定义离线补偿，当玩家在 {fetch reset} 语句执行前离开游戏时，<br>那么玩家下次进入游戏后将执行 {fetch mark} 中的语句。"
+  syntax: "fetch (mark {token} {action}|reset {token})"
+  example: "{fetch mark} label_1 {\\{} command inline \"give \\{\\{ sender \\}\\} diamond\" {\\}}<br>{fetch reset} label_1"
+  semantic: "离线补偿 {0} {1}"
+
+"Adyeshach:animation":
+  id: "animation"
+  name: "Animation"
+  desc: "让当前已选择的所有单位播放动作。<br><br>{已知的:}<br>SWING_MAIN_HAND, TAKE_DAMAGE, LEAVE_BED, SWING_OFFHAND<br>CRITICAL_EFFECT, MAGIC_CRITICAL_EFFECT"
+  syntax: "animation {token}"
+  example: "animation swing_main_hand"
+  semantic: "播放动画 {0}"
+
+"Adyeshach:controller":
+  id: "controller"
+  name: "Controller"
+  desc: "对当前已选择的所有单位赋予控制器。或移除、清空。<br><br>{已知的:}<br>Move, Gravity, SmoothLook, LookAtPlayer, LookAtPlayerAlways<br>RandomLookGround, RandomStrollLand"
+  syntax: "controller (add|remove|reset) {token}"
+  example: "controller add move<br>controller clear<br>controller remove gravity"
+  semantic: "控制器 {0} {1}"
+
+"Adyeshach:create":
+  id: "create"
+  name: "Create"
+  desc: "在特定坐标创建单位。"
+  syntax: "create {token} {token} at {action}"
+  example: "create test villager at location world 0 0 0"
+  semantic: "创建单位 {0} {1} 于 {2}"
+
+"Adyeshach:delete":
+  id: "delete"
+  name: "Delete"
+  desc: "删除并销毁已选择的所有单位。"
+  syntax: "delete"
+  example: "delete"
+  semantic: "删除并销毁单位"
+
+"Adyeshach:destroy":
+  id: "destroy"
+  name: "Destroy"
+  desc: "销毁当前已选择的所有单位。"
+  syntax: "destroy"
+  example: "destroy"
+  semantic: "销毁单位"
+
+"Adyeshach:look":
+  id: "look"
+  name: "Look"
+  desc: "让当前已选择的所有单位看向某个坐标，并可选是否平滑视角移动。"
+  syntax: "look [smooth] [x to {action}] [y to {action}] [z to {action}]"
+  example: "look x to 0<br>look x to 0 y to 0 z to 0<br>look smooth x to 0"
+  semantic: "单位看向 X {0} Y {1} Z {2} 平滑 {3}"
+
+"Adyeshach:meta":
+  id: "meta"
+  name: "Meta"
+  desc: "对当前已选择的所有单位修改元数据。或重置。<br><br>{详见:}<br>https://wiki.ptms.ink/index.php?title=AdyeshachPremium:开始:附录:第二节"
+  syntax: "meta set {token} [to {token}] | meta reset {token}"
+  example: "meta set entityPose to sleeping<br>meta reset entityPose"
+  semantic: "元数据设置 {0} 为 {1}"
+
+"Adyeshach:move":
+  id: "move"
+  name: "Move"
+  desc: "让当前已选择的所有单位走向某个坐标，并可选是否为相对坐标。"
+  syntax: "move [relative] [x to {action}] [y to {action}] [z to {action}]"
+  example: "move x to 0<br>move x to 0 y to 0 z to 0<br>move relative x to 10"
+  semantic: "单位移动到 X {0} Y {1} Z {2} 相对 {3}"
+
+"Adyeshach:passenger":
+  id: "passenger"
+  name: "Passenger"
+  desc: "对当前已选择的所有单位添加骑乘单位。或移除、清空。"
+  syntax: "passenger (add|remove|reset) {token}"
+  example: "passenger add test<br>passenger clear<br>passenger remove test"
+  semantic: "骑乘单位 {0} {1}"
+
+"Adyeshach:remove":
+  id: "remove"
+  name: "Remove"
+  desc: "删除当前已选择的所有单位。从管理器中移除，不再接受托管，但不会销毁实体。"
+  syntax: "remove"
+  example: "remove"
+  semantic: "移除单位"
+
+"Adyeshach:respawn":
+  id: "respawn"
+  name: "Respawn"
+  desc: "重新生成当前已选择的所有单位。"
+  syntax: "respawn"
+  example: "respawn"
+  semantic: "重生单位"
+
+"Adyeshach:select":
+  id: "select"
+  name: "Select"
+  desc: "将动作{返回值}作为单位 {ID} 或 {UUID} 进行选择。"
+  syntax: "select {action} [by (id|uuid)]"
+  example: "select test<br>select test by id"
+  semantic: "选择单位 {0} 通过 {1}"
+
+"Adyeshach:sleeping":
+  id: "sleeping"
+  name: "Sleeping"
+  desc: "让当前已选择的所有单位播放睡眠动画。"
+  syntax: "sleeping"
+  example: "sleeping"
+  semantic: "播放睡眠动画"
+
+"Adyeshach:still":
+  id: "still"
+  name: "Still"
+  desc: "让当前已选择的所有单位停止移动，与 {#Move} 对立。"
+  syntax: "still"
+  example: "still"
+  semantic: "停止移动"
+
+"Adyeshach:freeze":
+  id: "freeze"
+  name: "Freeze"
+  desc: "冻结或恢复当前已选择的所有单位的任何行为。"
+  syntax: "freeze {boolean}"
+  example: "freeze true<br>freeze false"
+  semantic: "冻结单位 {0}"
+
+"Adyeshach:tag":
+  id: "tag"
+  name: "Tag"
+  desc: "对当前已选择的所有单位修改标签。或移除、清空、判断是否持有。<br>使用 {persistent} 关键字以操作持久化标签。<br>但需要注意持久化标签需要 Adyeshach 至少在 1.4.21 版本以上。"
+  syntax: "tag [persistent] (set|remove|reset|has) {token} [to {token}]"
+  example: "tag set test to 1<br>tag remove test<br><br>tag persistent set p-test to 1<br>tag persistent remove p-test"
+  semantic: "标签 {0} {1} 为 {2}"
+
+"Adyeshach:teleport":
+  id: "teleport"
+  name: "Teleport"
+  desc: "将当前已选择的所有单位传送至指定坐标，与 {#Create} 动作中的坐标写法相同。"
+  syntax: "teleport {location}"
+  example: "teleport location world 0 80 0"
+  semantic: "传送单位到 {0}"
+
+"Adyeshach:use":
+  id: "use"
+  name: "Use"
+  desc: "使用特定的单位管理器。或临时的。<br><br>{已知的:}<br>public, private"
+  syntax: "use {token} [temp[orary]]"
+  example: "use public<br>use public temp<br>use private temporary"
+  semantic: "使用单位管理器 {0} 临时 {1}"
+
+"Adyeshach:viewer":
+  id: "viewer"
+  name: "Viewer"
+  desc: "将动作{返回值}作为在线玩家添加到当前已选择的所有单位的观察者列表。或移除、清空。"
+  syntax: "viewer (add|remove|reset) {action}"
+  example: "viewer add bukkitObj<br>viewer clear<br>viewer remove Arasple"
+  semantic: "观察者 {0} {1}"
+
+"Adyeshach:modelengine_animation_add":
+  id: "modelengine_animation_add"
+  name: "ModelEngine Animation Add"
+  desc: "播放 ModelEngine 动画，单位必须绑定模型。"
+  syntax: "modelengine animation add {token} {token} {token} [async]"
+  example: "modelengine animation add demo walk 25 async"
+  semantic: "ModelEngine动画增加 {0} {1} {2} 异步 {3}"
+
+"Adyeshach:modelengine_animation_remove":
+  id: "modelengine_animation_remove"
+  name: "ModelEngine Animation Remove"
+  desc: "移除 ModelEngine 动画，单位必须绑定模型。"
+  syntax: "modelengine animation remove {token} [ingorelerp {int}]"
+  example: "modelengine animation remove test<br>modelengine animation remove test ingorelerp true"
+  semantic: "ModelEngine动画移除 {0} 忽略插值 {1}"
+
+"Adyeshach:germengine_animation_add":
+  id: "germengine_animation_add"
+  name: "GermEngine Animation Add"
+  desc: "播放 GermEngine 动画，单位必须绑定模型。"
+  syntax: "germengine animation send {token}"
+  example: "germengine animation send test"
+  semantic: "GermEngine动画发送 {0}"
+
+"Adyeshach:germengine_animation_remove":
+  id: "germengine_animation_remove"
+  name: "GermEngine Animation Remove"
+  desc: "移除 GermEngine 动画，单位必须绑定模型。"
+  syntax: "germengine animation remove {token}"
+  example: "germengine animation stop test"
+  semantic: "GermEngine动画移除 {0}"
+
+"Adyeshach:position":
+  id: "position"
+  name: "Position"
+  desc: "获取当前已选择的单位的坐标，如果选择了多个单位则返回一个列表。"
+  syntax: "npc position"
+  example: "npc position<br>element 0 in npc position"
+  semantic: "获取NPC位置"
+
+"Aiyatsbus:arr-clear":
+  id: "arr-clear"
+  name: "Array Clear"
+  desc: "清空列表中的所有元素"
+  syntax: "arr-clear &array"
+  example: "arr-clear &my_list"
+  semantic: "清空数组 {0}"
+
+"Aiyatsbus:map-size":
+  id: "map-size"
+  name: "Map Size"
+  desc: "获取 Map 的元素数量，如果不是 Map，则返回字符串长度。"
+  syntax: "map-size &map | map-length &map"
+  example: "map-size &my_map<br>map-length &my_map"
+  semantic: "获取Map大小 {0}"
+
+"Aiyatsbus:map-mutable":
+  id: "map-mutable"
+  name: "Map Mutable"
+  desc: "转换为可变映射"
+  syntax: "map-mutable &map"
+  example: "map-mutable &my_map"
+  semantic: "转换为可变Map {0}"
+
+"Aiyatsbus:map-shuffle":
+  id: "map-shuffle"
+  name: "Map Shuffle"
+  desc: "打乱映射"
+  syntax: "map-shuffle &map"
+  example: "map-shuffle &my_map"
+  semantic: "打乱Map {0}"
+
+"Aiyatsbus:map-reverse":
+  id: "map-reverse"
+  name: "Map Reverse"
+  desc: "反转映射"
+  syntax: "map-reverse &map"
+  example: "map-reverse &my_map"
+  semantic: "反转Map {0}"
+
+"Aiyatsbus:map":
+  id: "map"
+  name: "Map"
+  desc: "构建映射"
+  syntax: "map &array"
+  example: "map &[key1, value1, key2, value2]"
+  semantic: "构建Map {0}"
+
+"Aiyatsbus:map-get":
+  id: "map-get"
+  name: "Map Get"
+  desc: "获取映射中的元素"
+  syntax: "map-get &key in &map"
+  example: "map-get \"key1\" in &my_map"
+  semantic: "获取Map键 {0} 的值于 {1}"
+
+"Aiyatsbus:map-put":
+  id: "map-put"
+  name: "Map Put"
+  desc: "添加键值对到映射末尾"
+  syntax: "map-put &key with &value to &map"
+  example: "map-put \"new_key\" with \"new_value\" to &my_map"
+  semantic: "向Map添加键值对 {0} 值 {1} 到 {2}"
+
+"Aiyatsbus:map-remove":
+  id: "map-remove"
+  name: "Map Remove"
+  desc: "移除映射中的键值对"
+  syntax: "map-remove &key in &map"
+  example: "map-remove \"key1\" in &my_map"
+  semantic: "从Map移除键 {0} 于 {1}"
+
+"Aiyatsbus:map-keys":
+  id: "map-keys"
+  name: "Map Keys"
+  desc: "获取映射中的键列表"
+  syntax: "map-keys &map"
+  example: "map-keys &my_map"
+  semantic: "获取Map所有键 {0}"
+
+"Aiyatsbus:max":
+  id: "max"
+  name: "Max"
+  desc: "取两值之最大"
+  syntax: "max &value1 &value2"
+  example: "max 10 20"
+  semantic: "最大值 {0} {1}"
+
+"Aiyatsbus:min":
+  id: "min"
+  name: "Min"
+  desc: "取两值之最小"
+  syntax: "min &value1 &value2"
+  example: "min 10 20"
+  semantic: "最小值 {0} {1}"
+
+"Aiyatsbus:ceil":
+  id: "ceil"
+  name: "Ceil"
+  desc: "向上取整"
+  syntax: "ceil &value"
+  example: "ceil 3.7"
+  semantic: "向上取整 {0}"
+
+"Aiyatsbus:floor":
+  id: "floor"
+  name: "Floor"
+  desc: "向下取整"
+  syntax: "floor &value"
+  example: "floor 3.7"
+  semantic: "向下取整 {0}"
+
+"Aiyatsbus:a-wait":
+  id: "a-wait"
+  name: "Wait"
+  desc: "在脚本中等待指定的时间（秒）。如果玩家在等待过程中离线则终止脚本。"
+  syntax: "a-wait &seconds | a-delay &seconds | a-sleep &seconds"
+  example: "a-wait 5<br>a-delay 2.5<br>a-sleep 1"
+  semantic: "等待 {0} 秒"
+
+"Aiyatsbus:instance-of":
+  id: "instance-of"
+  name: "Instance Of"
+  desc: "检查对象是否为指定类型的实例。如果类型不存在则返回 false。"
+  syntax: "instance-of &object is &class_name"
+  example: "instance-of &entity is org.bukkit.entity.Player"
+  semantic: "检查对象 {0} 是否为类型 {1}"
+
+"Aiyatsbus:cast":
+  id: "cast"
+  name: "Cast"
+  desc: "将对象转换为指定类型。如果转换失败则返回原对象。"
+  syntax: "cast &object to &class_name"
+  example: "cast &entity to org.bukkit.entity.Player"
+  semantic: "类型转换 {0} 为 {1}"
+
+"Aiyatsbus:get-block-drops":
+  id: "get-block-drops"
+  name: "Get Block Drops"
+  desc: "获取指定方块的掉落物列表。可选择指定挖掘工具和挖掘实体。"
+  syntax: "get-block-drops &block [item &tool] [entity &miner]"
+  example: "get-block-drops &block<br>get-block-drops &block item &diamond_pickaxe<br>get-block-drops &block item &diamond_pickaxe entity &player"
+  semantic: "获取方块掉落 {0} 工具 {1} 挖掘实体 {2}"
+
+"Aiyatsbus:a-cd":
+  id: "a-cd"
+  name: "Cool Down"
+  desc: "检查或添加附魔冷却时间。<br>check: 检查冷却时间，可选择是否通报给玩家和是否以动作栏形式发送<br>add: 添加冷却时间"
+  syntax: "a-cd check &enchant &player &seconds &notify [action-bar &action_bar]<br>a-cd add &enchant &player"
+  example: "a-cd check &enchant &player 5 true<br>a-cd check &enchant &player 5 true action-bar true<br>a-cd add &enchant &player"
+  semantic: "附魔冷却 {0} {1} {2} {3} 动作栏 {4}"
+
+"Aiyatsbus:spawn-entity":
+  id: "spawn-entity"
+  name: "Spawn Entity"
+  desc: "在指定位置生成实体"
+  syntax: "spawn-entity &entity_type at &location"
+  example: "spawn-entity zombie at &location"
+  semantic: "生成实体 {0} 于 {1}"
+
+"Aiyatsbus:real-damage":
+  id: "real-damage"
+  name: "Real Damage"
+  desc: "对实体造成真实伤害"
+  syntax: "real-damage &entity with &damage [by &attacker]"
+  example: "real-damage &player with 10<br>real-damage &player with 10 by &zombie"
+  semantic: "造成真实伤害 {0} 数值 {1} 来源 {2}"
+
+"Aiyatsbus:entity-name":
+  id: "entity-name"
+  name: "Entity Name"
+  desc: "获取实体的名称。如果是玩家则返回玩家名，否则返回自定义名称或本地化名称。"
+  syntax: "entity-name &entity"
+  example: "entity-name &player"
+  semantic: "获取实体名称 {0}"
+
+"Aiyatsbus:remove-entity":
+  id: "remove-entity"
+  name: "Remove Entity"
+  desc: "移除指定实体"
+  syntax: "remove-entity &entity"
+  example: "remove-entity &zombie"
+  semantic: "移除实体 {0}"
+
+"Aiyatsbus:add-potion-effect":
+  id: "add-potion-effect"
+  name: "Add Potion Effect"
+  desc: "为实体添加药水效果"
+  syntax: "add-potion-effect &effect_type on &entity duration &duration amplifier &amplifier [ambient &ambient] [particles &particles] [icon &icon]"
+  example: "add-potion-effect speed on &player duration 60 amplifier 1"
+  semantic: "添加药水效果 {0} 于 {1} 时长 {2} 等级 {3} 环境 {4} 粒子 {5} 图标 {6}"
+
+"Aiyatsbus:near-by-entities":
+  id: "near-by-entities"
+  name: "Near By Entities"
+  desc: "获取实体附近的实体列表"
+  syntax: "near-by-entities &entity in &radius_x &radius_y &radius_z"
+  example: "near-by-entities &player in 10 5 10"
+  semantic: "获取附近实体 {0} 半径 {1} {2} {3}"
+
+"Aiyatsbus:a-vec-add":
+  id: "a-vec-add"
+  name: "Vector Add"
+  desc: "为实体添加向量。可选择安全模式和击退检查。"
+  syntax: "a-vec-add &vector on &entity [safety &safety] [checkKnockback &check]"
+  example: "a-vec-add &vector on &player safety true"
+  semantic: "添加向量 {0} 于 {1} 安全模式 {2} 击退检查 {3}"
+
+"Aiyatsbus:entity-is-behind":
+  id: "entity-is-behind"
+  name: "Entity Is Behind"
+  desc: "检查一个实体是否在另一个实体后方"
+  syntax: "entity-is-behind &entity1 &entity2"
+  example: "entity-is-behind &player &zombie"
+  semantic: "检查实体 {0} 是否在 {1} 后方"
+
+"Aiyatsbus:launch-arrow":
+  id: "launch-arrow"
+  name: "Launch Arrow"
+  desc: "发射箭矢"
+  syntax: "launch-arrow &source [with &vector]"
+  example: "launch-arrow &player<br>{launch-arrow} &player with &vector"
+  semantic: "发射箭矢 {0} 向量 {1}"
+
+"Aiyatsbus:equip-set-item":
+  id: "equip-set-item"
+  name: "Equip Set Item"
+  desc: "设置实体的装备物品"
+  syntax: "equip-set-item &item in &slot to &entity"
+  example: "equip-set-item &diamond_sword in hand to &player"
+  semantic: "设置装备 {0} 于槽位 {1} 给 {2}"
+
+"Aiyatsbus:equip-get-item":
+  id: "equip-get-item"
+  name: "Equip Get Item"
+  desc: "获取实体的装备物品"
+  syntax: "equip-get-item &slot from &entity"
+  example: "equip-get-item hand from &player"
+  semantic: "获取装备槽位 {0} 从 {1}"
+
+"Aiyatsbus:build-firework":
+  id: "build-firework"
+  name: "Build Firework"
+  desc: "在指定位置生成烟花。可指定类型（BALL, BALL_LARGE, BURST, CREEPER, STAR）、威力、闪烁、尾迹、主颜色和淡出颜色。颜色支持中英文常见名，可为单色或列表。"
+  syntax: "build-firework &location type &type [power &power] [flicker &flicker] [trail &trail] [main-colors &colors] [fade-colors &colors]"
+  example: "build-firework world 0 80 0 type BALL_LARGE power 2 flicker true trail true main-colors &[red, blue] fade-colors &[yellow, white]"
+  semantic: "生成烟花 {0} 类型 {1} 威力 {2} 闪烁 {3} 尾迹 {4} 主色 {5} 淡出色 {6}"
+
+"Aiyatsbus:detonate-firework":
+  id: "detonate-firework"
+  name: "Detonate Firework"
+  desc: "立即引爆指定烟花实体。"
+  syntax: "detonate-firework &firework"
+  example: "detonate-firework &firework"
+  semantic: "引爆烟花 {0}"
+
+"Aiyatsbus:send-lang":
+  id: "send-lang"
+  name: "Send Lang"
+  desc: "向实体发送多语言消息，可附带参数数组。"
+  syntax: "send-lang &lang_key to &entity [with &args]"
+  example: "send-lang enchant-impact-damaged to &event[entity]<br>send-lang enchant-impact-damaged to &event[entity] with &[entity-name &event[attacker]]"
+  semantic: "发送多语言消息 {0} 给 {1} 参数 {2}"
+
+"Aiyatsbus:mark":
+  id: "mark"
+  name: "Mark"
+  desc: "为对象添加元数据标记。"
+  syntax: "mark &key on &object"
+  example: "mark my_tag on &entity"
+  semantic: "添加标记 {0} 于 {1}"
+
+"Aiyatsbus:unmark":
+  id: "unmark"
+  name: "Unmark"
+  desc: "移除对象的元数据标记。"
+  syntax: "unmark &key on &object"
+  example: "unmark my_tag on &entity"
+  semantic: "移除标记 {0} 于 {1}"
+
+"Aiyatsbus:has-mark":
+  id: "has-mark"
+  name: "Has Mark"
+  desc: "检查对象是否有指定元数据标记。"
+  syntax: "has-mark &key on &object | hasMark &key on &object"
+  example: "has-mark my_tag on &entity<br>hasMark my_tag on &entity"
+  semantic: "检查标记 {0} 于 {1}"
+
+"Aiyatsbus:set-metadata":
+  id: "set-metadata"
+  name: "Set Metadata"
+  desc: "为对象设置元数据。"
+  syntax: "set-metadata &key to &value on &object | setMetadata &key to &value on &object | set-meta &key to &value on &object"
+  example: "set-metadata my_key to my_value on &entity"
+  semantic: "设置元数据 {0} 为 {1} 于 {2}"
+
+"Aiyatsbus:remove-metadata":
+  id: "remove-metadata"
+  name: "Remove Metadata"
+  desc: "移除对象的元数据。"
+  syntax: "remove-metadata &key on &object | removeMetadata &key on &object | remove-meta &key on &object"
+  example: "remove-metadata my_key on &entity"
+  semantic: "移除元数据 {0} 于 {1}"
+
+"Aiyatsbus:has-metadata":
+  id: "has-metadata"
+  name: "Has Metadata"
+  desc: "检查对象是否有指定元数据。"
+  syntax: "has-metadata &key on &object | hasMetadata &key on &object | has-meta &key on &object"
+  example: "has-metadata my_key on &entity"
+  semantic: "检查元数据 {0} 于 {1}"
+
+"Aiyatsbus:get-metadata":
+  id: "get-metadata"
+  name: "Get Metadata"
+  desc: "获取对象的元数据，指定索引位置。"
+  syntax: "get-metadata &key on &object by &index | getMetadata &key on &object by &index | get-meta &key on &object by &index"
+  example: "get-metadata my_key on &entity by 0"
+  semantic: "获取元数据 {0} 于 {1} 索引 {2}"
+
+"Aiyatsbus:give-exp":
+  id: "give-exp"
+  name: "Give Exp"
+  desc: "给玩家经验值。可选择是否应用经验修补。"
+  syntax: "give-exp &amount to &player [mending &mending]"
+  example: "give-exp 100 to &player<br>give-exp 100 to &player mending true"
+  semantic: "给予经验 {0} 给 {1} 经验修补 {2}"
+
+"Aiyatsbus:a-money":
+  id: "a-money"
+  name: "Money"
+  desc: "获取玩家的经济余额。"
+  syntax: "a-money &player | money &player"
+  example: "a-money &player<br>money &player"
+  semantic: "获取玩家金钱 {0}"
+
+"Aiyatsbus:take-money":
+  id: "take-money"
+  name: "Take Money"
+  desc: "扣除玩家的金钱。"
+  syntax: "take-money &player &amount"
+  example: "take-money &player 100.0"
+  semantic: "扣除金钱 {0} {1}"
+
+"Aiyatsbus:give-money":
+  id: "give-money"
+  name: "Give Money"
+  desc: "给予玩家金钱。"
+  syntax: "give-money &player &amount"
+  example: "give-money &player 100.0"
+  semantic: "给予金钱 {0} {1}"
+
+"Aiyatsbus:has-money":
+  id: "has-money"
+  name: "Has Money"
+  desc: "检查玩家是否有足够的金钱。"
+  syntax: "has-money &player &amount"
+  example: "has-money &player 100.0"
+  semantic: "检查金钱 {0} {1}"
+
+"Aiyatsbus:get-vein":
+  id: "get-vein"
+  name: "Get Vein"
+  desc: "获取指定方块周围的矿脉。"
+  syntax: "get-vein &block [max &amount]"
+  example: "get-vein &block<br>get-vein &block max 100"
+  semantic: "获取矿脉 {0} 最大数量 {1}"
+
+"Aiyatsbus:strike-lightning":
+  id: "strike-lightning"
+  name: "Strike Lightning"
+  desc: "在指定位置劈闪电。"
+  syntax: "strike-lightning &location | lightning &location"
+  example: "strike-lightning &location<br>lightning &location"
+  semantic: "劈闪电 {0}"
+
+"Aiyatsbus:create-explosion":
+  id: "create-explosion"
+  name: "Create Explosion"
+  desc: "在指定位置创建爆炸。可选择爆炸源实体、是否着火、是否破坏方块。"
+  syntax: "create-explosion &location &power [by &entity] [fire &fire] [break &break]"
+  example: "create-explosion &location 2.0<br>create-explosion &location 2.0 by &player fire true break false"
+  semantic: "创建爆炸 {0} 威力 {1} 来源 {2} 着火 {3} 破坏方块 {4}"
+
+"Aiyatsbus:drop-item":
+  id: "drop-item"
+  name: "Drop Item"
+  desc: "在指定位置掉落物品。可选择是否自然掉落。"
+  syntax: "drop-item &item at &location [naturally &naturally]"
+  example: "drop-item &diamond at &location<br>drop-item &diamond at &location naturally true"
+  semantic: "掉落物品 {0} 于 {1} 自然掉落 {2}"
+
+"Aiyatsbus:operation":
+  id: "operation"
+  name: "Operation"
+  desc: "执行注册的操作。"
+  syntax: "operation &operation_name [args &args]"
+  example: "operation my_operation<br>operation my_operation args &[param1, param2]"
+  semantic: "执行操作 {0} 参数 {1}"
+
+"Aiyatsbus:modifiable-var":
+  id: "modifiable-var"
+  name: "Modifiable Var"
+  desc: "获取附魔的可修改变量值"
+  syntax: "modifiable-var &enchant $item name"
+  example: "modifiable-var &enchant $diamond_sword damage"
+  semantic: "获取可修改变量 {0} 物品名称"
+
+"Aiyatsbus:modifiable-var-set":
+  id: "modifiable-var-set"
+  name: "Modifiable Var Set"
+  desc: "设置附魔的可修改变量值"
+  syntax: "modifiable-var-set &enchant $item name [to] $value"
+  example: "modifiable-var-set &enchant $diamond_sword damage to 10<br>modifiable-var-set &enchant $diamond_sword damage = 15"
+  semantic: "设置可修改变量 {0} 物品名称 值 {1}"
+
+"Arim:arim-weight":
+  id: "arim-weight"
+  name: "arim-weight"
+  desc: "权重随机"
+  syntax: "arim-weight / arim-random<br>arim-weight {action list} [(by|with) {action list}] [def {action}]"
+  example: "arim-weight [ ele1 ele2 ele3 ] by [ 1 null 3 ] def 1<br>arim-weight [ ele1 ele2 ele3 ] by [ 1 2 3 ]"
+  semantic: "权重随机 {0} 权重 {1} 默认 {2}"
+
+"Arim:arim-inv":
+  id: "arim-inv"
+  name: "arim-inv"
+  desc: "背包物品检测"
+  syntax: "arim-inv / arim-inventory<br>arim-inv {token} {action} [amount {action}]"
+  example: "1. 检测背包合法物品：<br>arim-inv check \"name:all(start(&c机械),c(靴))\"<br>set name to 靴<br>arim-inv has inline \"name:all(start(&c机械),c({{ get name }}))\" amount 10<br>2. 扣除背包合法物品：<br>arim-inv take \"name:all(start(&c机械),c(靴))\"<br>set name to 靴<br>arim-inv take inline \"name:all(start(&c机械),c({{ get name }}))\" amount 10<br>3. 获取背包合法物品数量：<br>arim-inv count \"name:all(start(&c机械),c(靴))\"<br>set name to 靴<br>arim-inv count inline \"name:all(start(&c机械),c({{ get name }}))\""
+  semantic: "Arim背包操作 {0} {1} 数量 {2}"
+
+"DungeonPlus:dungeon":
+  id: "dungeon"
+  name: "Dungeon"
+  desc: "运行 DungeonPlus 脚本<br>详情访问: https://ersha.gitbook.io/dungeonplus/di-lao/untitled/kether"
+  syntax: "dungeon {action} {action} params {token} [area {token}]"
+  example: "dungeon message self params \"type=text;text=Example:<self:player-name>\""
+  semantic: "地牢脚本 {0} {1} 参数 {2} 区域 {3}"
+
+"DungeonPlus:dungeon-data-area":
+  id: "dungeon-data-area"
+  name: "Dungeon Area"
+  desc: "获取地牢区域内的玩家玩家数量"
+  syntax: "dungeon-data area [players|size] {token}"
+  example: "dungeon-data area players dungeon_1"
+  semantic: "地牢区域 {0} {1}"
+
+"DungeonPlus:dungeon-data-players":
+  id: "dungeon-data-players"
+  name: "Dungeon Players"
+  desc: "获取地牢内的所有玩家"
+  syntax: "dungeon-data players"
+  example: "dungeon-data players"
+  semantic: "地牢内玩家列表"
+
+"DungeonPlus:dungeon-data-data":
+  id: "dungeon-data-data"
+  name: "Dungeon Data"
+  desc: "获取某个地牢数据值"
+  syntax: "dungeon-data data {token}"
+  example: "dungeon-data data data_name"
+  semantic: "地牢数据 {0}"
+
+"DungeonPlus:dungeon-data-mob":
+  id: "dungeon-data-mob"
+  name: "Dungeon Mob"
+  desc: "获取某个怪物的击杀数量或判断是否击杀该怪物"
+  syntax: "dungeon-data mob [amount|contain] {token}"
+  example: "dungeon-data mob amount mob_1<br>dungeon-data mob contain mob_2"
+  semantic: "地牢怪物 {0} {1}"
+
+"DungeonPlus:dungeon-data-world":
+  id: "dungeon-data-world"
+  name: "Dungeon World"
+  desc: "获取地牢的世界名称"
+  syntax: "dungeon-data world"
+  example: "dungeon-data world"
+  semantic: "地牢世界名称"
+
+"DungeonPlus:dungeon-data-name":
+  id: "dungeon-data-name"
+  name: "Dungeon Name"
+  desc: "获取地牢名称"
+  syntax: "dungeon-data dongeon name"
+  example: "dungeon-data dongeon name"
+  semantic: "地牢名称"
+
+"DungeonPlus:dungeon-data-options":
+  id: "dungeon-data-options"
+  name: "Dungeon Options"
+  desc: "获取地牢启动参数"
+  syntax: "dungeon-data options {token}"
+  example: "dungeon-data dongeon options 1"
+  semantic: "地牢参数 {0}"
+
+"Invero:message":
+  id: "message"
+  name: "Message"
+  desc: "向玩家发送一个支持 Invero 相关格式化的消息"
+  syntax: "msg {action}"
+  example: "msg \"<red>Hello {{player name}}\""
+  semantic: "发送Invero消息 {0}"
+
+"Invero:invero_money":
+  id: "invero_money"
+  name: "Money"
+  desc: "控制 Vault 经济"
+  syntax: "money (get|has|give|take|set) [{action}]"
+  example: "money give 1000"
+  semantic: "经济操作 {0} {1}"
+
+"Invero:invero_points":
+  id: "invero_points"
+  name: "Points"
+  desc: "控制 PlayerPoints 经济"
+  syntax: "points (get|has|give|take|set) [{action}]"
+  example: "points give 1000"
+  semantic: "Points操作 {0} {1}"
+
+"Invero:connect":
+  id: "connect"
+  name: "Connect"
+  desc: "跨服"
+  syntax: "connect {action} [for {action}]"
+  example: "context yizhan_server"
+  semantic: "跨服连接 {0} 玩家 {1}"
+
+"Invero:depend":
+  id: "depend"
+  name: "Depend"
+  desc: "检查服务器是否有指定依赖。返回: true/false"
+  syntax: "depend (plugin|papi) {action}"
+  example: "depend plugin Vault<br>depend papi Math"
+  semantic: "检查依赖插件 {0}"
+
+"Invero:max":
+  id: "max"
+  name: "Max"
+  desc: "取 两值/多值 之最大"
+  syntax: "max {action} {action} [{action}] [{action}]"
+  example: "max 1 10<br>max [ 1 7 9 ]"
+  semantic: "最大值 {0} {1}"
+
+"Invero:min":
+  id: "min"
+  name: "Min"
+  desc: "取 两值/多值 之最小"
+  syntax: "min {action} {action} [{action}] [{action}]"
+  example: "min 1 10<br>min [ 1 7 9 ]"
+  semantic: "最小值 {0} {1}"
+
+"Invero:context":
+  id: "context"
+  name: "Context"
+  desc: "context /ctx 在具有菜单语境（即开启菜单）的情况下，操作菜单语境中的变量数据"
+  syntax: "context (get|has|no|without|rem|del|delete|set|inc|increase|dec|decrease) {action} [{action}]"
+  example: "懒得写"
+  semantic: "菜单语境 {0} {1}"
+
+"Invero:persist":
+  id: "persist"
+  name: "Persist"
+  desc: "独立于菜单语境操作持久数据"
+  syntax: "persist (get|set) {action} [to {action}] [by global] [player {action}]"
+  example: "懒得写"
+  semantic: "持久数据 {0} {1} 作用域 {2}"
+
+"Invero:menu":
+  id: "menu"
+  name: "Menu"
+  desc: "菜单相关操作"
+  syntax: "menu (title|close|open|open_ctx) [{action}] [{action}] [{action}] [{action}]"
+  example: "看上面"
+  semantic: "菜单操作 {0} {1}"
+
+"Invero:icon":
+  id: "icon"
+  name: "Icon"
+  desc: "图标操作：<br>relocate<br>update<br>refresh<br>index | sub_index<br>pause_update<br>pause_relocate<br>pause_frames<br>resume_update<br>resume_relocate<br>resume_frames<br>refresh = update（更新变量） + relocate（重定向子图标）"
+  syntax: "icon [{action}] [{action}] [{action}]"
+  example: "icon by A update"
+  semantic: "图标操作 {0} {1}"
+
+"Invero:page":
+  id: "page"
+  name: "Page"
+  desc: "翻页面板操作（需要在可翻页面板的语境下）"
+  syntax: "page (isFirst|isLast|get|max|next|previous|set) [{action}] [by {action}]"
+  example: "page next"
+  semantic: "翻页操作 {0}"
+
+"Invero:scroll":
+  id: "scroll"
+  name: "Scroll"
+  desc: "滚动面板操作（需要在可滚动面板的语境下）"
+  syntax: "scroll (index|next|previous|reset)"
+  example: "scroll next"
+  semantic: "滚动操作 {0}"
+
+"Invero:regenerate":
+  id: "regenerate"
+  name: "Regenerate"
+  desc: "元素生成器面板操作"
+  syntax: "regenerate [filter {action}] [sort {action}]"
+  example: "懒得写"
+  semantic: "刷新生成器 {0} 过滤 {1} 排序 {2}"
+
+"Invero:element":
+  id: "element"
+  name: "Element"
+  desc: "元素生成器模板图标操作"
+  syntax: "element {action}"
+  example: "看 Invero 案例"
+  semantic: "元素键 {0}"
+
+"Invero:storage":
+  id: "storage"
+  name: "Storage"
+  desc: "交互槽位操作（需要在可交互面板中使用）"
+  syntax: "storage at {action} (exist|empty|delete|get|set|isLocked|free|lock) [to {action}]"
+  example: "看 Invero 案例"
+  semantic: "交互槽位 {0} {1}"
+
+"Invero:node":
+  id: "node"
+  name: "Node"
+  desc: "节点"
+  syntax: "node {action} [with {action}]"
+  example: "看 Invero 文档"
+  semantic: "节点 {0} 参数 {1}"
+
+"Invero:item":
+  id: "item"
+  name: "Item"
+  desc: "构建物品"
+  syntax: "item {action} [by {action}] [amount {action}]"
+  example: "看 Invero 案例"
+  semantic: "构建物品 {0} 来源 {1} 数量 {2}"
+
+"TrMenu:item_match":
+  id: "item_match"
+  name: "ItemMatcher"
+  desc: "将动作的{返回值}作为{物品特征解析式}判断玩家是否持有。<br>物品特征解析式详见 {TrMenu} 文档。"
+  syntax: "item {action}"
+  example: "{item} \"material:diamond_block\"<br>{item} \"material:diamond_block,data:0,amount:64\""
+  semantic: "匹配物品 {0}"
+
+"TrMenu:menu":
+  id: "menu"
+  name: "Menu"
+  desc: "将动作的{返回值}作为菜单名称打开或关闭玩家当前菜单。"
+  syntax: "menu open {action} | menu close"
+  example: "{menu open} Example<br>{menu close}"
+  semantic: "菜单操作 {0} {1}"
+
+"TrMenu:metadata":
+  id: "metadata"
+  name: "Metadata"
+  desc: "获取或赋值玩家的{元数据}。<br><br>{meta} 是临时存储在服务器内存,<br>{data} 则会调用 TabooLib 提供的 {LocalPlayer} 存储在玩家独立数据文件。"
+  syntax: "data (get|set|del) {action} [to {action}] | meta (get|set|del) {action} [to {action}]"
+  example: "{data} {set} test {to} value<br>{data} {del} test<br><br>{meta} {set} test {to} value<br>{meta} {del} test<br><br>print {data} {get} test"
+  semantic: "元数据 {0} {1} {2}"
+
+"TrMenu:trmenu_money":
+  id: "trmenu_money"
+  name: "Money"
+  desc: "将动作的{返回值}作为 {Vault} 货币判断玩家是否持有。"
+  syntax: "money {action}"
+  example: "money 100"
+  semantic: "检测金钱 {0}"
+
+"TrMenu:trmenu_playerpoints":
+  id: "trmenu_playerpoints"
+  name: "PlayerPoints"
+  desc: "将动作的{返回值}作为 {PlayerPoints} 货币判断玩家是否持有。"
+  syntax: "points {action}"
+  example: "points 100"
+  semantic: "检测Points {0}"
+
+"TrMenu:variable":
+  id: "variable"
+  name: "Variable"
+  desc: "替换动作的{返回值}中所有 {TrMenu} 变量函数。 <br><br>引用：<br>https://trmenu.trixey.cc/usage/functions"
+  syntax: "var[s] {action}"
+  example: "tell {var} \"{\\{}<Index>{\\}}\"<br>tell {var} \"{\\{}meta: <Key>{\\}}\""
+  semantic: "TrMenu变量解析 {0}"
+
+"Vulpecula:event_cancel":
+  id: "event_cancel"
+  name: "Event Cancel"
+  desc: "取消当前事件或设置事件是否取消"
+  syntax: "event cancel [to {action}]"
+  example: "{event cancel}<br>{event cancel} to false"
+  semantic: "事件取消 {0}"
+
+"Vulpecula:event_wait":
+  id: "event_wait"
+  name: "Event Wait"
+  desc: "等待指定事件的发生并做自定义处理<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-event#x7y9W"
+  syntax: "event (wait|require) {action} {action}"
+  example: "{event wait} entity-shoot<br>{event wait} entity-shoot -filter check &event[entity.type] == PLAYER"
+  semantic: "事件等待 {0} {1} {2}"
+
+"Vulpecula:entity_damage":
+  id: "entity_damage"
+  name: "Entity Damage"
+  desc: "对实体造成伤害"
+  syntax: "entity damage {action} [by {action}]"
+  example: "{entity damage} &entity 10<br>{entity damage} &entity 10 by &player"
+  semantic: "实体伤害 {0} 数值 {1} 来源 {2}"
+
+"Vulpecula:entity_potion":
+  id: "entity_potion"
+  name: "Entity Potion"
+  desc: "给予/移除实体药水效果<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-entity#ZzVee"
+  syntax: "entity potion {action} (add|set|remove|rm) {action} [{action}]"
+  example: "{entity potion} &entity add SLOW -level 2 -time 600<br>{entity potion} &entity remove SLOW"
+  semantic: "实体药水 {0} {1} {2}"
+
+"Vulpecula:entity_teleport":
+  id: "entity_teleport"
+  name: "Entity Teleport"
+  desc: "传送实体至指定位置"
+  syntax: "entity (tp|teleport) {action} to {action}"
+  example: "entity tp &entity to loc world 11 45 14"
+  semantic: "实体传送 {0} 到 {1}"
+
+"Vulpecula:regex":
+  id: "regex"
+  name: "Regex"
+  desc: "借助正则表达式查找或替换指定文本<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-regex"
+  syntax: "regex (find|replace|group) {action} [by|with|using|then] [{action}] [{action}]"
+  example: "regex replace &text by \"(攻击力\\+)(\\d+)\" then {<br>    join [ regex group 1 math 1 + regex group 2 ]<br>}"
+  semantic: "正则 {0} {1} {2}"
+
+"Vulpecula:function_call":
+  id: "function_call"
+  name: "Function Call"
+  desc: "{在 Shell 模式下该语句无任何意义。}<br>调用已声明的任何函数，包括 main 函数。支持传递参数"
+  syntax: "func {action} [with {action list}]"
+  example: "{func} function_0<br>{func} function_1 with [ 'Hello Vulpecula!' ]"
+  semantic: "调用函数 {0} 参数 {1}"
+
+"Zaphkiel:get_cooldown":
+  id: "get_cooldown"
+  name: "Get Cooldown"
+  desc: "在 {Zaphkiel} 物品行为中：<br>获取{当前物品}或{当前玩家}的冷却时间（单位：游戏刻）"
+  syntax: "cooldown time [for (item|player)]"
+  example: "{cooldown time}<br>{cooldown time for player}"
+  semantic: "获取ZAP冷却时间 {0}"
+
+"Zaphkiel:update_cooldown":
+  id: "update_cooldown"
+  name: "Update Cooldown"
+  desc: "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为冷却时间（单位：游戏刻）写入{当前物品}或{当前玩家}"
+  syntax: "cooldown set {action} [for (item|player)]"
+  example: "{cooldown set} 100<br>{cooldown set} 100 {for player}"
+  semantic: "设置ZAP冷却时间 {0} 目标 {1}"
+
+"Zaphkiel:check_cooldown":
+  id: "check_cooldown"
+  name: "Check Cooldown"
+  desc: "在 {Zaphkiel} 物品行为中：<br>判断{当前物品}或{当前玩家}是否处于冷却时间"
+  syntax: "cooldown check [for (item|player)]"
+  example: "{cooldown check}<br>{cooldown check for item}<br>{cooldown check for player}"
+  semantic: "检查ZAP冷却 {0}"
+
+"Zaphkiel:effect":
+  id: "effect"
+  name: "Effect"
+  desc: "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为 Bukkit 药水效果赋予玩家。或移除、清空。"
+  syntax: "effect (give|remove|clear) [{action} {action} {action}]"
+  example: "{effect give} POISON 100 0<br>{effect clear}<br>{effect remove} POISON"
+  semantic: "ZAP药水效果 {0} {1} {2} {3}"
+
+"Zaphkiel:item_durability":
+  id: "item_durability"
+  name: "Item Durability"
+  desc: "在 {Zaphkiel} 物品行为中：<br>获取物品的当前耐久度，该语句可以被 {item data durability_current} 代替。"
+  syntax: "item durability"
+  example: "{item durability}"
+  semantic: "获取ZAP物品耐久"
+
+"Zaphkiel:item_durability_operate":
+  id: "item_durability_operate"
+  name: "Item Damage & Repair"
+  desc: "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为耐久度扣除或修复。"
+  syntax: "item (damage|repair) {action}"
+  example: "{item damage} 1<br>{item repair} 1"
+  semantic: "ZAP物品 {0} {1}"
+
+"Zaphkiel:item_consume":
+  id: "item_consume"
+  name: "Item Consume"
+  desc: "在 {Zaphkiel} 物品行为中： 扣除 1 个行为中的物品。"
+  syntax: "item consume"
+  example: "item consume"
+  semantic: "消耗ZAP物品"
+
+"Zaphkiel:item_data":
+  id: "item_data"
+  name: "Item Data"
+  desc: "在 {Zaphkiel} 物品行为中：<br>获取或设置物品的活跃数据。"
+  syntax: "item data {action} [to {action}]"
+  example: "{item data} durability {to} 10<br>{item data} damage {to} 200"
+  semantic: "ZAP物品数据 {0} 为 {1}"
+
+"Zaphkiel:save":
+  id: "save"
+  name: "Save"
+  desc: "在 {Zaphkiel} 物品行为中：<br>将缓存写入物品流。"
+  syntax: "save"
+  example: "{save}"
+  semantic: "保存ZAP物品"
+
+"Zaphkiel:build_1":
+  id: "build_1"
+  name: "Build Name & Lore"
+  desc: "在 {Zaphkiel} 物品构建过程中：<br>修改名称或描述中的变量"
+  syntax: "build [name|lore] {action} to {action}"
+  example: "{build name} quality to item data quality"
+  semantic: "构建ZAP物品名称/描述 {0} {1} 为 {2}"
+
+"Zaphkiel:build_2":
+  id: "build_2"
+  name: "Build Icon & Data"
+  desc: "在 {Zaphkiel} 物品构建过程中：<br>修改材质或附加值，这里的 {data} 代表物品附加值而非活跃数据。"
+  syntax: "build [icon|data] {action}"
+  example: "{build icon} stone<br>{build data} 1"
+  semantic: "构建ZAP物品图标/数据 {0} {1}"

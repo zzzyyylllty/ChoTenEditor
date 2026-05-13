@@ -1,0 +1,4300 @@
+[
+  {
+    "name": "Kether",
+    "color": "#b5254b",
+    "actions": [
+      {
+        "id": "all",
+        "name": "All",
+        "description": "判断动作列表的所有{返回值}是否均为{是}。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "all {action list}",
+        "example": "all [ player op player sneaking ]<br>all [ permission userA permission userB permission userC ]",
+        "semantic": "全部条件 {0}"
+      },
+      {
+        "id": "any",
+        "name": "Any",
+        "description": "判断动作列表的所有{返回值}是否含有{是}。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "any {action list}",
+        "example": "any [ player op player sneaking ]<br>any [ permission userA permission userB permission userC ]",
+        "semantic": "任一条件 {0}"
+      },
+      {
+        "id": "async",
+        "name": "Async",
+        "description": "在不受生命周期控制的{异步}计划中执行动作。<br>当程序运行结束后，所有未完成的 {#Async} 动作会被直接关闭。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "async {action}",
+        "example": "async \\{\\{ sleep 1s print \"Hello\" \\}\\} print \"World!\"",
+        "semantic": "异步执行 {0}"
+      },
+      {
+        "id": "await",
+        "name": "Await",
+        "description": "等待动作完成。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "await {action}",
+        "example": "await print \"Hello World!\"",
+        "semantic": "等待动作 {0}"
+      },
+      {
+        "id": "await_all",
+        "name": "Await All",
+        "description": "等待{动作列表}中的{所有动作}完成。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "await_all {action list}",
+        "example": "await_all [ print \"Hello\" sleep 1s ] print \"World!\"",
+        "semantic": "等待所有动作 {0}"
+      },
+      {
+        "id": "await_any",
+        "name": "Await Any",
+        "description": "等待{动作列表}中的{任意动作}完成。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "await_any {action list}",
+        "example": "await_any [ print \"Hello\" sleep 1s ] print \"World!\"",
+        "semantic": "等待任一动作 {0}"
+      },
+      {
+        "id": "call",
+        "name": "Call",
+        "description": "{在 Shell 模式下该语句无任何意义。}<br>调用已声明的任何函数，包括 {main} 函数。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "函数操作"
+        ],
+        "syntax": "call {token}",
+        "example": "call function_0",
+        "semantic": "调用 {0}"
+      },
+      {
+        "id": "exit",
+        "name": "Exit",
+        "description": "退出程序。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "exit (success|pause|cooldown)",
+        "example": "exit success <br>exit pause",
+        "semantic": "退出 {0}"
+      },
+      {
+        "id": "goto",
+        "name": "Goto",
+        "description": "{在 Shell 模式下该语句无任何意义。}<br>跳转到已声明的任何函数，包括 {main} 函数。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "函数操作"
+        ],
+        "syntax": "goto {token}",
+        "example": "goto function_0",
+        "semantic": "跳转 {0}"
+      },
+      {
+        "id": "if_else",
+        "name": "If & Else",
+        "description": "基础逻辑语句。<br>当一个动作的{返回值}为{是}时，执行第二个动作，反之执行第三个动作。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "脚本控制"
+        ],
+        "syntax": "If {action} then {action} [else {action}]",
+        "example": "if permission \"admin\" then tell \"success\"<br>if permission \"admin\" then tell \"success\" else tell \"denied\"",
+        "semantic": "如果 {0} 则 {1} 否则 {2}"
+      },
+      {
+        "id": "literal",
+        "name": "Literal",
+        "description": "创建并返回一个{字符串}。<br>当字符串中存在空格时需将内容写在{双引号}或{单引号}中，若内容中不含空格则允许省略引号。<br><br>{注意：}<br>即使是 {literal 100} 也并非整数类型，如有需要请使用 {#Type} 动作。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Literal": {
+            "syntax": "literal {token}",
+            "example": "literal Hello",
+            "semantic": "文本值 {0}"
+          }
+        }
+      },
+      {
+        "id": "not",
+        "name": "Not",
+        "description": "判断动作的{返回值}是否为{否}，即否定动作的结果。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "not {action}",
+        "example": "not player op<br>not permission userA<br>not not not not not not not not not not not true",
+        "semantic": "非 {0}"
+      },
+      {
+        "id": "repeat",
+        "name": "Repeat",
+        "description": "重复一个动作数次。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "repeat {int} {action}",
+        "example": "repeat 10 print \"Hello World!\"",
+        "semantic": "重复执行 {0} 次 {1}"
+      },
+      {
+        "id": "sleep",
+        "name": "Sleep",
+        "description": "堵塞工作线程特定时间段。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "(sleep|delay|wait) {duration}",
+        "example": "sleep 0.1s<br>sleep 1.5s",
+        "semantic": "等待时间 {0}"
+      },
+      {
+        "id": "variable_get",
+        "name": "Variable Get",
+        "description": "获取变量。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Get": {
+            "syntax": "get {token}",
+            "example": "get test",
+            "semantic": "获取变量 {0}"
+          },
+          "Reference": {
+            "syntax": "&{token}",
+            "example": "&test",
+            "semantic": "获取变量 {0}"
+          }
+        }
+      },
+      {
+        "id": "variable_set",
+        "name": "Variable Set",
+        "description": "将变量设置为{基本类型}或一个动作的{返回值}。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Token": {
+            "syntax": "set {token} {token}",
+            "example": "set test yes",
+            "semantic": "设置变量 {0} 为 {1}"
+          },
+          "Action": {
+            "syntax": "set {token} to {action}",
+            "example": "set test to yes",
+            "semantic": "设置变量 {0} 为 {1}"
+          }
+        }
+      },
+      {
+        "id": "while",
+        "name": "While",
+        "description": "基础逻辑语句。<br>当一个动作的{返回值}为{是}时，重复第二个动作直到第一个动作的的{返回值}为{否}。",
+        "provider": "Kether",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "脚本控制"
+        ],
+        "syntax": "while {action} then {action}",
+        "example": "while player sneaking then \\{\\{ tell sneaking sleep 1s \\}\\}",
+        "semantic": "当 {0} 时循环执行 {1}"
+      }
+    ]
+  },
+  {
+    "name": "TabooLib",
+    "color": "#2563EB",
+    "actions": [
+      {
+        "id": "absorption_amount",
+        "name": "Absorption Amount",
+        "description": "获取或设置玩家的额外生命",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player absorption amount [(add|to) {action}]",
+        "example": "player absorption amount<br>player absorption amount to 100<br>player absorption amount add 100",
+        "semantic": "玩家额外生命 {0} {1}"
+      },
+      {
+        "id": "action_bar",
+        "name": "Action Bar",
+        "description": "将动作的{返回值}作为{动作栏}信息发送给{执行者}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "actionbar {action}",
+        "example": "actionbar \"Hello World!\"",
+        "semantic": "发送动作栏 {0}"
+      },
+      {
+        "id": "address",
+        "name": "Address",
+        "description": "获取玩家的 IP 地址。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "网络信息"
+        ],
+        "syntax": "player address",
+        "example": "player address",
+        "semantic": "获取玩家IP地址"
+      },
+      {
+        "id": "allow_flight",
+        "name": "Allow Flight",
+        "description": "判断或修改玩家是否允许飞行",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player allow flight [to {action}]",
+        "example": "player allow flight<br>player allow flight to true",
+        "semantic": "玩家允许飞行 {0}"
+      },
+      {
+        "id": "array",
+        "name": "Array",
+        "description": "将动作列表的所有{返回值}作为{集合}返回。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "array {action list}",
+        "example": "array [ 1 1 2 3 4 ]",
+        "semantic": "创建数组 {0}"
+      },
+      {
+        "id": "attack_cooldown",
+        "name": "Attack Cooldown",
+        "description": "获取玩家的攻击冷却。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player attack cooldown",
+        "example": "{player} dead",
+        "semantic": "获取玩家攻击冷却"
+      },
+      {
+        "id": "bed_spawn",
+        "name": "Bed Spawn",
+        "description": "获取或修改玩家的出生点（床），需要对应方块材质为床。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player bed spawn [to {action}]",
+        "example": "player bed spawn<br>player bed spawn to location world 0 0 0",
+        "semantic": "玩家床出生点 {0}"
+      },
+      {
+        "id": "bed_spawn_x,y,z",
+        "name": "Bed Spawn X,Y,Z",
+        "description": "获取玩家出生点（床）的坐标轴。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player bed spawn (x|y|z)",
+        "example": "player bed spawn x<br>player bed spawn y<br>player bed spawn z",
+        "semantic": "玩家床出生点 {0} 坐标"
+      },
+      {
+        "id": "blocking",
+        "name": "Blocking",
+        "description": "判断玩家是否在格挡状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player blocking",
+        "example": "player blocking",
+        "semantic": "玩家是否格挡"
+      },
+      {
+        "id": "break",
+        "name": "Break",
+        "description": "该方法用于在特定循环语句 ({ForEach, Join, Map, While}) 中使用，结束循环体。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "break",
+        "example": "while true then \\{ print 1 break \\}",
+        "semantic": "中断循环"
+      },
+      {
+        "id": "case & when",
+        "name": "Case & When",
+        "description": "一种复杂的选择语句, 相比于 #IF 有更丰富的特性。<br>完整的选择语句需要包含至少一项选择分支, 也就是 {when block}。<br><br>每个标准的选择分支由 {when} {{条件}} -> {{表达式}} 组成。<br>也可使用 {else} {{表达}} 作为默认分支。<br><br>{先看一段示例:}<br>set number to 3<br>set numberProvided to case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> \"One\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> \"Two\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> \"Three\"<br>&nbsp;&nbsp;&nbsp;&nbsp;else \"One\"<br>]<br>log inline \"You provide {{ &numberProvided }}\"<br><br>{运行后得到结果:}<br>You provide Three<br><br>{也可以像其他语句一样正常使用:}<br>set number to 3<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> log \"One\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> log \"Two\"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> log \"Three\"<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"One\"<br>]<br><br>{或是包含多条语句:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Monday\"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"First day of the week\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when [ 2 3 4 5 6 7 ] -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Sunday\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"Other days\"<br>]<br><br>{或是进行逻辑判断:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when < 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Small\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when > 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log \"Big\"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log \"Other\"<br>]",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "脚本控制"
+        ],
+        "syntax": "case {action} [ {when block} ... ]",
+        "example": "case &mat [<br>&nbsp;&nbsp;&nbsp;&nbsp;when \"diamond\" -> 1<br>&nbsp;&nbsp;&nbsp;&nbsp;when [ \"iron\", \"gold\" ] -> 2<br>&nbsp;&nbsp;&nbsp;&nbsp;else false<br>]",
+        "semantic": "条件分支 {0} 匹配 {1}"
+      },
+      {
+        "id": "check",
+        "name": "Check",
+        "description": "将两个动作的{返回值}进行对比，支持多种判定方式。<br><br>1. 等于（{==}、{is}）：指两个值{字面意思}上相同。<br>2. 不等于（{!=}、{not}）：指两个值{字面意思}上不同。<br>3. 相似等于（{=?}、{is?}）：指两个值{字面意思}上{忽略大小写}的条件下相同。<br>4. 绝对等于（{=!}、{is!}）：指两个值{内存路径}上相同。<br>5. 大于（{>}、{gt}）：指第一个值{大于}第二个值。<br>6. 大于等于（{>=}）：指第一个值{大于}或{等于}第二个值。<br>7. 小于（{<}、{lt}）：指第一个值{小于}第二个值。<br>8. 小于等于（{<=}）：指第一个值{小于}或{等于}第二个值。<br>9. 右含左(in)：第二个值是否含有第一个值的内容。<br>10. 左含右(has)：第一个值是否含有第二个值的内容。<br><br>{注意：}<br>在使用{等于}条件进行判断时，左右两个参数会自动附加 {#Type} 类型推断动作。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "check {action} {symbol} {action}",
+        "example": "if check 1 is 1 then print yes else print no<br>if check 2 gt 1 then print yes else print no<br>if check 2 lt 1 then print yes else print no",
+        "semantic": "检查 {0} {1} {2}"
+      },
+      {
+        "id": "color",
+        "name": "Color Text",
+        "description": "替换动作的{返回值}中所有{颜色代码}。<br>支持由 {TabooLib} 提供的高级颜色代码。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "文本处理"
+        ],
+        "syntax": "color[ed] {action}",
+        "example": "color \"&a a test message\"<br>color \"&GREEN a test message\"<br>color \"&#7FB80E a test message\"<br>color \"&000,255,000 a test message\"",
+        "semantic": "颜色格式化 {0}"
+      },
+      {
+        "id": "command",
+        "name": "Command",
+        "description": "将动作的{返回值}作为命令执行，默认以{玩家}为执行者。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "游戏机制"
+        ],
+        "syntax": "command {action} [as (console|player|op)]",
+        "example": "command \"gamemode survival\"<br>command \"gamemode creative\" as op",
+        "semantic": "执行命令 {0} 以 {1} 身份"
+      },
+      {
+        "id": "compass_target",
+        "name": "Compass Target",
+        "description": "获取或修改玩家的指南针目标。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "物品管理"
+        ],
+        "syntax": "player compass target [to {action}]",
+        "example": "player compass target<br>player compass target to location world 0 0 0",
+        "semantic": "玩家指南针目标 {0}"
+      },
+      {
+        "id": "compass_x,y,z",
+        "name": "Compass X,Y,Z",
+        "description": "获取玩家指南针目标的坐标轴。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "player compass (x|y|z)",
+        "example": "player compass x<br>player compass y<br>player compass z",
+        "semantic": "玩家指南针 {0} 坐标"
+      },
+      {
+        "id": "conversing",
+        "name": "Conversing",
+        "description": "Tests to see of a Conversable object is actively engaged in a conversation.<br><br>{Returns:}<br>True if a conversation is in progress",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "游戏系统"
+        ],
+        "syntax": "player conversing",
+        "example": "player conversing",
+        "semantic": "玩家是否对话中"
+      },
+      {
+        "id": "date_day",
+        "name": "Date Day",
+        "description": "本年、本月、本周中的天数。<br>年：（{1} ~ {365}）<br>月：（{1} ~ {31}）<br>周：（{1} ~ {7}）",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "day of (year|month|week)",
+        "example": "day in year<br>day in week",
+        "semantic": "获取 {0} 中的天数"
+      },
+      {
+        "id": "date_hour",
+        "name": "Date Hour",
+        "description": "当前小时（{0} ~ {23}）。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "hour[s]",
+        "example": "hour",
+        "semantic": "当前小时"
+      },
+      {
+        "id": "date_minute",
+        "name": "Date Minute",
+        "description": "当前分钟（{0} ~ {59}）。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "minute[s]",
+        "example": "minute",
+        "semantic": "当前分钟"
+      },
+      {
+        "id": "date_month",
+        "name": "Date Month",
+        "description": "当前月份（{1} ~ {12}）。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "month[s]",
+        "example": "print month",
+        "semantic": "当前月份"
+      },
+      {
+        "id": "date_second",
+        "name": "Date Second",
+        "description": "当前秒（{0} ~ {59}）。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "second[s]",
+        "example": "second",
+        "semantic": "当前秒"
+      },
+      {
+        "id": "date_year",
+        "name": "Date Year",
+        "description": "当前年份（{MIN_YEAR} ~ {MAX_YEAR}）。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntax": "year[s]",
+        "example": "year",
+        "semantic": "当前年份"
+      },
+      {
+        "id": "dead",
+        "name": "Dead",
+        "description": "判断玩家是否死亡。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player dead",
+        "example": "player dead",
+        "semantic": "玩家是否死亡"
+      },
+      {
+        "id": "element",
+        "name": "Element",
+        "description": "将动作的{返回值}作为{列表}获取指定元素。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "element {action} of {action}",
+        "example": "element 0 in range 1 to 10",
+        "semantic": "获取 {0} 中的元素 {1}"
+      },
+      {
+        "id": "exhaustion",
+        "name": "Exhaustion",
+        "description": "获取或修改玩家的疲劳度。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player exhaustion [(add|to) {action}]",
+        "example": "player exhaustion<br>player exhaustion to 100<br>player exhaustion add 100",
+        "semantic": "玩家疲劳度 {0} {1}"
+      },
+      {
+        "id": "exp",
+        "name": "Exp",
+        "description": "获取或修改玩家的经验相关数据，只有 {player exp} 允许修改。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player exp [until next level|at level|to level] [(add|to) {action}]",
+        "example": "player exp<br>player exp add 10<br>player exp until next level",
+        "semantic": "玩家经验 {0} {1}"
+      },
+      {
+        "id": "first_played",
+        "name": "First Played",
+        "description": "返回玩家的首次游戏时间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "时间与日期"
+        ],
+        "syntax": "player first played",
+        "example": "player first played",
+        "semantic": "玩家首次游戏时间"
+      },
+      {
+        "id": "fly___walk_speed",
+        "name": "Fly & Walk Speed",
+        "description": "获取或修改玩家的飞行或移动速度。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player (fly|walk) speed [(add|to) {action}]",
+        "example": "player fly speed<br>player fly speed to 100<br>player walk speed add 100",
+        "semantic": "玩家 {0} 速度 {1} {2}"
+      },
+      {
+        "id": "flying",
+        "name": "Flying",
+        "description": "判断或修改玩家是否在飞行状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player flying [to {action}]",
+        "example": "player flying<br>player flying to true",
+        "semantic": "玩家飞行状态 {0}"
+      },
+      {
+        "id": "food_level",
+        "name": "Food Level",
+        "description": "获取或修改玩家的饥饿值。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player food level [(add|to) {action}]",
+        "example": "player food level<br>player food level to 100<br>player food level add 100",
+        "semantic": "玩家饥饿值 {0} {1}"
+      },
+      {
+        "id": "foreach",
+        "name": "ForEach",
+        "description": "遍历第一个动作的{返回值}中所有{成员}，并作为{临时变量}传入第二个动作。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "脚本控制",
+          "数据处理"
+        ],
+        "syntax": "for {token} in {action} then {action}",
+        "example": "for i in range 1 to 10 then print &i<br>for i in players then print &i",
+        "semantic": "遍历 {0} 于 {1} 执行 {2}"
+      },
+      {
+        "id": "format_time",
+        "name": "Format Time",
+        "description": "使用特定的方式{格式化}特定的时间。<br><br>",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期",
+          "文本处理"
+        ],
+        "syntax": "format {action} (by|with) {token}",
+        "example": "format date with \"yyyy-MM-dd HH:mm\"<br>format 1628773023000 with \"yyyy-MM-dd HH:mm\"",
+        "semantic": "格式化时间 {0} 使用 {1}"
+      },
+      {
+        "id": "gamemode",
+        "name": "GameMode",
+        "description": "获取或修改玩家的游戏模式。<br><br>可用模式：<br>{生存}：SURVIVAL, 0<br>{创造}：CREATIVE, 1<br>{冒险}：ADVENTURE, 2<br>{观察}：SPECTATOR, 3",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player gamemode [to {action}]",
+        "example": "player gamemode<br>player gamemode to survival",
+        "semantic": "玩家游戏模式 {0}"
+      },
+      {
+        "id": "gliding",
+        "name": "Gliding",
+        "description": "判断或修改玩家是否在滑翔状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player gliding [to {action}]",
+        "example": "player gliding<br>player gliding to true",
+        "semantic": "玩家滑翔状态 {0}"
+      },
+      {
+        "id": "glowing",
+        "name": "Glowing",
+        "description": "判断或修改玩家是否在发光状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player glowing [to {action}]",
+        "example": "player glowing<br>player glowing to true",
+        "semantic": "玩家发光状态 {0}"
+      },
+      {
+        "id": "gravity",
+        "name": "Gravity",
+        "description": "判断或修改玩家是否拥有重力。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player gravity [(add|to) {action}]",
+        "example": "player gravity<br>player gravity to true",
+        "semantic": "玩家重力 {0} {1}"
+      },
+      {
+        "id": "health",
+        "name": "Health",
+        "description": "获取或修改玩家的生命或最大生命。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player [max ]health [(add|to) {action}]",
+        "example": "player health<br>player health to 100<br>player max health add 100",
+        "semantic": "玩家{0}生命 {1} {2}"
+      },
+      {
+        "id": "inline",
+        "name": "Inline",
+        "description": "替换动作的{返回值}中所有{内联脚本}。 <br>内联脚本指在字符串中使用 {\\{\\{} ... {\\}\\}} 插入脚本代码。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "文本处理",
+          "脚本操作"
+        ],
+        "syntaxs": {
+          "Inline": {
+            "syntax": "inline {action}",
+            "example": "inline \"my name is \\{\\{\\{ sender \\}\\}\\}\"",
+            "semantic": "内联解析 {0}"
+          },
+          "Function": {
+            "syntax": "function {action}",
+            "example": "inline \"permission \\{\\{\\{ permission admin \\}\\}\\}\"",
+            "semantic": "内联解析 {0}"
+          }
+        }
+      },
+      {
+        "id": "inside_vehicle",
+        "name": "Inside Vehicle",
+        "description": "判断玩家是否在载具中。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player inside vehicle",
+        "example": "player inside vehicle",
+        "semantic": "玩家是否在载具中"
+      },
+      {
+        "id": "javascript",
+        "name": "JavaScript",
+        "description": "运行 {JavaScript} 代码，并{返回}结果。<br>并传入当前程序的所有变量，以及事件 ({event})、执行者 ({sender})、服务器 ({server})。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "脚本操作"
+        ],
+        "syntax": "(javascript|js|$) {token}",
+        "example": "if $ sender.isOp() then print \"success\"<br>if $ 'sender.getName() == \"CONSOLE\"' then print \"is console\"<br><br>javascript 'sender.sendMessage(\"Hello World!\")'",
+        "semantic": "执行JS {0}"
+      },
+      {
+        "id": "join",
+        "name": "Join",
+        "description": "将动作列表的所有{返回值}合并为{字符串}返回，默认使用{空格}作为分隔。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "文本处理",
+          "数据处理"
+        ],
+        "syntax": "join {action list} [by {token}]",
+        "example": "join [ 1 1 2 3 4 ]<br>join [ 1 1 2 3 4 ] by \"-\"",
+        "semantic": "连接列表 {0} 分隔符 {1}"
+      },
+      {
+        "id": "jumping",
+        "name": "Jumping",
+        "description": "判断或修改玩家是否在跳跃状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player jumping [to {action}]",
+        "example": "player jumping<br>player jumping to true",
+        "semantic": "玩家跳跃状态 {0}"
+      },
+      {
+        "id": "last_played",
+        "name": "Last Played",
+        "description": "返回玩家的最后游戏、登陆时间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "时间与日期"
+        ],
+        "syntax": "player last (played|login)",
+        "example": "player last played<br>player last login",
+        "semantic": "玩家最后 {0} 时间"
+      },
+      {
+        "id": "leashed",
+        "name": "Leashed",
+        "description": "Returns whether the entity is currently leashed.",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player leashed",
+        "example": "player leashed",
+        "semantic": "玩家是否被拴绳"
+      },
+      {
+        "id": "level",
+        "name": "Level",
+        "description": "获取或修改玩家的等级。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player level [(add|to) {action}]",
+        "example": "player level<br>player level to 10<br>player level add 10",
+        "semantic": "玩家等级 {0} {1}"
+      },
+      {
+        "id": "locale",
+        "name": "Locale",
+        "description": "获取玩家的客户端语言。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player locale",
+        "example": "player locale",
+        "semantic": "玩家客户端语言"
+      },
+      {
+        "id": "location",
+        "name": "Location",
+        "description": "构建一个坐标。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "location {action} {action} {action} {action} [and {action} {action}]",
+        "example": "location world 0 0 0<br>location world 0 0 0 and 0 0",
+        "semantic": "构建坐标 {0} {1} {2} {3} 朝向 {4} {5}"
+      },
+      {
+        "id": "location1",
+        "name": "Location",
+        "description": "获取或修改玩家的坐标。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player location [to {location}]",
+        "example": "player location<br>player location to location world 0 0 0",
+        "semantic": "玩家坐标 {0}"
+      },
+      {
+        "id": "location_angle",
+        "name": "Location Angle",
+        "description": "获取或修改玩家的角度。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player (yaw|pitch) [(add|to) {action}]",
+        "example": "player yaw<br>player yaw to 0<br>player pitch add 10",
+        "semantic": "玩家 {0} 角度 {1} {2}"
+      },
+      {
+        "id": "location_x,y,z",
+        "name": "Location X,Y,Z",
+        "description": "获取玩家的坐标轴。使用 {block} 则返回整数（方块）坐标。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player [block ](x|y|z)",
+        "example": "player x<br>player y<br>player block z",
+        "semantic": "玩家{0}坐标 {1}"
+      },
+      {
+        "id": "map",
+        "name": "Map",
+        "description": "遍历第一个动作的{返回值}中所有{成员}，并作为{临时变量}传入第二个动作。<br>最终将所有第二个动作的{返回值}作为{集合}返回。<br><br>与 {#ForEach} 动作不同的是，{#Map} 则会整理每一次{非空}的处理结果。<br><br>Returns a list containing the results of applying the given transform function to each element in the original collection.",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "脚本控制",
+          "数据处理"
+        ],
+        "syntax": "map {token} in {action} with {action}",
+        "example": "map i in range 1 to 10 with $ \"i  10\"<br>map i in range 1 to 10 with math  [ &i 10 ]",
+        "semantic": "映射 {0} 于 {1} 应用 {2}"
+      },
+      {
+        "id": "math",
+        "name": "Math",
+        "description": "使用{数学运算符}处理动作列表的所有{返回值}。<br><br>支持的运算符:<br>{加}：+, add, plus<br>{减}：-, sub, minus<br>{乘}：, mul, times<br>{除}：/, div, divided<br>",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算"
+        ],
+        "syntax": "math {symbol} {action list}",
+        "example": "math add [ 1 2 3 ]<br>math mul [ 1 2 3 ]",
+        "semantic": "数学运算 {0} {1}"
+      },
+      {
+        "id": "name",
+        "name": "Name",
+        "description": "获取玩家的游戏名称、展示名称或列表名称。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player [(display|list) ] name",
+        "example": "player name<br>player list name<br>player display name",
+        "semantic": "玩家{0}名称"
+      },
+      {
+        "id": "no_damage_tick",
+        "name": "No Damage Ticks",
+        "description": "获取或修改玩家的无敌时间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player no damage ticks [(add|to) {action}]",
+        "example": "player no damage ticks<br>player no damage ticks to 100<br>player no damage ticks add 100",
+        "semantic": "玩家无敌时间 {0} {1}"
+      },
+      {
+        "id": "null",
+        "name": "Null",
+        "description": "返回一个{空}值。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作"
+        ],
+        "syntax": "null",
+        "example": "check &test is null<br>check &test not null",
+        "semantic": "空值"
+      },
+      {
+        "id": "on_guard",
+        "name": "On Ground",
+        "description": "判断玩家是否在地面上，该数据由客户端返回，可能会被篡改。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player on ground",
+        "example": "player on ground",
+        "semantic": "玩家是否在地面"
+      },
+      {
+        "id": "op",
+        "name": "Op",
+        "description": "判断或修改玩家是否为 OP 权限。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player op [to {action}]",
+        "example": "player op<br>player op to true",
+        "semantic": "玩家OP状态 {0}"
+      },
+      {
+        "id": "optional",
+        "name": "Optional",
+        "description": "对动作的{返回值}进行非空判断。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作",
+          "逻辑与数学"
+        ],
+        "syntax": "optional {action} else {action}",
+        "example": "optional null else yes",
+        "semantic": "可选值 {0} 否则 {1}"
+      },
+      {
+        "id": "pass",
+        "name": "Pass",
+        "description": "返回一个{空字符串}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作"
+        ],
+        "syntax": "pass",
+        "example": "title \"Hello World!\" subtitle pass",
+        "semantic": "空字符串"
+      },
+      {
+        "id": "pause",
+        "name": "Pause",
+        "description": "使程序的{生命周期}强制暂停，该操作不可被撤销，直到程序关闭。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "pause",
+        "example": "pause",
+        "semantic": "暂停程序"
+      },
+      {
+        "id": "permission",
+        "name": "Permission",
+        "description": "将动作的{返回值}作为权限判断{执行者}是否持有该权限。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "权限操作"
+        ],
+        "syntax": "perm[ission] {action}",
+        "example": "perm admin <br>permission admin",
+        "semantic": "检测权限 {0}"
+      },
+      {
+        "id": "placeholderapi",
+        "name": "PlaceholderAPI",
+        "description": "替换动作的{返回值}中所有 {PlaceholderAPI} 变量。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作",
+          "文本处理"
+        ],
+        "syntaxs": {
+          "Papi": {
+            "syntax": "papi {action}",
+            "example": "papi \"%player_name%\"",
+            "semantic": "解析PAPI变量 {0}"
+          },
+          "Placeholder": {
+            "syntax": "placeholder {action}",
+            "example": "placeholder \"%player_name%\"",
+            "semantic": "解析PAPI变量 {0}"
+          }
+        }
+      },
+      {
+        "id": "print",
+        "name": "Print",
+        "description": "将动作的{返回值}作为信息发送给{控制台}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntaxs": {
+          "Print": {
+            "syntax": "print {action}",
+            "example": "print \"Hello World!\"",
+            "semantic": "控制台输出 {0}"
+          },
+          "Log": {
+            "syntax": "log {action}",
+            "example": "print \"Hello World!\"",
+            "semantic": "控制台输出 {0}"
+          }
+        }
+      },
+      {
+        "id": "random",
+        "name": "Random",
+        "description": "在一定的范围内{随机}返回一个{浮点数}，或从动作的{返回值}中{随机}返回一个{成员}。<br>在定义范围时可以省略第二个参数来选定 0 ~ 范围。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算",
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Double": {
+            "syntax": "random {double} [to {double}]",
+            "example": "random 10",
+            "semantic": "随机数 {0} 至 {1}"
+          },
+          "Action": {
+            "syntax": "random {action}",
+            "example": "random 1 to 10",
+            "semantic": "随机数 {0} 至 {1}"
+          }
+        }
+      },
+      {
+        "id": "random2",
+        "name": "Random2",
+        "description": "在一定的范围内{随机}返回一个{浮点数}或{整数}，相比于 #{random}，这个范围由{动作}的返回值表示。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算",
+          "数据处理"
+        ],
+        "syntax": "random2 {action} to {action}",
+        "example": "random2 1 to 10<br>random2 1 to random2 10 to 20<br>",
+        "semantic": "随机数 {0} 至 {1}"
+      },
+      {
+        "id": "range",
+        "name": "Range",
+        "description": "创建一组数字{集合}，当你{省略}步长或使用{整型}作为步长时，则创建的是整型集合，反之创建浮点数集合。<br>集合的类型取决于步长的类型，而不是范围数字类型。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算",
+          "数据处理"
+        ],
+        "syntax": "range {number} to {number} [step {number}]",
+        "example": "range 1 to 10<br>range 1 to 10 step 2<br>range 1 to 10 step 2.5",
+        "semantic": "数字范围 {0} 至 {1} 步长 {2}"
+      },
+      {
+        "id": "remaining_air",
+        "name": "Remaining Air",
+        "description": "获取或修改玩家的氧气。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player remaining air [(add|to) {action}]",
+        "example": "player remaining air<br>player remaining air to 100<br>player remaining air add 100",
+        "semantic": "玩家氧气值 {0} {1}"
+      },
+      {
+        "id": "riptiding",
+        "name": "Riptiding",
+        "description": "判断玩家是否在激流（三叉戟）状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player riptiding",
+        "example": "player riptiding",
+        "semantic": "玩家是否激流"
+      },
+      {
+        "id": "round",
+        "name": "Round",
+        "description": "将动作的{返回值}作为{浮点数}并四舍五入为最接近的{整数}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算"
+        ],
+        "syntax": "round {action}",
+        "example": "round 100.5",
+        "semantic": "四舍五入 {0}"
+      },
+      {
+        "id": "saturation",
+        "name": "Saturation",
+        "description": "获取或修改玩家的饱食度。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player saturation [(add|to) {action}]",
+        "example": "player saturation<br>player saturation to 100<br>player saturation add 100",
+        "semantic": "玩家饱食度 {0} {1}"
+      },
+      {
+        "id": "scale",
+        "name": "Scaled",
+        "description": "将动作的{返回值}作为{浮点数}并保留小数点后两位。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数学运算"
+        ],
+        "syntax": "scale[d] {action}",
+        "example": "scale 100.5",
+        "semantic": "保留两位小数 {0}"
+      },
+      {
+        "id": "size",
+        "name": "Size",
+        "description": "将动作的{返回值}作为{列表}获取其长度。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "size {action}",
+        "example": "size range 1 to 10",
+        "semantic": "获取长度 {0}"
+      },
+      {
+        "id": "sleep_ignored",
+        "name": "Sleep Ignored",
+        "description": "Returns whether the player is sleeping ignored.<br><br>Sets whether the player is ignored as not sleeping. If everyone is either sleeping or has this flag set, then time will advance to the next day. If everyone has this flag set but no one is actually in bed, then nothing will happen.",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player sleep ignored [to {action}]",
+        "example": "player sleep ignored<br>player sleep ignored to true",
+        "semantic": "玩家忽略睡眠 {0}"
+      },
+      {
+        "id": "sleep_ticks",
+        "name": "Sleep Ticks",
+        "description": "返回玩家的睡眠时间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "时间与日期"
+        ],
+        "syntax": "player sleep ticks",
+        "example": "player sleep ticks",
+        "semantic": "玩家睡眠刻数"
+      },
+      {
+        "id": "sleeping",
+        "name": "Sleeping",
+        "description": "判断玩家是否在睡眠状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player sleeping",
+        "example": "player sleeping",
+        "semantic": "玩家是否睡眠"
+      },
+      {
+        "id": "sneaking",
+        "name": "Sneaking",
+        "description": "判断玩家是否在潜行状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player sneaking",
+        "example": "player sneaking",
+        "semantic": "玩家是否潜行"
+      },
+      {
+        "id": "sound",
+        "name": "Sound",
+        "description": "将文本作为音效播放，默认音量与音调均为 {1.0}。<br>使用 \"{resource:}\" 作为前缀则播放{资源包}中的音效。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "音效操作"
+        ],
+        "syntax": "sound {token} [by {double} {double}]",
+        "example": "sound AMBIENT_CAVE<br>sound AMBIENT_CAVE by 1 1<br>sound resource:custom.sound by 1 1",
+        "semantic": "播放音效 {0} 音量 {1} 音调 {2}"
+      },
+      {
+        "id": "split",
+        "name": "Split",
+        "description": "对动作的{返回值}作为字符串{切片}并返回。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "文本处理",
+          "数据处理"
+        ],
+        "syntax": "split {action} [with {token}]",
+        "example": "split \"yes\"<br>split \"yes\" with \"e\"",
+        "semantic": "分割字符串 {0} 分隔符 {1}"
+      },
+      {
+        "id": "sprinting",
+        "name": "Sprinting",
+        "description": "判断玩家是否在疾跑状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player sprinting",
+        "example": "player sprinting",
+        "semantic": "玩家是否疾跑"
+      },
+      {
+        "id": "subtitle",
+        "name": "Subtitle",
+        "description": "将动作的{返回值}作为{副标题}信息发送给{执行者}，默认的淡入淡出、停留、时间为{0}、{20}、{0}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntax": "subtitle {action} [by {int} {int} {int}]",
+        "example": "subtitle \"Hello Kether!\"<br>subtitle \"Hello Kether!\" by 10 20 10",
+        "semantic": "发送副标题 {0} 淡入 {1} 停留 {2} 淡出 {3}"
+      },
+      {
+        "id": "swimming",
+        "name": "Swimming",
+        "description": "判断或修改玩家是否在游泳状态。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "player swimming [(add|to) {action}]",
+        "example": "player swimming<br>player swimming to true",
+        "semantic": "玩家游泳状态 {0} {1}"
+      },
+      {
+        "id": "switch",
+        "name": "Switch",
+        "description": "切换当前{观察者}到特定玩家。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "switch {action}",
+        "example": "switch bukkitObj",
+        "semantic": "切换观察者 {0}"
+      },
+      {
+        "id": "tell",
+        "name": "Tell",
+        "description": "将动作的{返回值}作为信息发送给{执行者}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntaxs": {
+          "Tell": {
+            "syntax": "tell {action}",
+            "example": "tell \"Hello World!\"",
+            "semantic": "发送消息 {0}"
+          },
+          "Send": {
+            "syntax": "send {action}",
+            "example": "send \"Hello World!\"",
+            "semantic": "发送消息 {0}"
+          },
+          "Message": {
+            "syntax": "message {action}",
+            "example": "send \"Hello World!\"",
+            "semantic": "发送消息 {0}"
+          }
+        }
+      },
+      {
+        "id": "time",
+        "name": "Time",
+        "description": "当前系统时间。<br><br>Returns the current time in milliseconds. Note that while the unit of time of the return value is a millisecond, the granularity of the value depends on the underlying operating system and may be larger. For example, many operating systems measure time in units of tens of milliseconds.<br>See the description of the class Date for a discussion of slight discrepancies that may arise between \"computer time\" and coordinated universal time (UTC).<br><br>{Returns: }the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC.",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期"
+        ],
+        "syntaxs": {
+          "Time": {
+            "syntax": "time",
+            "example": "time",
+            "semantic": "当前系统时间戳"
+          },
+          "Date": {
+            "syntax": "date",
+            "example": "date",
+            "semantic": "当前系统时间戳"
+          }
+        }
+      },
+      {
+        "id": "time_format",
+        "name": "Time Format",
+        "description": "使用特定的方式{格式化}当前系统时间。<br><br>",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "时间与日期",
+          "文本处理"
+        ],
+        "syntaxs": {
+          "Time": {
+            "syntax": "time as {token}",
+            "example": "time as \"yyyy-MM-dd\"",
+            "semantic": "格式化当前时间为 {0}"
+          },
+          "Date": {
+            "syntax": "date as {token}",
+            "example": "date as \"yyyy-MM-dd HH:mm:ss\"",
+            "semantic": "格式化当前时间为 {0}"
+          }
+        }
+      },
+      {
+        "id": "title",
+        "name": "Title",
+        "description": "将动作的{返回值}作为{标题}信息发送给{执行者}，默认的淡入淡出、停留、时间为{0}、{20}、{0}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntax": "title {action} [subtitle {action}] [by {int} {int} {int}]",
+        "example": "title \"Hello World!\"<br>title \"Hello World!\" subtitle \"Hello Kether!\"<br>title \"Hello World!\" subtitle \"Hello Kether!\" by 10 20 10",
+        "semantic": "发送标题 {0} 副标题 {1} 淡入 {2} 停留 {3} 淡出 {4}"
+      },
+      {
+        "id": "toast",
+        "name": "Toast",
+        "description": "将动作的{返回值}作为{成就信息}发送给{执行者}。<br>支持{列表}作为动作的返回值。<br><br>需要服务端版本高于 1.13",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntax": "toast {material} {action} [(by|with) (task|goal|challenge)]",
+        "example": "toast diamond array [ \"Hi\" \"Kether\" ]<br>toast diamond array [ \"Hi\" \"Kether\" ] by goal<br>toast diamond \"Hi Kether\" by challenge",
+        "semantic": "发送成就Toast {0} {1} 类型 {2}"
+      },
+      {
+        "id": "type",
+        "name": "Type",
+        "description": "创建并返回一个最接近的{字符串}、{整型}、{长整型}、{浮点数} 或 {布尔值}。<br>当字符串中存在空格时需将内容写在{双引号}或{单引号}中，若内容中不含空格则允许省略引号。 <br><br>或使用{指定类型}进行格式化（以动作作为参数）：<br>int, long, float, double, boolean",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作",
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Token": {
+            "syntax": "type {token}",
+            "example": "type 100",
+            "semantic": "类型转换 {0}"
+          },
+          "Type": {
+            "syntax": "type {type} {action}",
+            "example": "type 100.5",
+            "semantic": "类型转换 {0}"
+          }
+        }
+      },
+      {
+        "id": "variables",
+        "name": "Variables",
+        "description": "将所有变量的{节点}合并字符串{列表}返回。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "变量操作"
+        ],
+        "syntaxs": {
+          "Vars": {
+            "syntax": "vars",
+            "example": "vars",
+            "semantic": "获取所有变量名列表"
+          },
+          "Variables": {
+            "syntax": "variables",
+            "example": "vars",
+            "semantic": "获取所有变量名列表"
+          }
+        }
+      },
+      {
+        "id": "warning",
+        "name": "Warning",
+        "description": "将动作的{返回值}作为警告发送给{控制台}。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "消息显示"
+        ],
+        "syntax": "warn[ing] {action}",
+        "example": "warning \"Hello World!\"",
+        "semantic": "控制台警告 {0}"
+      },
+      {
+        "id": "whitelist",
+        "name": "Whitelist",
+        "description": "判断或修改玩家是否在白名单中。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "服务器管理"
+        ],
+        "syntax": "player whitelist [to {action}]",
+        "example": "player whitelist<br>player whitelist to true",
+        "semantic": "玩家白名单状态 {0}"
+      },
+      {
+        "id": "world",
+        "name": "World",
+        "description": "获取玩家的当前所在世界名称。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "player world",
+        "example": "player world",
+        "semantic": "玩家当前世界"
+      },
+      {
+        "id": "import",
+        "name": "Import",
+        "description": "导入命名空间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "系统配置"
+        ],
+        "syntax": "import {token}",
+        "example": "import invero",
+        "semantic": "导入命名空间 {0}"
+      },
+      {
+        "id": "release",
+        "name": "Release",
+        "description": "释放命名空间。",
+        "provider": "TabooLib",
+        "type": "public",
+        "categories": [
+          "系统配置"
+        ],
+        "syntax": "release {token}",
+        "example": "release invero",
+        "semantic": "释放命名空间 {0}"
+      }
+    ]
+  },
+  {
+    "name": "Chemdah",
+    "color": "#3dd68c",
+    "actions": [
+      {
+        "id": "block",
+        "name": "Block",
+        "description": "获取坐标中的 X、Y、Z 轴整数值。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "block (x|y|z) in {location}",
+        "example": "block x in location world 0 0 0",
+        "semantic": "获取方块坐标 {0} 于 {1}"
+      },
+      {
+        "id": "cancel",
+        "name": "Cancel",
+        "description": "作用于{任务}或{对话}开始时的脚本代理中，可取消行为。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "cancel",
+        "example": "cancel",
+        "semantic": "取消当前行为"
+      },
+      {
+        "id": "ceil",
+        "name": "Ceil",
+        "description": "向上取整",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "ceil {action}",
+        "example": "ceil 3.1",
+        "semantic": "向上取整 {0}"
+      },
+      {
+        "id": "close",
+        "name": "Close",
+        "description": "作用于{对话}的脚本代理中，可结束对话。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "close",
+        "example": "close",
+        "semantic": "关闭对话"
+      },
+      {
+        "id": "distance",
+        "name": "Distance",
+        "description": "判断两个坐标之间的距离，若两坐标位于不同世界则返回 -1。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "世界与坐标",
+          "逻辑与数学"
+        ],
+        "syntax": "distance {location} to {location}",
+        "example": "distance location world 0 0 0 to location world 10 10 10",
+        "semantic": "计算距离 {0} 到 {1}"
+      },
+      {
+        "id": "equipment_check",
+        "name": "Equipment Check",
+        "description": "检查玩家装备是否为特定物品，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。<br><br>可用位置：<br>{主手}：hand, mainhand<br>{副手}：offhand<br>{头盔}：head, helmet<br>{胸甲}：chest, chestplate<br>{护腿}：legs, leggings<br>{鞋子}：boots, feet",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory {equipment} is {token} [amount {int}]",
+        "example": "inventory helmet is \"minecraft:iron_helmet\"<br>inventory chestplate is \"minecraft:diamond_chestplate\" amount 1",
+        "semantic": "检查装备 {0} 是否为 {1} 数量 {2}"
+      },
+      {
+        "id": "floor",
+        "name": "Floor",
+        "description": "向下取整",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "floor {action}",
+        "example": "floor 3.9",
+        "semantic": "向下取整 {0}"
+      },
+      {
+        "id": "goto",
+        "name": "Goto",
+        "description": "跳转到特定对话结构中。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "goto {token}",
+        "example": "goto conversation_0",
+        "semantic": "跳转到 {0}"
+      },
+      {
+        "id": "inventory_count",
+        "name": "Inventory Count",
+        "description": "获取玩家背包中的特定物品数量，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory (count|amount) {token}",
+        "example": "inventory count \"minecraft:stone\"",
+        "semantic": "统计背包物品 {0} 数量"
+      },
+      {
+        "id": "inventory_check",
+        "name": "Inventory Check",
+        "description": "检查玩家背包中是否含有特定物品，使用 {Chemdah} 物品表达式。 表达式帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory check {token} [amount {int}]",
+        "example": "inventory check \"minecraft:stone\" inventory check \"minecraft:diamond\" amount 1",
+        "semantic": "检查背包物品 {0} 数量 {1}"
+      },
+      {
+        "id": "inventory_close",
+        "name": "Inventory Close",
+        "description": "关闭玩家当前页面。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory close",
+        "example": "inventory close",
+        "semantic": "关闭玩家背包界面"
+      },
+      {
+        "id": "inventory_slot_check",
+        "name": "Inv Slot Check",
+        "description": "检查玩家背包中某个位置是否为特定物品，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory slot {int} is {token} [amount {int}]",
+        "example": "inventory slot 0 is \"minecraft:stone\"<br>inventory slot 1 is \"minecraft:diamond\" amount 1",
+        "semantic": "检查背包槽位 {0} 是否为 {1} 数量 {2}"
+      },
+      {
+        "id": "inventory_take",
+        "name": "Inventory Take",
+        "description": "检查玩家背包中是否含有特定物品并移除，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "inventory (remove|take) {token} [amount {int}]",
+        "example": "inventory take \"minecraft:stone\"<br>inventory take \"minecraft:diamond\" amount 1",
+        "semantic": "移除背包物品 {0} 数量 {1}"
+      },
+      {
+        "id": "location_x,y,z",
+        "name": "Location X,Y,Z",
+        "description": "获取坐标中的 X、Y、Z、Yaw、Pitch 或修改。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "(x|y|z|yaw|pitch) in {location} [(to|add) {action}]",
+        "example": "x in location world 0 0 0<br>x in location world 0 0 0 to 10",
+        "semantic": "获取坐标 {0} 于 {1} {2} {3}"
+      },
+      {
+        "id": "max",
+        "name": "Max",
+        "description": "取两值之最大",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "max {action} {action}",
+        "example": "max 1 10",
+        "semantic": "最大值 {0} {1}"
+      },
+      {
+        "id": "min",
+        "name": "Min",
+        "description": "取两值之最小",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "min {action} {action}",
+        "example": "max 1 10",
+        "semantic": "最小值 {0} {1}"
+      },
+      {
+        "id": "mmocore_attribute_point",
+        "name": "MMOCore Attribute Point",
+        "description": "获取玩家的 {MMOCore} 属性点数。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore attribute point",
+        "example": "mmocore attribute point",
+        "semantic": "获取MMOCore属性点"
+      },
+      {
+        "id": "mmocore_class",
+        "name": "MMOCore Class",
+        "description": "获取玩家的 {MMOCore} 职业相关数据。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore class (id|name|point)",
+        "example": "mmocore class id<br>mmocore class name",
+        "semantic": "获取MMOCore职业 {0}"
+      },
+      {
+        "id": "mmocore_level___exp",
+        "name": "MMOCore Level & Exp",
+        "description": "获取玩家的 {MMOCore} 等级或经验值。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore (level|experience|exp)",
+        "example": "mmocore level<br>mmocore experience",
+        "semantic": "获取MMOCore {0}"
+      },
+      {
+        "id": "mmocore_mana",
+        "name": "MMOCore Mana",
+        "description": "获取玩家的 {MMOCore} 法力值。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore mana",
+        "example": "mmocore mana",
+        "semantic": "获取MMOCore法力值"
+      },
+      {
+        "id": "mmocore_skill_point",
+        "name": "MMOCore Skill Point",
+        "description": "获取玩家的 {MMOCore} 技能点数。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore skill point",
+        "example": "{mmocore skill point}",
+        "semantic": "获取MMOCore技能点"
+      },
+      {
+        "id": "mmocore_stamina",
+        "name": "MMOCore Stamina",
+        "description": "获取玩家的 {MMOCore} 耐力值。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore stamina",
+        "example": "{mmocore stamina}",
+        "semantic": "获取MMOCore耐力值"
+      },
+      {
+        "id": "mythicmobs_cast",
+        "name": "MythicMobs Cast",
+        "description": "使玩家执行 {MythicMobs} 怪物技能。<br><br>可用的 {Trigger} 类型：<br>DEFAULT, API, ATTACK, BOW_HIT, BLOCK, BLOCK_PLACE, BLOCK_BREAK, <br>COMBAT, CONSUME, CROUCH, UNCROUCH, DAMAGED, DROPCOMBAT, DEATH, <br>DESPAWNED, ENTERCOMBAT, EXPLODE, INTERACT, KILL, KILLPLAYER, <br>PLAYERDEATH, SHOOT, SIGNAL, SPAWN, SPLASH_POTION, SWING, TARGETCHANGE, <br>TARGETED, TELEPORT, TIMER, USE, RIGHTCLICK, READY, CAST, FISH, <br>FISH_BITE, FISH_CATCH_FISH, FISH_CATCH_ENTITY, FISH_GROUND, FISH_REEL, <br>FISH_FAIL, TAME, TAME_FAIL, TRIDENT_THROW, TRIDENT_HIT, CUSTOM",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "(mythicmobs|mm) cast {token} [with {trigger}]",
+        "example": "{mm cast} skill<br>{mm cast} skill {with} api",
+        "semantic": "施放MythicMobs技能 {0} 触发器 {1}"
+      },
+      {
+        "id": "origin",
+        "name": "Origin",
+        "description": "作用于{对话}的脚本代理中，可获取对话 NPC 的头顶坐标。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "世界与坐标"
+        ],
+        "syntax": "origin",
+        "example": "{origin}",
+        "semantic": "获取NPC原点坐标"
+      },
+      {
+        "id": "particle_normal",
+        "name": "Particle Normal",
+        "description": "在指定的坐标下播放粒子效果，若在结尾使用 {@self} 则只播放给自己。<br><br>{粒子表达式写法详见：}<br>https://wiki.ptms.ink/index.php?title=Chemdah_通用粒子表达式",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "视觉特效"
+        ],
+        "syntax": "particle normal {token} (at|on) {location} [@self]",
+        "example": "{particle normal} \"flame 0 0 0 -count 10\" {at} location world 0 0 0<br>{particle normal} \"flame 0 0 0 -count 10 -speed 0.1\" {at} location world 0 0 0 {@self}",
+        "semantic": "播放普通粒子 {0} {1} {2} 仅自身 {3}"
+      },
+      {
+        "id": "position",
+        "name": "Position",
+        "description": "检测玩家是否在特定区域内，使用 {Chemdah} 坐标表达式。<br>表达式帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "世界与坐标",
+          "实体控制"
+        ],
+        "syntax": "position in[side] {token}",
+        "example": "{position inside} \"world 0 0 0 ~ 10\"<br>{position inside} \"world 0 0 0 > 10 10 10\"<br>",
+        "semantic": "判断位置是否在区域 {0}"
+      },
+      {
+        "id": "profile_data",
+        "name": "Profile Data",
+        "description": "修改或获取玩家的变量。<br>玩家变量帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "实体控制"
+        ],
+        "syntaxs": {
+          "Data": {
+            "syntax": "profile data {action} [(add|to) {action}] [default {action}]",
+            "example": "{profile data} key",
+            "semantic": "玩家档案数据 {0} {1} {2} 默认值 {3}"
+          },
+          "Keys": {
+            "syntax": "profile data keys",
+            "example": "{profile data} key {default} 10",
+            "semantic": "玩家档案数据 {0} {1} {2} 默认值 {3}"
+          }
+        }
+      },
+      {
+        "id": "profile_level",
+        "name": "Profile Level",
+        "description": "修改或获取玩家{自定义等级}中的等级或经验。<br>自定义等级帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "profile level {action} (level|exp|exp-max) [(add|to) {action}]",
+        "example": "{profile level} default {level}<br>{profile level} default {level} to 100<br>{profile level} default {exp}<br>{profile level} default {exp} add 100",
+        "semantic": "玩家档案等级 {0} {1} {2} {3}"
+      },
+      {
+        "id": "quest_group_check",
+        "name": "Quest Group Check",
+        "description": "检测玩家是否接受或已完成任务组",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest-group (accepted|completed) {action}",
+        "example": "{quest-group accepted} example-group",
+        "semantic": "检测任务组状态 {0} {1}"
+      },
+      {
+        "id": "quest_check",
+        "name": "Quest Check",
+        "description": "检测玩家正在进行的或尚未接受的任务（已选择的）。<br><br>可用行为：<br>accept-check（允许接受）accepted（是否已经接受）completed（是否已经完成）",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest {check}",
+        "example": "{quest accepted}<br>{quest completed}",
+        "semantic": "检测任务 {0}"
+      },
+      {
+        "id": "quest_control",
+        "name": "Quest Control",
+        "description": "控制玩家正在进行的或尚未接受的任务 (已选择的）。<br><br>可用行为：<br>accept（接受任务）complete（完成任务）fail（放弃任务）restart（重置任务）stop（结束任务）",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest {control}",
+        "example": "{quest accept}<br>{quest complete}",
+        "semantic": "控制任务 {0}"
+      },
+      {
+        "id": "quest_progress",
+        "name": "Quest Progress",
+        "description": "获取玩家当前任务（已选择的）或任务（已选择的）中的某项条目的进度信息。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest progress (value|target|percent|percent100) [task {action}]",
+        "example": "{quest progress value}<br>{quest progress target task} 0",
+        "semantic": "获取任务进度 {0} 任务 {1}"
+      },
+      {
+        "id": "quest_select",
+        "name": "Quest Select",
+        "description": "选择任何一个服务器中存在的有效任务以供后续操作。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest select {action}",
+        "example": "{quest select} 10_diamond_ore",
+        "semantic": "选择任务 {0}"
+      },
+      {
+        "id": "quest_data",
+        "name": "Quest Data",
+        "description": "修改或获取玩家当前任务（已选择的）中的变量。<br>任务变量帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统",
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Data": {
+            "syntax": "quest data {action} [(add|to) {action}] [default {action}]",
+            "example": "{quest data} key",
+            "semantic": "任务数据 {0} {1} {2} 默认值 {3}"
+          },
+          "Keys": {
+            "syntax": "quest data keys",
+            "example": "{quest data} key {default} 10",
+            "semantic": "任务数据 {0} {1} {2} 默认值 {3}"
+          }
+        }
+      },
+      {
+        "id": "quest_stats",
+        "name": "Quest Stats",
+        "description": "隐藏或刷新任务（已选择的）或任务（已选择的）中某项条目的进度显示。<br>使用一个单独的 {} 代表所有条目。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest stats (hide|refresh) [task {action}]",
+        "example": "{quest stats} {hide}<br>{quest stats} {refresh} {task} {}<br>{quest stats} {refresh} {task} 0",
+        "semantic": "任务统计 {0} 任务 {1}"
+      },
+      {
+        "id": "quest_tasks",
+        "name": "Quest Tasks",
+        "description": "获取某个任务 (已选择) 中的所有条目序号。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest tasks",
+        "example": "{quest tasks}",
+        "semantic": "获取任务所有条目"
+      },
+      {
+        "id": "quest_this",
+        "name": "Quest This",
+        "description": "在 {Chemdah} 任务脚本代理中，返回当前任务或条目序号。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "this [task]",
+        "example": "{this}<br>{this task}",
+        "semantic": "获取当前任务/条目"
+      },
+      {
+        "id": "quest_track",
+        "name": "Quest Track",
+        "description": "使玩家追踪任务（已选择的）",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest track",
+        "example": "{quest track}",
+        "semantic": "追踪当前任务"
+      },
+      {
+        "id": "quest_tracking",
+        "name": "Quest Tracking",
+        "description": "获取玩家正在追踪的任务名称",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quest tracking",
+        "example": "{quest tracking}",
+        "semantic": "获取正在追踪的任务"
+      },
+      {
+        "id": "quests",
+        "name": "Quests",
+        "description": "获取玩家当前正在进行的所有任务，使用 {self} 则忽略共享（多人）任务。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "quests [self]",
+        "example": "{quests}<br>{quests} self",
+        "semantic": "获取进行中的任务列表"
+      },
+      {
+        "id": "schematic",
+        "name": "Schematic",
+        "description": "在 {#Location} 构建的坐标出生成特定 {WorldEdit} 建筑模板。或旋转、忽略空气。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "schem[atic] {action} (at|on) {location} [rotation {int}] [ignore air]",
+        "example": "set loc to location world 0 0 0<br><br>{schematic} ship {at} &loc<br>{schematic} ship {at} &loc {ignore air}<br>{schematic} ship {at} &loc {rotation} random array [ 0 90 180 270 ] {ignore air}",
+        "semantic": "生成结构 {0} {1} {2} 旋转 {3} 忽略空气 {4}"
+      },
+      {
+        "id": "script",
+        "name": "Script",
+        "description": "运行或停止某个脚本文件。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "script (run|stop) {token}",
+        "example": "{script run} def.ks<br>{script stop} def.ks<br>",
+        "semantic": "脚本 {0} {1}"
+      },
+      {
+        "id": "skillapi_attribute_point",
+        "name": "SkillAPI Attribute",
+        "description": "获取玩家的 {SkillAPI} 属性或属性点数。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi attribute (point|{token})",
+        "example": "{skillapi attribute} foo<br>{skillapi attribute} bar<br>{skillapi attribute point}",
+        "semantic": "获取SkillAPI属性 {0}"
+      },
+      {
+        "id": "skillapi_cast",
+        "name": "SkillAPI Cast",
+        "description": "使玩家执行 {SkillAPI} 技能。<br>",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi cast {token}",
+        "example": "{skillapi cast} skill<br>",
+        "semantic": "施放SkillAPI技能 {0}"
+      },
+      {
+        "id": "skillapi_class",
+        "name": "SkillAPI Class",
+        "description": "获取玩家的 {SkillAPI} 职业相关数据。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi class (main|size)",
+        "example": "{skillapi class} main<br>{skillapi class} size",
+        "semantic": "获取SkillAPI职业 {0}"
+      },
+      {
+        "id": "skillapi_exp",
+        "name": "SkillAPI Exp",
+        "description": "获取玩家的 {SkillAPI} 当前经验值或升级所需经验。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi exp (total|required)",
+        "example": "{skillapi experience} total<br>{skillapi experience} required",
+        "semantic": "获取SkillAPI经验 {0}"
+      },
+      {
+        "id": "skillapi_level",
+        "name": "SkillAPI Level",
+        "description": "获取玩家的 {SkillAPI} 等级或是否满级。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "mmocore level [maxed]",
+        "example": "{skillapi level}<br>{skillapi level maxed}",
+        "semantic": "获取SkillAPI等级"
+      },
+      {
+        "id": "skillapi_mana",
+        "name": "SkillAPI Mana",
+        "description": "获取玩家的 {SkillAPI} 法力值。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi mana",
+        "example": "{skillapi mana}",
+        "semantic": "获取SkillAPI法力值"
+      },
+      {
+        "id": "skillapi_skill_point",
+        "name": "SkillAPI Skill Point",
+        "description": "获取玩家的 {SkillAPI} 技能点数。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "skillapi skill point",
+        "example": "{skillapi skill point}",
+        "semantic": "获取SkillAPI技能点"
+      },
+      {
+        "id": "talk",
+        "name": "Talk",
+        "description": "作用于 {agent:begin} 时：<br>增加 NPC 即将发送的对话内容。<br><br>作用于 {agent:refuse}, {agent:end}, {then} 时：<br>使 NPC 立即发送特定内容，常用于对话的收尾。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "talk {token}",
+        "example": "{talk} \"You win! number is \\{\\{ &number \\}\\}\"<br>{talk} \"All right, see you later.\"",
+        "semantic": "NPC对话 {0}"
+      },
+      {
+        "id": "trigger",
+        "name": "Trigger",
+        "description": "唤起玩家的 {Trigger} 任务。<br>关于该任务类型的帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "public",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "trigger {token}",
+        "example": "{trigger} 10_diamond_ore",
+        "semantic": "触发任务 {0}"
+      },
+      {
+        "id": "ui",
+        "name": "UI",
+        "description": "仅作用于 {UI} 模块的配置文件中，用于构建任务的完成进度。<br>关于 UI 模块的帮助详见 {Chemdah} 文档。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "界面交互",
+          "游戏系统"
+        ],
+        "syntax": "ui (percent|bar {token}) {token list} [exclude {token list}]",
+        "example": "{ui bar} def {[} L3 {]}<br>{ui percent} {[} L1 L2 L3 {] exclude [} S1 {]}",
+        "semantic": "界面进度 {0} {1} 排除 {2}"
+      },
+      {
+        "id": "variable",
+        "name": "Variable",
+        "description": "修改或获取全局变量。<br>全局帮助详见 {Chemdah} 文档。<br><br>在获取语法后使用 {default} 语句可在数据不存在时返回默认值，在追加（add）语句后使用 {default} 语句可在数据不存在时以该数据为基础进行追加（add）行为。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Variable": {
+            "syntax": "var {action} [(add|to) {action}] [default {action}]",
+            "example": "{var} key",
+            "semantic": "全局变量 {0} {1} {2} 默认值 {3}"
+          },
+          "Keys": {
+            "syntax": "var keys",
+            "example": "{var} key {default} 10",
+            "semantic": "全局变量 {0} {1} {2} 默认值 {3}"
+          }
+        }
+      },
+      {
+        "id": "wizard",
+        "name": "Wizard",
+        "description": "唤起或停止 Wizard 引导",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "wizard (to {action}|cancel)",
+        "example": "{wizard} to \"example_0\"<br>{wizard} cancel",
+        "semantic": "向导 {0}"
+      },
+      {
+        "id": "workflow_fetch",
+        "name": "Workflows Fetch",
+        "description": "定义离线补偿，当玩家在 {fetch reset} 语句执行前离开游戏时，<br>那么玩家下次进入游戏后将执行 {fetch mark} 中的语句。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "脚本控制",
+          "实体控制"
+        ],
+        "syntax": "fetch (mark {token} {action}|reset {token})",
+        "example": "{fetch mark} label_1 {\\{} command inline \"give \\{\\{ sender \\}\\} diamond\" {\\}}<br>{fetch reset} label_1",
+        "semantic": "离线补偿 {0} {1}"
+      }
+    ]
+  },
+  {
+    "name": "Adyeshach",
+    "color": "#c645c8",
+    "actions": [
+      {
+        "id": "animation",
+        "name": "Animation",
+        "description": "让当前已选择的所有单位播放动作。<br><br>{已知的:}<br>SWING_MAIN_HAND, TAKE_DAMAGE, LEAVE_BED, SWING_OFFHAND<br>CRITICAL_EFFECT, MAGIC_CRITICAL_EFFECT",
+        "provider": "Adyeshach",
+        "type": "both",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "animation {token}",
+        "example": "animation swing_main_hand",
+        "semantic": "播放动画 {0}"
+      },
+      {
+        "id": "controller",
+        "name": "Controller",
+        "description": "对当前已选择的所有单位赋予控制器。或移除、清空。<br><br>{已知的:}<br>Move, Gravity, SmoothLook, LookAtPlayer, LookAtPlayerAlways<br>RandomLookGround, RandomStrollLand",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "controller (add|remove|reset) {token}",
+        "example": "controller add move<br>controller clear<br>controller remove gravity",
+        "semantic": "控制器 {0} {1}"
+      },
+      {
+        "id": "create",
+        "name": "Create",
+        "description": "在特定坐标创建单位。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "create {token} {token} at {action}",
+        "example": "create test villager at location world 0 0 0",
+        "semantic": "创建单位 {0} {1} 于 {2}"
+      },
+      {
+        "id": "delete",
+        "name": "Delete",
+        "description": "删除并销毁已选择的所有单位。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "delete",
+        "example": "delete",
+        "semantic": "删除并销毁单位"
+      },
+      {
+        "id": "destroy",
+        "name": "Destroy",
+        "description": "销毁当前已选择的所有单位。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "destroy",
+        "example": "destroy",
+        "semantic": "销毁单位"
+      },
+      {
+        "id": "look",
+        "name": "Look",
+        "description": "让当前已选择的所有单位看向某个坐标，并可选是否平滑视角移动。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "look [smooth] [x to {action}] [y to {action}] [z to {action}]",
+        "example": "look x to 0<br>look x to 0 y to 0 z to 0<br>look smooth x to 0",
+        "semantic": "单位看向 X {0} Y {1} Z {2} 平滑 {3}"
+      },
+      {
+        "id": "meta",
+        "name": "Meta",
+        "description": "对当前已选择的所有单位修改元数据。或重置。<br><br>{详见:}<br>https://wiki.ptms.ink/index.php?title=AdyeshachPremium:开始:附录:第二节",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Set": {
+            "syntax": "meta set {token} [to {token}]",
+            "example": "meta set entityPose to sleeping",
+            "semantic": "元数据设置 {0} 为 {1}"
+          },
+          "Reset": {
+            "syntax": "meta reset {token}",
+            "example": "meta reset entityPose",
+            "semantic": "元数据设置 {0} 为 {1}"
+          }
+        }
+      },
+      {
+        "id": "move",
+        "name": "Move",
+        "description": "让当前已选择的所有单位走向某个坐标，并可选是否为相对坐标。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "move [relative] [x to {action}] [y to {action}] [z to {action}]",
+        "example": "move x to 0<br>move x to 0 y to 0 z to 0<br>move relative x to 10",
+        "semantic": "单位移动到 X {0} Y {1} Z {2} 相对 {3}"
+      },
+      {
+        "id": "passenger",
+        "name": "Passenger",
+        "description": "对当前已选择的所有单位添加骑乘单位。或移除、清空。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "passenger (add|remove|reset) {token}",
+        "example": "passenger add test<br>passenger clear<br>passenger remove test",
+        "semantic": "骑乘单位 {0} {1}"
+      },
+      {
+        "id": "remove",
+        "name": "Remove",
+        "description": "删除当前已选择的所有单位。从管理器中移除，不再接受托管，但不会销毁实体。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "remove",
+        "example": "remove",
+        "semantic": "移除单位"
+      },
+      {
+        "id": "respawn",
+        "name": "Respawn",
+        "description": "重新生成当前已选择的所有单位。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "respawn",
+        "example": "respawn",
+        "semantic": "重生单位"
+      },
+      {
+        "id": "select",
+        "name": "Select",
+        "description": "将动作{返回值}作为单位 {ID} 或 {UUID} 进行选择。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "select {action} [by (id|uuid)]",
+        "example": "select test<br>select test by id",
+        "semantic": "选择单位 {0} 通过 {1}"
+      },
+      {
+        "id": "sleeping",
+        "name": "Sleeping",
+        "description": "让当前已选择的所有单位播放睡眠动画。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "sleeping",
+        "example": "sleeping",
+        "semantic": "播放睡眠动画"
+      },
+      {
+        "id": "still",
+        "name": "Still",
+        "description": "让当前已选择的所有单位停止移动，与 {#Move} 对立。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "still",
+        "example": "still",
+        "semantic": "停止移动"
+      },
+      {
+        "id": "freeze",
+        "name": "Freeze",
+        "description": "冻结或恢复当前已选择的所有单位的任何行为。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "freeze {boolean}",
+        "example": "freeze true<br>freeze false",
+        "semantic": "冻结单位 {0}"
+      },
+      {
+        "id": "tag",
+        "name": "Tag",
+        "description": "对当前已选择的所有单位修改标签。或移除、清空、判断是否持有。<br>使用 {persistent} 关键字以操作持久化标签。<br>但需要注意持久化标签需要 Adyeshach 至少在 1.4.21 版本以上。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "tag [persistent] (set|remove|reset|has) {token} [to {token}]",
+        "example": "tag set test to 1<br>tag remove test<br><br>tag persistent set p-test to 1<br>tag persistent remove p-test",
+        "semantic": "标签 {0} {1} 为 {2}"
+      },
+      {
+        "id": "teleport",
+        "name": "Teleport",
+        "description": "将当前已选择的所有单位传送至指定坐标，与 {#Create} 动作中的坐标写法相同。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "teleport {location}",
+        "example": "teleport location world 0 80 0",
+        "semantic": "传送单位到 {0}"
+      },
+      {
+        "id": "use",
+        "name": "Use",
+        "description": "使用特定的单位管理器。或临时的。<br><br>{已知的:}<br>public, private",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "系统配置"
+        ],
+        "syntax": "use {token} [temp[orary]]",
+        "example": "use public<br>use public temp<br>use private temporary",
+        "semantic": "使用单位管理器 {0} 临时 {1}"
+      },
+      {
+        "id": "viewer",
+        "name": "Viewer",
+        "description": "将动作{返回值}作为在线玩家添加到当前已选择的所有单位的观察者列表。或移除、清空。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "视觉特效"
+        ],
+        "syntax": "viewer (add|remove|reset) {action}",
+        "example": "viewer add bukkitObj<br>viewer clear<br>viewer remove Arasple",
+        "semantic": "观察者 {0} {1}"
+      },
+      {
+        "id": "modelengine_animation_add",
+        "name": "ModelEngine Animation Add",
+        "description": "播放 ModelEngine 动画，单位必须绑定模型。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "模型处理",
+          "实体控制"
+        ],
+        "syntax": "modelengine animation add {token} {token} {token} [async]",
+        "example": "modelengine animation add demo walk 25 async",
+        "semantic": "ModelEngine动画增加 {0} {1} {2} 异步 {3}"
+      },
+      {
+        "id": "modelengine_animation_remove",
+        "name": "ModelEngine Animation Remove",
+        "description": "移除 ModelEngine 动画，单位必须绑定模型。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "模型处理",
+          "实体控制"
+        ],
+        "syntax": "modelengine animation remove {token} [ingorelerp {int}]",
+        "example": "modelengine animation remove test<br>modelengine animation remove test ingorelerp true",
+        "semantic": "ModelEngine动画移除 {0} 忽略插值 {1}"
+      },
+      {
+        "id": "germengine_animation_add",
+        "name": "GermEngine Animation Add",
+        "description": "播放 GermEngine 动画，单位必须绑定模型。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "模型处理",
+          "实体控制"
+        ],
+        "syntax": "germengine animation send {token}",
+        "example": "germengine animation send test",
+        "semantic": "GermEngine动画发送 {0}"
+      },
+      {
+        "id": "germengine_animation_remove",
+        "name": "GermEngine Animation Remove",
+        "description": "移除 GermEngine 动画，单位必须绑定模型。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "模型处理",
+          "实体控制"
+        ],
+        "syntax": "germengine animation remove {token}",
+        "example": "germengine animation stop test",
+        "semantic": "GermEngine动画移除 {0}"
+      },
+      {
+        "id": "position",
+        "name": "Position",
+        "description": "获取当前已选择的单位的坐标，如果选择了多个单位则返回一个列表。",
+        "provider": "Adyeshach",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "npc position",
+        "example": "npc position<br>element 0 in npc position",
+        "semantic": "获取NPC位置"
+      }
+    ]
+  },
+  {
+    "name": "Aiyatsbus",
+    "color": "#FF6B6B",
+    "actions": [
+      {
+        "id": "arr-clear",
+        "name": "Array Clear",
+        "description": "清空列表中的所有元素",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "arr-clear &array",
+        "example": "arr-clear &my_list",
+        "semantic": "清空数组 {0}"
+      },
+      {
+        "id": "map-size",
+        "name": "Map Size",
+        "description": "获取 Map 的元素数量，如果不是 Map，则返回字符串长度。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntaxs": {
+          "Map-size": {
+            "syntax": "map-size &map",
+            "example": "map-size &my_map",
+            "semantic": "获取Map大小 {0}"
+          },
+          "Map-length": {
+            "syntax": "map-length &map",
+            "example": "map-length &my_map",
+            "semantic": "获取Map大小 {0}"
+          }
+        }
+      },
+      {
+        "id": "map-mutable",
+        "name": "Map Mutable",
+        "description": "转换为可变映射",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-mutable &map",
+        "example": "map-mutable &my_map",
+        "semantic": "转换为可变Map {0}"
+      },
+      {
+        "id": "map-shuffle",
+        "name": "Map Shuffle",
+        "description": "打乱映射",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-shuffle &map",
+        "example": "map-shuffle &my_map",
+        "semantic": "打乱Map {0}"
+      },
+      {
+        "id": "map-reverse",
+        "name": "Map Reverse",
+        "description": "反转映射",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-reverse &map",
+        "example": "map-reverse &my_map",
+        "semantic": "反转Map {0}"
+      },
+      {
+        "id": "map",
+        "name": "Map",
+        "description": "构建映射",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map &array",
+        "example": "map &[key1, value1, key2, value2]",
+        "semantic": "构建Map {0}"
+      },
+      {
+        "id": "map-get",
+        "name": "Map Get",
+        "description": "获取映射中的元素",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-get &key in &map",
+        "example": "map-get \"key1\" in &my_map",
+        "semantic": "获取Map键 {0} 的值于 {1}"
+      },
+      {
+        "id": "map-put",
+        "name": "Map Put",
+        "description": "添加键值对到映射末尾",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-put &key with &value to &map",
+        "example": "map-put \"new_key\" with \"new_value\" to &my_map",
+        "semantic": "向Map添加键值对 {0} 值 {1} 到 {2}"
+      },
+      {
+        "id": "map-remove",
+        "name": "Map Remove",
+        "description": "移除映射中的键值对",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-remove &key in &map",
+        "example": "map-remove \"key1\" in &my_map",
+        "semantic": "从Map移除键 {0} 于 {1}"
+      },
+      {
+        "id": "map-keys",
+        "name": "Map Keys",
+        "description": "获取映射中的键列表",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "map-keys &map",
+        "example": "map-keys &my_map",
+        "semantic": "获取Map所有键 {0}"
+      },
+      {
+        "id": "max",
+        "name": "Max",
+        "description": "取两值之最大",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数学运算"
+        ],
+        "syntax": "max {action} {action}",
+        "example": "max 10 20",
+        "semantic": "最大值 {0} {1}"
+      },
+      {
+        "id": "min",
+        "name": "Min",
+        "description": "取两值之最小",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数学运算"
+        ],
+        "syntax": "min {action} {action}",
+        "example": "min 10 20",
+        "semantic": "最小值 {0} {1}"
+      },
+      {
+        "id": "ceil",
+        "name": "Ceil",
+        "description": "向上取整",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数学运算"
+        ],
+        "syntax": "ceil {action}",
+        "example": "ceil 3.7",
+        "semantic": "向上取整 {0}"
+      },
+      {
+        "id": "floor",
+        "name": "Floor",
+        "description": "向下取整",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数学运算"
+        ],
+        "syntax": "floor {action}",
+        "example": "floor 3.7",
+        "semantic": "向下取整 {0}"
+      },
+      {
+        "id": "a-wait",
+        "name": "Wait",
+        "description": "在脚本中等待指定的时间（秒）。如果玩家在等待过程中离线则终止脚本。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "脚本控制",
+          "游戏系统"
+        ],
+        "syntaxs": {
+          "A-wait": {
+            "syntax": "a-wait &seconds",
+            "example": "a-wait 5",
+            "semantic": "等待 {0} 秒"
+          },
+          "A-delay": {
+            "syntax": "a-delay &seconds",
+            "example": "a-delay 2.5",
+            "semantic": "等待 {0} 秒"
+          },
+          "A-sleep": {
+            "syntax": "a-sleep &seconds",
+            "example": "a-sleep 1",
+            "semantic": "等待 {0} 秒"
+          }
+        }
+      },
+      {
+        "id": "instance-of",
+        "name": "Instance Of",
+        "description": "检查对象是否为指定类型的实例。如果类型不存在则返回 false。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数据处理"
+        ],
+        "syntax": "instance-of &object is &class_name",
+        "example": "instance-of &entity is org.bukkit.entity.Player",
+        "semantic": "检查对象 {0} 是否为类型 {1}"
+      },
+      {
+        "id": "cast",
+        "name": "Cast",
+        "description": "将对象转换为指定类型。如果转换失败则返回原对象。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "逻辑与数学",
+          "数据处理"
+        ],
+        "syntax": "cast &object to &class_name",
+        "example": "cast &entity to org.bukkit.entity.Player",
+        "semantic": "类型转换 {0} 为 {1}"
+      },
+      {
+        "id": "get-block-drops",
+        "name": "Get Block Drops",
+        "description": "获取指定方块的掉落物列表。可选择指定挖掘工具和挖掘实体。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "世界与坐标"
+        ],
+        "syntax": "get-block-drops &block [item &tool] [entity &miner]",
+        "example": "get-block-drops &block<br>get-block-drops &block item &diamond_pickaxe<br>get-block-drops &block item &diamond_pickaxe entity &player",
+        "semantic": "获取方块掉落 {0} 工具 {1} 挖掘实体 {2}"
+      },
+      {
+        "id": "a-cd",
+        "name": "Cool Down",
+        "description": "检查或添加附魔冷却时间。<br>check: 检查冷却时间，可选择是否通报给玩家和是否以动作栏形式发送<br>add: 添加冷却时间",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "实体控制"
+        ],
+        "syntaxs": {
+          "Check": {
+            "syntax": "a-cd check &enchant &player &seconds &notify [action-bar &action_bar]",
+            "example": "a-cd check &enchant &player 5 true",
+            "semantic": "附魔冷却 {0} {1} {2} {3} 动作栏 {4}"
+          },
+          "Add": {
+            "syntax": "a-cd add &enchant &player",
+            "example": "a-cd check &enchant &player 5 true action-bar true",
+            "semantic": "附魔冷却 {0} {1} {2} {3} 动作栏 {4}"
+          }
+        }
+      },
+      {
+        "id": "spawn-entity",
+        "name": "Spawn Entity",
+        "description": "在指定位置生成实体",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "spawn-entity &entity_type at &location",
+        "example": "spawn-entity zombie at &location",
+        "semantic": "生成实体 {0} 于 {1}"
+      },
+      {
+        "id": "real-damage",
+        "name": "Real Damage",
+        "description": "对实体造成真实伤害",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "real-damage &entity with &damage [by &attacker]",
+        "example": "real-damage &player with 10<br>real-damage &player with 10 by &zombie",
+        "semantic": "造成真实伤害 {0} 数值 {1} 来源 {2}"
+      },
+      {
+        "id": "entity-name",
+        "name": "Entity Name",
+        "description": "获取实体的名称。如果是玩家则返回玩家名，否则返回自定义名称或本地化名称。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "文本处理"
+        ],
+        "syntax": "entity-name &entity",
+        "example": "entity-name &player",
+        "semantic": "获取实体名称 {0}"
+      },
+      {
+        "id": "remove-entity",
+        "name": "Remove Entity",
+        "description": "移除指定实体",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "remove-entity &entity",
+        "example": "remove-entity &zombie",
+        "semantic": "移除实体 {0}"
+      },
+      {
+        "id": "add-potion-effect",
+        "name": "Add Potion Effect",
+        "description": "为实体添加药水效果",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "药水效果"
+        ],
+        "syntax": "add-potion-effect &effect_type on &entity duration &duration amplifier &amplifier [ambient &ambient] [particles &particles] [icon &icon]",
+        "example": "add-potion-effect speed on &player duration 60 amplifier 1",
+        "semantic": "添加药水效果 {0} 于 {1} 时长 {2} 等级 {3} 环境 {4} 粒子 {5} 图标 {6}"
+      },
+      {
+        "id": "near-by-entities",
+        "name": "Near By Entities",
+        "description": "获取实体附近的实体列表",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "near-by-entities &entity in &radius_x &radius_y &radius_z",
+        "example": "near-by-entities &player in 10 5 10",
+        "semantic": "获取附近实体 {0} 半径 {1} {2} {3}"
+      },
+      {
+        "id": "a-vec-add",
+        "name": "Vector Add",
+        "description": "为实体添加向量。可选择安全模式和击退检查。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "a-vec-add &vector on &entity [safety &safety] [checkKnockback &check]",
+        "example": "a-vec-add &vector on &player safety true",
+        "semantic": "添加向量 {0} 于 {1} 安全模式 {2} 击退检查 {3}"
+      },
+      {
+        "id": "entity-is-behind",
+        "name": "Entity Is Behind",
+        "description": "检查一个实体是否在另一个实体后方",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "逻辑与数学"
+        ],
+        "syntax": "entity-is-behind &entity1 &entity2",
+        "example": "entity-is-behind &player &zombie",
+        "semantic": "检查实体 {0} 是否在 {1} 后方"
+      },
+      {
+        "id": "launch-arrow",
+        "name": "Launch Arrow",
+        "description": "发射箭矢",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "launch-arrow &source [with &vector]",
+        "example": "launch-arrow &player<br>{launch-arrow} &player with &vector",
+        "semantic": "发射箭矢 {0} 向量 {1}"
+      },
+      {
+        "id": "equip-set-item",
+        "name": "Equip Set Item",
+        "description": "设置实体的装备物品",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "equip-set-item &item in &slot to &entity",
+        "example": "equip-set-item &diamond_sword in hand to &player",
+        "semantic": "设置装备 {0} 于槽位 {1} 给 {2}"
+      },
+      {
+        "id": "equip-get-item",
+        "name": "Equip Get Item",
+        "description": "获取实体的装备物品",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "实体控制"
+        ],
+        "syntax": "equip-get-item &slot from &entity",
+        "example": "equip-get-item hand from &player",
+        "semantic": "获取装备槽位 {0} 从 {1}"
+      },
+      {
+        "id": "build-firework",
+        "name": "Build Firework",
+        "description": "在指定位置生成烟花。可指定类型（BALL, BALL_LARGE, BURST, CREEPER, STAR）、威力、闪烁、尾迹、主颜色和淡出颜色。颜色支持中英文常见名，可为单色或列表。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "视觉特效",
+          "世界与坐标"
+        ],
+        "syntax": "build-firework &location type &type [power &power] [flicker &flicker] [trail &trail] [main-colors &colors] [fade-colors &colors]",
+        "example": "build-firework world 0 80 0 type BALL_LARGE power 2 flicker true trail true main-colors &[red, blue] fade-colors &[yellow, white]",
+        "semantic": "生成烟花 {0} 类型 {1} 威力 {2} 闪烁 {3} 尾迹 {4} 主色 {5} 淡出色 {6}"
+      },
+      {
+        "id": "detonate-firework",
+        "name": "Detonate Firework",
+        "description": "立即引爆指定烟花实体。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "视觉特效"
+        ],
+        "syntax": "detonate-firework &firework",
+        "example": "detonate-firework &firework",
+        "semantic": "引爆烟花 {0}"
+      },
+      {
+        "id": "send-lang",
+        "name": "Send Lang",
+        "description": "向实体发送多语言消息，可附带参数数组。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "消息显示",
+          "实体控制"
+        ],
+        "syntax": "send-lang &lang_key to &entity [with &args]",
+        "example": "send-lang enchant-impact-damaged to &event[entity]<br>send-lang enchant-impact-damaged to &event[entity] with &[entity-name &event[attacker]]",
+        "semantic": "发送多语言消息 {0} 给 {1} 参数 {2}"
+      },
+      {
+        "id": "mark",
+        "name": "Mark",
+        "description": "为对象添加元数据标记。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "mark &key on &object",
+        "example": "mark my_tag on &entity",
+        "semantic": "添加标记 {0} 于 {1}"
+      },
+      {
+        "id": "unmark",
+        "name": "Unmark",
+        "description": "移除对象的元数据标记。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "unmark &key on &object",
+        "example": "unmark my_tag on &entity",
+        "semantic": "移除标记 {0} 于 {1}"
+      },
+      {
+        "id": "has-mark",
+        "name": "Has Mark",
+        "description": "检查对象是否有指定元数据标记。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Has-mark": {
+            "syntax": "has-mark &key on &object",
+            "example": "has-mark my_tag on &entity",
+            "semantic": "检查标记 {0} 于 {1}"
+          },
+          "HasMark": {
+            "syntax": "hasMark &key on &object",
+            "example": "hasMark my_tag on &entity",
+            "semantic": "检查标记 {0} 于 {1}"
+          }
+        }
+      },
+      {
+        "id": "set-metadata",
+        "name": "Set Metadata",
+        "description": "为对象设置元数据。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Set-metadata": {
+            "syntax": "set-metadata &key to &value on &object",
+            "example": "set-metadata my_key to my_value on &entity",
+            "semantic": "设置元数据 {0} 为 {1} 于 {2}"
+          },
+          "SetMetadata": {
+            "syntax": "setMetadata &key to &value on &object",
+            "example": "set-metadata my_key to my_value on &entity",
+            "semantic": "设置元数据 {0} 为 {1} 于 {2}"
+          },
+          "Set-meta": {
+            "syntax": "set-meta &key to &value on &object",
+            "example": "set-metadata my_key to my_value on &entity",
+            "semantic": "设置元数据 {0} 为 {1} 于 {2}"
+          }
+        }
+      },
+      {
+        "id": "remove-metadata",
+        "name": "Remove Metadata",
+        "description": "移除对象的元数据。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Remove-metadata": {
+            "syntax": "remove-metadata &key on &object",
+            "example": "remove-metadata my_key on &entity",
+            "semantic": "移除元数据 {0} 于 {1}"
+          },
+          "RemoveMetadata": {
+            "syntax": "removeMetadata &key on &object",
+            "example": "remove-metadata my_key on &entity",
+            "semantic": "移除元数据 {0} 于 {1}"
+          },
+          "Remove-meta": {
+            "syntax": "remove-meta &key on &object",
+            "example": "remove-metadata my_key on &entity",
+            "semantic": "移除元数据 {0} 于 {1}"
+          }
+        }
+      },
+      {
+        "id": "has-metadata",
+        "name": "Has Metadata",
+        "description": "检查对象是否有指定元数据。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Has-metadata": {
+            "syntax": "has-metadata &key on &object",
+            "example": "has-metadata my_key on &entity",
+            "semantic": "检查元数据 {0} 于 {1}"
+          },
+          "HasMetadata": {
+            "syntax": "hasMetadata &key on &object",
+            "example": "has-metadata my_key on &entity",
+            "semantic": "检查元数据 {0} 于 {1}"
+          },
+          "Has-meta": {
+            "syntax": "has-meta &key on &object",
+            "example": "has-metadata my_key on &entity",
+            "semantic": "检查元数据 {0} 于 {1}"
+          }
+        }
+      },
+      {
+        "id": "get-metadata",
+        "name": "Get Metadata",
+        "description": "获取对象的元数据，指定索引位置。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理"
+        ],
+        "syntaxs": {
+          "Get-metadata": {
+            "syntax": "get-metadata &key on &object by &index",
+            "example": "get-metadata my_key on &entity by 0",
+            "semantic": "获取元数据 {0} 于 {1} 索引 {2}"
+          },
+          "GetMetadata": {
+            "syntax": "getMetadata &key on &object by &index",
+            "example": "get-metadata my_key on &entity by 0",
+            "semantic": "获取元数据 {0} 于 {1} 索引 {2}"
+          },
+          "Get-meta": {
+            "syntax": "get-meta &key on &object by &index",
+            "example": "get-metadata my_key on &entity by 0",
+            "semantic": "获取元数据 {0} 于 {1} 索引 {2}"
+          }
+        }
+      },
+      {
+        "id": "give-exp",
+        "name": "Give Exp",
+        "description": "给玩家经验值。可选择是否应用经验修补。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "give-exp &amount to &player [mending &mending]",
+        "example": "give-exp 100 to &player<br>give-exp 100 to &player mending true",
+        "semantic": "给予经验 {0} 给 {1} 经验修补 {2}"
+      },
+      {
+        "id": "a-money",
+        "name": "Money",
+        "description": "获取玩家的经济余额。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "经济",
+          "实体控制"
+        ],
+        "syntaxs": {
+          "A-money": {
+            "syntax": "a-money &player",
+            "example": "a-money &player",
+            "semantic": "获取玩家金钱 {0}"
+          },
+          "Money": {
+            "syntax": "money &player",
+            "example": "money &player",
+            "semantic": "获取玩家金钱 {0}"
+          }
+        }
+      },
+      {
+        "id": "take-money",
+        "name": "Take Money",
+        "description": "扣除玩家的金钱。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "经济",
+          "实体控制"
+        ],
+        "syntax": "take-money &player &amount",
+        "example": "take-money &player 100.0",
+        "semantic": "扣除金钱 {0} {1}"
+      },
+      {
+        "id": "give-money",
+        "name": "Give Money",
+        "description": "给予玩家金钱。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "经济",
+          "实体控制"
+        ],
+        "syntax": "give-money &player &amount",
+        "example": "give-money &player 100.0",
+        "semantic": "给予金钱 {0} {1}"
+      },
+      {
+        "id": "has-money",
+        "name": "Has Money",
+        "description": "检查玩家是否有足够的金钱。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "经济",
+          "实体控制"
+        ],
+        "syntax": "has-money &player &amount",
+        "example": "has-money &player 100.0",
+        "semantic": "检查金钱 {0} {1}"
+      },
+      {
+        "id": "get-vein",
+        "name": "Get Vein",
+        "description": "获取指定方块周围的矿脉。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "世界与坐标"
+        ],
+        "syntax": "get-vein &block [max &amount]",
+        "example": "get-vein &block<br>get-vein &block max 100",
+        "semantic": "获取矿脉 {0} 最大数量 {1}"
+      },
+      {
+        "id": "strike-lightning",
+        "name": "Strike Lightning",
+        "description": "在指定位置劈闪电。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "视觉特效",
+          "世界与坐标"
+        ],
+        "syntaxs": {
+          "Strike-lightning": {
+            "syntax": "strike-lightning &location",
+            "example": "strike-lightning &location",
+            "semantic": "劈闪电 {0}"
+          },
+          "Lightning": {
+            "syntax": "lightning &location",
+            "example": "lightning &location",
+            "semantic": "劈闪电 {0}"
+          }
+        }
+      },
+      {
+        "id": "create-explosion",
+        "name": "Create Explosion",
+        "description": "在指定位置创建爆炸。可选择爆炸源实体、是否着火、是否破坏方块。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "视觉特效",
+          "世界与坐标"
+        ],
+        "syntax": "create-explosion &location &power [by &entity] [fire &fire] [break &break]",
+        "example": "create-explosion &location 2.0<br>create-explosion &location 2.0 by &player fire true break false",
+        "semantic": "创建爆炸 {0} 威力 {1} 来源 {2} 着火 {3} 破坏方块 {4}"
+      },
+      {
+        "id": "drop-item",
+        "name": "Drop Item",
+        "description": "在指定位置掉落物品。可选择是否自然掉落。",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "物品管理",
+          "世界与坐标"
+        ],
+        "syntax": "drop-item &item at &location [naturally &naturally]",
+        "example": "drop-item &diamond at &location<br>drop-item &diamond at &location naturally true",
+        "semantic": "掉落物品 {0} 于 {1} 自然掉落 {2}"
+      },
+      {
+        "id": "operation",
+        "name": "Operation",
+        "description": "执行注册的操作。",
+        "provider": "Aiyatsbus",
+        "type": "private",
+        "categories": [
+          "脚本控制"
+        ],
+        "syntax": "operation &operation_name [args &args]",
+        "example": "operation my_operation<br>operation my_operation args &[param1, param2]",
+        "semantic": "执行操作 {0} 参数 {1}"
+      },
+      {
+        "id": "modifiable-var",
+        "name": "Modifiable Var",
+        "description": "获取附魔的可修改变量值",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "modifiable-var &enchant $item name",
+        "example": "modifiable-var &enchant $diamond_sword damage",
+        "semantic": "获取可修改变量 {0} 物品名称"
+      },
+      {
+        "id": "modifiable-var-set",
+        "name": "Modifiable Var Set",
+        "description": "设置附魔的可修改变量值",
+        "provider": "Aiyatsbus",
+        "type": "public",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntax": "modifiable-var-set &enchant $item name [to] $value",
+        "example": "modifiable-var-set &enchant $diamond_sword damage to 10<br>modifiable-var-set &enchant $diamond_sword damage = 15",
+        "semantic": "设置可修改变量 {0} 物品名称 值 {1}"
+      }
+    ]
+  },
+  {
+    "name": "Arim",
+    "color": "#8b5cf6",
+    "actions": [
+      {
+        "id": "arim-weight",
+        "name": "arim-weight",
+        "description": "权重随机",
+        "provider": "Arim",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntaxs": {
+          "Arim-random": {
+            "syntax": "arim-weight / arim-random",
+            "example": "arim-weight [ ele1 ele2 ele3 ] by [ 1 null 3 ] def 1",
+            "semantic": "权重随机 {0} 权重 {1} 默认 {2}"
+          },
+          "Action": {
+            "syntax": "arim-weight {action list} [(by|with) {action list}] [def {action}]",
+            "example": "arim-weight [ ele1 ele2 ele3 ] by [ 1 2 3 ]",
+            "semantic": "权重随机 {0} 权重 {1} 默认 {2}"
+          }
+        }
+      },
+      {
+        "id": "arim-inv",
+        "name": "arim-inv",
+        "description": "背包物品检测",
+        "provider": "Arim",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntaxs": {
+          "Arim-inventory": {
+            "syntax": "arim-inv / arim-inventory",
+            "example": "1. 检测背包合法物品：",
+            "semantic": "Arim背包操作 {0} {1} 数量 {2}"
+          },
+          "Token": {
+            "syntax": "arim-inv {token} {action} [amount {action}]",
+            "example": "arim-inv check \"name:all(start(&c机械),c(靴))\"",
+            "semantic": "Arim背包操作 {0} {1} 数量 {2}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "DungeonPlus",
+    "color": "#ffa500",
+    "actions": [
+      {
+        "id": "dungeon",
+        "name": "Dungeon",
+        "description": "运行 DungeonPlus 脚本<br>详情访问: https://ersha.gitbook.io/dungeonplus/di-lao/untitled/kether",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "脚本控制"
+        ],
+        "syntax": "dungeon {action} {action} params {token} [area {token}]",
+        "example": "dungeon message self params \"type=text;text=Example:<self:player-name>\"",
+        "semantic": "地牢脚本 {0} {1} 参数 {2} 区域 {3}"
+      },
+      {
+        "id": "dungeon-data-area",
+        "name": "Dungeon Area",
+        "description": "获取地牢区域内的玩家玩家数量",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "实体控制"
+        ],
+        "syntax": "dungeon-data area [players|size] {token}",
+        "example": "dungeon-data area players dungeon_1",
+        "semantic": "地牢区域 {0} {1}"
+      },
+      {
+        "id": "dungeon-data-players",
+        "name": "Dungeon Players",
+        "description": "获取地牢内的所有玩家",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "实体控制"
+        ],
+        "syntax": "dungeon-data players",
+        "example": "dungeon-data players",
+        "semantic": "地牢内玩家列表"
+      },
+      {
+        "id": "dungeon-data-data",
+        "name": "Dungeon Data",
+        "description": "获取某个地牢数据值",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "数据处理"
+        ],
+        "syntax": "dungeon-data data {token}",
+        "example": "dungeon-data data data_name",
+        "semantic": "地牢数据 {0}"
+      },
+      {
+        "id": "dungeon-data-mob",
+        "name": "Dungeon Mob",
+        "description": "获取某个怪物的击杀数量或判断是否击杀该怪物",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "实体控制"
+        ],
+        "syntax": "dungeon-data mob [amount|contain] {token}",
+        "example": "dungeon-data mob amount mob_1<br>dungeon-data mob contain mob_2",
+        "semantic": "地牢怪物 {0} {1}"
+      },
+      {
+        "id": "dungeon-data-world",
+        "name": "Dungeon World",
+        "description": "获取地牢的世界名称",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "世界与坐标"
+        ],
+        "syntax": "dungeon-data world",
+        "example": "dungeon-data world",
+        "semantic": "地牢世界名称"
+      },
+      {
+        "id": "dungeon-data-name",
+        "name": "Dungeon Name",
+        "description": "获取地牢名称",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "dungeon-data dongeon name",
+        "example": "dungeon-data dongeon name",
+        "semantic": "地牢名称"
+      },
+      {
+        "id": "dungeon-data-options",
+        "name": "Dungeon Options",
+        "description": "获取地牢启动参数",
+        "provider": "DungeonPlus",
+        "type": "private",
+        "categories": [
+          "游戏系统",
+          "数据处理"
+        ],
+        "syntax": "dungeon-data options {token}",
+        "example": "dungeon-data dongeon options 1",
+        "semantic": "地牢参数 {0}"
+      }
+    ]
+  },
+  {
+    "name": "Invero",
+    "color": "hsl(185, 69.6%, 27.1%)",
+    "actions": [
+      {
+        "id": "message",
+        "name": "Message",
+        "description": "向玩家发送一个支持 Invero 相关格式化的消息",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "msg {action}",
+        "example": "msg \"<red>Hello {{player name}}\"",
+        "semantic": "发送Invero消息 {0}"
+      },
+      {
+        "id": "invero_money",
+        "name": "Money",
+        "description": "控制 Vault 经济",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "经济"
+        ],
+        "syntax": "money (get|has|give|take|set) [{action}]",
+        "example": "money give 1000",
+        "semantic": "经济操作 {0} {1}"
+      },
+      {
+        "id": "invero_points",
+        "name": "Points",
+        "description": "控制 PlayerPoints 经济",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "经济"
+        ],
+        "syntax": "points (get|has|give|take|set) [{action}]",
+        "example": "points give 1000",
+        "semantic": "Points操作 {0} {1}"
+      },
+      {
+        "id": "connect",
+        "name": "Connect",
+        "description": "跨服",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "connect {action} [for {action}]",
+        "example": "context yizhan_server",
+        "semantic": "跨服连接 {0} 玩家 {1}"
+      },
+      {
+        "id": "depend",
+        "name": "Depend",
+        "description": "检查服务器是否有指定依赖。返回: true/false",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "系统配置"
+        ],
+        "syntax": "depend (plugin|papi) {action}",
+        "example": "depend plugin Vault<br>depend papi Math",
+        "semantic": "检查依赖插件 {0}"
+      },
+      {
+        "id": "max",
+        "name": "Max",
+        "description": "取 两值/多值 之最大",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "max {action} {action} [{action}] [{action}]",
+        "example": "max 1 10<br>max [ 1 7 9 ]",
+        "semantic": "最大值 {0} {1}"
+      },
+      {
+        "id": "min",
+        "name": "Min",
+        "description": "取 两值/多值 之最小",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "逻辑与数学"
+        ],
+        "syntax": "min {action} {action} [{action}] [{action}]",
+        "example": "min 1 10<br>min [ 1 7 9 ]",
+        "semantic": "最小值 {0} {1}"
+      },
+      {
+        "id": "context",
+        "name": "Context",
+        "description": "context /ctx 在具有菜单语境（即开启菜单）的情况下，操作菜单语境中的变量数据",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "context (get|has|no|without|rem|del|delete|set|inc|increase|dec|decrease) {action} [{action}]",
+        "example": "懒得写",
+        "semantic": "菜单语境 {0} {1}"
+      },
+      {
+        "id": "persist",
+        "name": "Persist",
+        "description": "独立于菜单语境操作持久数据",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "数据处理"
+        ],
+        "syntax": "persist (get|set) {action} [to {action}] [by global] [player {action}]",
+        "example": "懒得写",
+        "semantic": "持久数据 {0} {1} 作用域 {2}"
+      },
+      {
+        "id": "menu",
+        "name": "Menu",
+        "description": "菜单相关操作",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "menu (title|close|open|open_ctx) [{action}] [{action}] [{action}] [{action}]",
+        "example": "看上面",
+        "semantic": "菜单操作 {0} {1}"
+      },
+      {
+        "id": "icon",
+        "name": "Icon",
+        "description": "图标操作：<br>relocate<br>update<br>refresh<br>index | sub_index<br>pause_update<br>pause_relocate<br>pause_frames<br>resume_update<br>resume_relocate<br>resume_frames<br>refresh = update（更新变量） + relocate（重定向子图标）",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "icon [{action}] [{action}] [{action}]",
+        "example": "icon by A update",
+        "semantic": "图标操作 {0} {1}"
+      },
+      {
+        "id": "page",
+        "name": "Page",
+        "description": "翻页面板操作（需要在可翻页面板的语境下）",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "page (isFirst|isLast|get|max|next|previous|set) [{action}] [by {action}]",
+        "example": "page next",
+        "semantic": "翻页操作 {0}"
+      },
+      {
+        "id": "scroll",
+        "name": "Scroll",
+        "description": "滚动面板操作（需要在可滚动面板的语境下）",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "scroll (index|next|previous|reset)",
+        "example": "scroll next",
+        "semantic": "滚动操作 {0}"
+      },
+      {
+        "id": "regenerate",
+        "name": "Regenerate",
+        "description": "元素生成器面板操作",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "regenerate [filter {action}] [sort {action}]",
+        "example": "懒得写",
+        "semantic": "刷新生成器 {0} 过滤 {1} 排序 {2}"
+      },
+      {
+        "id": "element",
+        "name": "Element",
+        "description": "元素生成器模板图标操作",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "element {action}",
+        "example": "看 Invero 案例",
+        "semantic": "元素键 {0}"
+      },
+      {
+        "id": "storage",
+        "name": "Storage",
+        "description": "交互槽位操作（需要在可交互面板中使用）",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntax": "storage at {action} (exist|empty|delete|get|set|isLocked|free|lock) [to {action}]",
+        "example": "看 Invero 案例",
+        "semantic": "交互槽位 {0} {1}"
+      },
+      {
+        "id": "node",
+        "name": "Node",
+        "description": "节点",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "node {action} [with {action}]",
+        "example": "看 Invero 文档",
+        "semantic": "节点 {0} 参数 {1}"
+      },
+      {
+        "id": "item",
+        "name": "Item",
+        "description": "构建物品",
+        "provider": "Invero",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "item {action} [by {action}] [amount {action}]",
+        "example": "看 Invero 案例",
+        "semantic": "构建物品 {0} 来源 {1} 数量 {2}"
+      }
+    ]
+  },
+  {
+    "name": "TrMenu",
+    "color": "#00dee6",
+    "actions": [
+      {
+        "id": "item_match",
+        "name": "ItemMatcher",
+        "description": "将动作的{返回值}作为{物品特征解析式}判断玩家是否持有。<br>物品特征解析式详见 {TrMenu} 文档。",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "item {action}",
+        "example": "{item} \"material:diamond_block\"<br>{item} \"material:diamond_block,data:0,amount:64\"",
+        "semantic": "匹配物品 {0}"
+      },
+      {
+        "id": "menu",
+        "name": "Menu",
+        "description": "将动作的{返回值}作为菜单名称打开或关闭玩家当前菜单。",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "界面交互"
+        ],
+        "syntaxs": {
+          "Open": {
+            "syntax": "menu open {action}",
+            "example": "{menu open} Example",
+            "semantic": "菜单操作 {0} {1}"
+          },
+          "Close": {
+            "syntax": "menu close",
+            "example": "{menu close}",
+            "semantic": "菜单操作 {0} {1}"
+          }
+        }
+      },
+      {
+        "id": "metadata",
+        "name": "Metadata",
+        "description": "获取或赋值玩家的{元数据}。<br><br>{meta} 是临时存储在服务器内存,<br>{data} 则会调用 TabooLib 提供的 {LocalPlayer} 存储在玩家独立数据文件。",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "数据处理",
+          "变量操作"
+        ],
+        "syntaxs": {
+          "Data": {
+            "syntax": "data (get|set|del) {action} [to {action}]",
+            "example": "{data} {set} test {to} value",
+            "semantic": "元数据 {0} {1} {2}"
+          },
+          "Meta": {
+            "syntax": "meta (get|set|del) {action} [to {action}]",
+            "example": "{data} {del} test",
+            "semantic": "元数据 {0} {1} {2}"
+          }
+        }
+      },
+      {
+        "id": "trmenu_money",
+        "name": "Money",
+        "description": "将动作的{返回值}作为 {Vault} 货币判断玩家是否持有。",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "经济"
+        ],
+        "syntax": "money {action}",
+        "example": "money 100",
+        "semantic": "检测金钱 {0}"
+      },
+      {
+        "id": "trmenu_playerpoints",
+        "name": "PlayerPoints",
+        "description": "将动作的{返回值}作为 {PlayerPoints} 货币判断玩家是否持有。",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "经济"
+        ],
+        "syntax": "points {action}",
+        "example": "points 100",
+        "semantic": "检测Points {0}"
+      },
+      {
+        "id": "variable",
+        "name": "Variable",
+        "description": "替换动作的{返回值}中所有 {TrMenu} 变量函数。 <br><br>引用：<br>https://trmenu.trixey.cc/usage/functions",
+        "provider": "TrMenu",
+        "type": "private",
+        "categories": [
+          "数据处理",
+          "文本处理"
+        ],
+        "syntax": "var[s] {action}",
+        "example": "tell {var} \"{\\{}<Index>{\\}}\"<br>tell {var} \"{\\{}meta: <Key>{\\}}\"",
+        "semantic": "TrMenu变量解析 {0}"
+      }
+    ]
+  },
+  {
+    "name": "Vulpecula",
+    "color": "#ff69b4",
+    "actions": [
+      {
+        "id": "event_cancel",
+        "name": "Event Cancel",
+        "description": "取消当前事件或设置事件是否取消",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "事件处理"
+        ],
+        "syntax": "event cancel [to {action}]",
+        "example": "{event cancel}<br>{event cancel} to false",
+        "semantic": "事件取消 {0}"
+      },
+      {
+        "id": "event_wait",
+        "name": "Event Wait",
+        "description": "等待指定事件的发生并做自定义处理<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-event#x7y9W",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "事件处理",
+          "脚本控制"
+        ],
+        "syntax": "event (wait|require) {action} {action}",
+        "example": "{event wait} entity-shoot<br>{event wait} entity-shoot -filter check &event[entity.type] == PLAYER",
+        "semantic": "事件等待 {0} {1} {2}"
+      },
+      {
+        "id": "entity_damage",
+        "name": "Entity Damage",
+        "description": "对实体造成伤害",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "实体控制"
+        ],
+        "syntax": "entity damage {action} [by {action}]",
+        "example": "{entity damage} &entity 10<br>{entity damage} &entity 10 by &player",
+        "semantic": "实体伤害 {0} 数值 {1} 来源 {2}"
+      },
+      {
+        "id": "entity_potion",
+        "name": "Entity Potion",
+        "description": "给予/移除实体药水效果<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-entity#ZzVee",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "药水效果"
+        ],
+        "syntax": "entity potion {action} (add|set|remove|rm) {action} [{action}]",
+        "example": "{entity potion} &entity add SLOW -level 2 -time 600<br>{entity potion} &entity remove SLOW",
+        "semantic": "实体药水 {0} {1} {2}"
+      },
+      {
+        "id": "entity_teleport",
+        "name": "Entity Teleport",
+        "description": "传送实体至指定位置",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "实体控制",
+          "世界与坐标"
+        ],
+        "syntax": "entity (tp|teleport) {action} to {action}",
+        "example": "entity tp &entity to loc world 11 45 14",
+        "semantic": "实体传送 {0} 到 {1}"
+      },
+      {
+        "id": "regex",
+        "name": "Regex",
+        "description": "借助正则表达式查找或替换指定文本<br>{具体写法详见：}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-regex",
+        "provider": "Vulpecula",
+        "type": "public",
+        "categories": [
+          "文本处理",
+          "正则表达式"
+        ],
+        "syntax": "regex (find|replace|group) {action} [by|with|using|then] [{action}] [{action}]",
+        "example": "regex replace &text by \"(攻击力\\+)(\\d+)\" then {<br>    join [ regex group 1 math 1 + regex group 2 ]<br>}",
+        "semantic": "正则 {0} {1} {2}"
+      },
+      {
+        "id": "function_call",
+        "name": "Function Call",
+        "description": "{在 Shell 模式下该语句无任何意义。}<br>调用已声明的任何函数，包括 main 函数。支持传递参数",
+        "provider": "Vulpecula",
+        "type": "private",
+        "categories": [
+          "函数操作"
+        ],
+        "syntax": "func {action} [with {action list}]",
+        "example": "{func} function_0<br>{func} function_1 with [ 'Hello Vulpecula!' ]",
+        "semantic": "调用函数 {0} 参数 {1}"
+      }
+    ]
+  },
+  {
+    "name": "Zaphkiel",
+    "color": "#838383",
+    "actions": [
+      {
+        "id": "get_cooldown",
+        "name": "Get Cooldown",
+        "description": "在 {Zaphkiel} 物品行为中：<br>获取{当前物品}或{当前玩家}的冷却时间（单位：游戏刻）",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "游戏机制",
+          "物品管理"
+        ],
+        "syntax": "cooldown time [for (item|player)]",
+        "example": "{cooldown time}<br>{cooldown time for player}",
+        "semantic": "获取ZAP冷却时间 {0}"
+      },
+      {
+        "id": "update_cooldown",
+        "name": "Update Cooldown",
+        "description": "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为冷却时间（单位：游戏刻）写入{当前物品}或{当前玩家}",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "游戏机制",
+          "物品管理"
+        ],
+        "syntax": "cooldown set {action} [for (item|player)]",
+        "example": "{cooldown set} 100<br>{cooldown set} 100 {for player}",
+        "semantic": "设置ZAP冷却时间 {0} 目标 {1}"
+      },
+      {
+        "id": "check_cooldown",
+        "name": "Check Cooldown",
+        "description": "在 {Zaphkiel} 物品行为中：<br>判断{当前物品}或{当前玩家}是否处于冷却时间",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "游戏机制",
+          "物品管理"
+        ],
+        "syntax": "cooldown check [for (item|player)]",
+        "example": "{cooldown check}<br>{cooldown check for item}<br>{cooldown check for player}",
+        "semantic": "检查ZAP冷却 {0}"
+      },
+      {
+        "id": "effect",
+        "name": "Effect",
+        "description": "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为 Bukkit 药水效果赋予玩家。或移除、清空。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "药水效果",
+          "实体控制"
+        ],
+        "syntax": "effect (give|remove|clear) [{action} {action} {action}]",
+        "example": "{effect give} POISON 100 0<br>{effect clear}<br>{effect remove} POISON",
+        "semantic": "ZAP药水效果 {0} {1} {2} {3}"
+      },
+      {
+        "id": "item_durability",
+        "name": "Item Durability",
+        "description": "在 {Zaphkiel} 物品行为中：<br>获取物品的当前耐久度，该语句可以被 {item data durability_current} 代替。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "item durability",
+        "example": "{item durability}",
+        "semantic": "获取ZAP物品耐久"
+      },
+      {
+        "id": "item_durability_operate",
+        "name": "Item Damage & Repair",
+        "description": "在 {Zaphkiel} 物品行为中：<br>将动作{返回值}作为耐久度扣除或修复。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "item (damage|repair) {action}",
+        "example": "{item damage} 1<br>{item repair} 1",
+        "semantic": "ZAP物品 {0} {1}"
+      },
+      {
+        "id": "item_consume",
+        "name": "Item Consume",
+        "description": "在 {Zaphkiel} 物品行为中： 扣除 1 个行为中的物品。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "item consume",
+        "example": "item consume",
+        "semantic": "消耗ZAP物品"
+      },
+      {
+        "id": "item_data",
+        "name": "Item Data",
+        "description": "在 {Zaphkiel} 物品行为中：<br>获取或设置物品的活跃数据。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理",
+          "数据处理"
+        ],
+        "syntax": "item data {action} [to {action}]",
+        "example": "{item data} durability {to} 10<br>{item data} damage {to} 200",
+        "semantic": "ZAP物品数据 {0} 为 {1}"
+      },
+      {
+        "id": "save",
+        "name": "Save",
+        "description": "在 {Zaphkiel} 物品行为中：<br>将缓存写入物品流。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "数据处理",
+          "物品管理"
+        ],
+        "syntax": "save",
+        "example": "{save}",
+        "semantic": "保存ZAP物品"
+      },
+      {
+        "id": "build_1",
+        "name": "Build Name & Lore",
+        "description": "在 {Zaphkiel} 物品构建过程中：<br>修改名称或描述中的变量",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "build [name|lore] {action} to {action}",
+        "example": "{build name} quality to item data quality",
+        "semantic": "构建ZAP物品名称/描述 {0} {1} 为 {2}"
+      },
+      {
+        "id": "build_2",
+        "name": "Build Icon & Data",
+        "description": "在 {Zaphkiel} 物品构建过程中：<br>修改材质或附加值，这里的 {data} 代表物品附加值而非活跃数据。",
+        "provider": "Zaphkiel",
+        "type": "private",
+        "categories": [
+          "物品管理"
+        ],
+        "syntax": "build [icon|data] {action}",
+        "example": "{build icon} stone<br>{build data} 1",
+        "semantic": "构建ZAP物品图标/数据 {0} {1}"
+      }
+    ]
+  }
+]

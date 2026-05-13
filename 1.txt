@@ -1,0 +1,53 @@
+CASE WHEN是：
+一种复杂的选择语句, 相比于 #IF 有更丰富的特性。
+完整的选择语句需要包含至少一项选择分支, 也就是 {when block}。
+
+每个标准的选择分支由 {when} {{条件}} -> {{表达式}} 组成。
+也可使用 {else} {{表达}} 作为默认分支。
+
+{先看一段示例:}
+set number to 3
+set numberProvided to case &number [
+    when 1 -> "One"
+    when 2 -> "Two"
+    when 3 -> "Three"
+    else "One"
+]
+log inline "You provide {{ &numberProvided }}"
+
+{运行后得到结果:}
+You provide Three
+
+{也可以像其他语句一样正常使用:}
+set number to 3
+case &number [
+    when 1 -> log "One"
+    when 2 -> log "Two"
+    when 3 -> log "Three"
+    else log "One"
+]
+
+{或是包含多条语句:}
+set number to 1
+case &number [
+    when 1 -> {
+        log "Monday"
+        log "First day of the week"
+    }
+    when [ 2 3 4 5 6 7 ] -> {
+        log "Sunday"
+    }
+    else log "Other days"
+]
+
+{或是进行逻辑判断:}
+set number to 1
+case &number [
+    when < 10 -> {
+        log "Small"
+    }
+    when > 10 -> {
+        log "Big"
+    }
+    else log "Other"
+]

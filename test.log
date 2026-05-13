@@ -1,0 +1,57 @@
+
+> choteneditor@1.0.0 start
+> electron .
+
+
+Preload script path: E:\ChoTenEditor\preload.js
+Preload script exists: true
+mainWindow.testAPI: undefined
+mainWindow.electronAPI: undefined
+[36520:0316/165613.789:INFO:CONSOLE:6] "[PRELOAD] Preload script starting...", source:  (6)
+[36520:0316/165613.790:INFO:CONSOLE:13] "[PRELOAD] testAPI exposed successfully", source:  (13)
+[36520:0316/165613.790:INFO:CONSOLE:32] "[PRELOAD] electronAPI exposed with methods: openDirectory,openFile,saveFile,readFile,writeFile,readdir,mkdir,stat", source:  (32)
+[36520:0316/165613.790:INFO:CONSOLE:33] "[PRELOAD] Preload script completed", source:  (33)
+[36520:0316/165613.795:INFO:CONSOLE:36] "[RENDERER] DOMContentLoaded fired", source: file:///E:/ChoTenEditor/renderer.js (36)
+[36520:0316/165613.818:INFO:CONSOLE:2] "%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security
+  Policy set or a policy with "unsafe-eval" enabled. This exposes users of
+  this app to unnecessary security risks.
+
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.", source: node:electron/js2c/sandbox_bundle (2)
+[36520:0316/165613.996:INFO:CONSOLE:41] "[RENDERER] Checking for APIs on window object", source: file:///E:/ChoTenEditor/renderer.js (41)
+[36520:0316/165613.996:INFO:CONSOLE:42] "[RENDERER] window.testAPI: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (42)
+[36520:0316/165613.996:INFO:CONSOLE:43] "[RENDERER] window._electronAPI: undefined", source: file:///E:/ChoTenEditor/renderer.js (43)
+[36520:0316/165613.996:INFO:CONSOLE:44] "[RENDERER] Available window properties (filtered): window,self,name,customElements,history,navigation,locationbar,menubar,personalbar,scrollbars,statusbar,toolbar,status,closed,frames,length,top,opener,parent,frameElement,navigator,origin,external,screen,innerWidth,innerHeight,scrollX,pageXOffset,scrollY,pageYOffset,visualViewport,screenX,screenY,outerWidth,outerHeight,devicePixelRatio,event,clientInformation,screenLeft,screenTop,styleMedia,onsearch,onappinstalled,onbeforeinstallprompt,onabort,onbeforeinput,onbeforematch,onbeforetoggle,onblur,oncancel,oncanplay,oncanplaythrough,onchange,onclick,onclose,oncommand,oncontentvisibilityautostatechange,oncontextlost,oncontextmenu,oncontextrestored,oncuechange,ondblclick,ondrag,ondragend,ondragenter,ondragleave,ondragover,ondragstart,ondrop,ondurationchange,onemptied,onended,onerror,onfocus,onformdata,oninput,oninvalid,onkeydown,onkeypress,onkeyup,onload,onloadeddata,onloadedmetadata,onloadstart,onmousedown,onmouseenter,onmouseleave,onmousemove,onmouseout,onmouseover,onmouseup,onmousewheel,onpause,onplay,onplaying,onprogress,onratechange,onreset,onresize,onscroll,onscrollend,onsecuritypolicyviolation,onseeked,onseeking,onselect,onslotchange,onstalled,onsubmit,onsuspend,ontimeupdate,ontoggle,onvolumechange,onwaiting,onwebkitanimationend,onwebkitanimationiteration,onwebkitanimationstart,onwebkittransitionend,onwheel,onauxclick,ongotpointercapture,onlostpointercapture,onpointerdown,onpointermove,onpointerup,onpointercancel,onpointerover,onpointerout,onpointerenter,onpointerleave,onselectstart,onselectionchange,onanimationcancel,onanimationend,onanimationiteration,onanimationstart,ontransitionrun,ontransitionstart,ontransitionend,ontransitioncancel,onbeforexrselect,onafterprint,onbeforeprint,onbeforeunload,onhashchange,onlanguagechange,onmessage,onmessageerror,onoffline,ononline,onpagehide,onpageshow,onpopstate,onrejectionhandled,onstorage,onunhandledrejection,onunload,isSecureContext,crossOriginIsolated,scheduler,performance,trustedTypes,crypto,indexedDB,localStorage,sessionStorage,alert,atob,blur,btoa,cancelAnimationFrame,cancelIdleCallback,captureEvents,clearInterval,clearTimeout,close,confirm,createImageBitmap,fetch,find,focus,getComputedStyle,getSelection,matchMedia,moveBy,moveTo,open,postMessage,print,prompt,queueMicrotask,releaseEvents,reportError,requestAnimationFrame,requestIdleCallback,resizeBy,resizeTo,scroll,scrollBy,scrollTo,setInterval,setTimeout,stop,structuredClone,chrome,crashReport,cookieStore,ondevicemotion,ondeviceorientation,ondeviceorientationabsolute,onpointerrawupdate,caches,documentPictureInPicture,sharedStorage,fetchLater,getScreenDetails,queryLocalFonts,showDirectoryPicker,showOpenFilePicker,showSaveFilePicker,originAgentCluster,viewport,onpageswap,onpagereveal,credentialless,fence,launchQueue,speechSynthesis,onscrollsnapchange,onscrollsnapchanging,ongamepadconnected,ongamepaddisconnected,testAPI,electronAPI,init,setupEventListeners,openProject,loadDirectory,navigateToDirectory,navigateUp,navigateBack,getParentPath,updateBreadcrumbs,renderBreadcrumbs,getRelativePath,updateNavigationButtons,renderFileTree,handleFileClick,openFile,addTab,setActiveTab,closeTab,createNewFile,saveCurrentFile,switchEditorMode,updateEditorModeForFile,renderVisualEditor,handleEditorChange,getFileName,updateStatus,showError,appState", source: file:///E:/ChoTenEditor/renderer.js (44)
+[36520:0316/165613.996:INFO:CONSOLE:49] "[RENDERER] testAPI is available, calling test(): Test API working", source: file:///E:/ChoTenEditor/renderer.js (49)
+[36520:0316/165613.996:INFO:CONSOLE:74] "[RENDERER] _electronAPI available with methods: openDirectory,openFile,saveFile,readFile,writeFile,readdir,mkdir,stat", source: file:///E:/ChoTenEditor/renderer.js (74)
+[36520:0316/165618.809:INFO:CONSOLE:101] "openProject called", source: file:///E:/ChoTenEditor/renderer.js (101)
+[36520:0316/165618.809:INFO:CONSOLE:111] "Calling _electronAPI.openDirectory()", source: file:///E:/ChoTenEditor/renderer.js (111)
+[36520:0316/165621.174:INFO:CONSOLE:113] "openDirectory result: E:\MC\tra\Ets\plugins\Chemdah\legacy", source: file:///E:/ChoTenEditor/renderer.js (113)
+[36520:0316/165621.174:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets\plugins\Chemdah\legacy", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165621.175:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165622.052:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets\plugins\Chemdah\legacy\conversation", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165622.054:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165622.817:INFO:CONSOLE:292] "openFile called: E:\MC\tra\Ets\plugins\Chemdah\legacy\conversation\bisaite.yml", source: file:///E:/ChoTenEditor/renderer.js (292)
+[36520:0316/165622.818:INFO:CONSOLE:301] "readFile result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (301)
+[36520:0316/165623.424:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets\plugins\Chemdah\legacy", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165623.425:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165624.608:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets\plugins\Chemdah\legacy\conversation", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165624.609:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165625.101:INFO:CONSOLE:292] "openFile called: E:\MC\tra\Ets\plugins\Chemdah\legacy\conversation\andelu.yml", source: file:///E:/ChoTenEditor/renderer.js (292)
+[36520:0316/165625.101:INFO:CONSOLE:301] "readFile result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (301)
+[36520:0316/165628.440:INFO:CONSOLE:134] "loadDirectory called with path: E:/MC/tra/Ets/plugins/Chemdah/legacy", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165628.441:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165629.606:INFO:CONSOLE:134] "loadDirectory called with path: E:/MC/tra/Ets/plugins/Chemdah", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165629.607:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165630.126:INFO:CONSOLE:134] "loadDirectory called with path: E:/MC/tra/Ets/plugins", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165630.128:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165630.640:INFO:CONSOLE:134] "loadDirectory called with path: E:/MC/tra/Ets", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165630.642:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165631.322:INFO:CONSOLE:134] "loadDirectory called with path: E:/MC/tra", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165631.322:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165634.594:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165634.596:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)
+[36520:0316/165635.480:INFO:CONSOLE:134] "loadDirectory called with path: E:\MC\tra\Ets\.idea", source: file:///E:/ChoTenEditor/renderer.js (134)
+[36520:0316/165635.481:INFO:CONSOLE:143] "readdir result: [object Object]", source: file:///E:/ChoTenEditor/renderer.js (143)

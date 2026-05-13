@@ -1,0 +1,668 @@
+__option__:
+  theme: 'chat'
+  title: '{name}'
+BoFeng_main:
+  npc id: 'adyeshach BoFeng'
+  when:
+    - if: check profile data FirstTalk_BoFeng default 0 == 0
+      open: BoFeng_FirstTalk_1
+    - if: true
+      open: BoFeng_0
+      
+BoFeng_FirstTalk_1:
+  npc: |-
+    嗨，流浪者。我在M.E.G.做食品销售。
+    要来点香香软软的小面包吗？就当是免费送你的。
+  format: generic
+  player:
+    - reply: '不用了，谢谢。'
+      then: |
+        goto BoFeng_FirstTalk_2
+    - reply: '哦，谢谢你的面包。'
+      then: |
+        command papi "sertraline item give bread %player_name% 5" as console
+        goto BoFeng_FirstTalk_2
+        
+BoFeng_FirstTalk_2:
+  npc: |-
+    呃...还没问你叫什么呢。
+  format: generic
+  player:
+    - reply: '我叫{{ sender }}.'
+      then: |
+        goto BoFeng_FirstTalk_3
+        
+BoFeng_FirstTalk_3:
+  npc: |-
+    {{ sender }}，你好。M.E.G.欢迎你。
+    要买食物的话，随时来找我哈。
+  format: generic
+  player:
+    - reply: '好的，谢谢。'
+      then: |
+        profile data FirstTalk_BoFeng to 1
+        close
+        
+
+BoFeng_0:
+  npc: |-
+    苍天碧海，食德都可食；会吃会喝，何人有价值?
+    你好，我是波风! 有什么我能为你做的?
+    {{ if { quest select OrangeCool not any [ quest accepted quest completed ] } then "咳咳，嗯，没事" else '' }}
+  format: generic
+  player:
+    - reply: '我要买点东西.'
+      then: |
+        command papi "economyshopgui-premium:shop BoFeng %player_name%" as console
+    - reply: '我想了解一些事情.'
+      then: |
+        goto BoFeng_info
+    - reply: '聊会天.'
+      then: |
+        goto BoFeng_chat
+    - reply: '找你有点事.'
+      then: |
+        goto BoFeng_business
+
+BoFeng_BlackFlags_1:
+  npc: |-
+    嘘...小声点。最近M.E.G.内部斗争越来越激烈了，改组派那帮人越来越嚣张。
+    我有个计划能打击他们的声望，需要你帮忙。你愿意听吗？
+  format: generic
+  player:
+    - reply: '什么计划？'
+      then: |
+        goto BoFeng_BlackFlags_2
+    - reply: '我不想卷入政治斗争。'
+      then: |
+        talk "好吧，那就算了。"
+        close
+
+BoFeng_BlackFlags_2:
+  npc: |-
+    改组派的Zero最近在基地里很活跃。我在Level 1的某个地方藏了一面黑旗，那是改组派的象征。
+    你去把它取来，然后当面交给Zero。她会很难堪，公众形象也会受损。怎么样？
+  format: generic
+  player:
+    - reply: '听起来有点阴险，但我愿意帮忙。'
+      then: |
+        quest select BlackFlags quest accept
+        talk "好，任务详情已经发到你的数据库了。小心行事。"
+        close
+    - reply: '这不太道德，算了吧。'
+      then: |
+        talk "好吧，那就算了。"
+        close
+
+BoFeng_1:
+  npc: |-
+    呃，我是M.E.G.的食品销售。
+    你可以在我这儿买廉价食物，
+    或者卖食物给我，不管怎样...
+  format: generic
+  player:
+    - reply: '好的。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_2:
+  npc: |-
+    我自然是从M.E.G.那边拿货。
+    当然，也有人会卖给我食物。
+    但最近我缺面包和杏仁水，能帮我带点过来吗？
+    我会付报酬的。
+  format: generic
+  player:
+    - reply: '可以的。'
+      then: |
+        quest select FoodSender quest accept
+    - reply: '好，我试试。'
+      then: |
+        quest select FoodSender quest accept
+    - reply: '算了吧。'
+      then: |
+        goto BoFeng_2_1
+
+BoFeng_2_1:
+  npc: |-
+    好吧...改变主意了随时回来找我哈。
+  format: generic
+  player:
+    - reply: '嗯。'
+      then: |
+        close
+
+BoFeng_3:
+  npc: |-
+    嗯...我有个朋友密振受了些外伤，
+    但M.E.G.在Level 1的绷带缺货了，
+    能带点过来吗？自己做的也行。
+    然后你还需要找他聊聊，不过不用你带过去。
+    他现在住在B.N.T.G.基地。
+  format: generic
+  player:
+    - reply: '行。'
+      then: |
+        quest select MedicinalHelper quest accept
+    - reply: '算了吧。'
+      then: |
+        goto BoFeng_3_1
+
+BoFeng_3_1:
+  npc: |-
+    呃好吧...再见哈。
+  format: generic
+  player:
+    - reply: '嗯。'
+      then: |
+        close
+
+BoFeng_4:
+  npc: |-
+    果然...哦好吧，其实...我是B.N.T.G.的人，不意外吧？
+  format: generic
+  player:
+    - reply: '密振告诉我的'
+      then: |
+        goto BoFeng_4_2
+    - reply: 'M.E.G. 认可这种行为吗?'
+      then: |
+        goto BoFeng_4_3
+BoFeng_4_2:
+  npc: |-
+    哦这样啊,当然...
+  format: generic
+  player:
+    - reply: 'M.E.G. 认可这种行为吗?'
+      then: |
+        goto BoFeng_4_3
+BoFeng_4_3:
+  npc: |-
+    算是默许吧。
+    正好，最近有个B.N.T.G.的任务需要你去做，我会给你贸易点的。
+  format: generic
+  player:
+    - reply: '具体描述一下?'
+      then: |
+        goto BoFeng_4_4
+BoFeng_4_4:
+  npc: |-
+    长话短说。最近我所在的B.N.T.G.基地旁边的管道总有声音。
+    我调查后发现是神爱之繁生的成员，
+    听说他们在宜居地带有基地，总之你帮我找到那儿就行。
+    听说从Level 1东部有个通风管可以过去。
+  format: generic
+  player:
+    - reply: '我可以试试。'
+      then: |
+        talk "好了，任务细则发到你数据库上面了，自己看看吧。祝你好运。"
+        quest select DarkPipe quest accept
+
+BoFeng_5:
+  npc: |-
+    我刚开始是厨师，后来成了食品销售。
+    不过厨艺还没退化，中餐西餐我都会做。
+    话说我最近又缺了些原材料，帮我带点吧。
+  format: generic
+  player:
+    - reply: '可以。'
+      then: |
+        quest select DinnerTime quest accept
+    - reply: '算了吧。'
+      then: |
+        close
+
+BoFeng_FunGesture_1:
+  npc: |-
+    手势？我倒是有个很酷的。
+    让手指看起来像带电一样，微微颤抖。
+    这手势需要点表演天赋，要看起来真实。
+  format: generic
+  player:
+    - reply: '我学会了，谢谢！'
+      then: |
+        profile data learn_electric_finger to 1
+        close
+    - reply: '能再演示一遍吗？'
+      then: |
+        goto BoFeng_FunGesture_1
+
+BoFeng_OrangeCool_1:
+  npc: |-
+    咳咳...最近有点发热，想用冰块和橘子罐头做个冷饮舒缓一下。
+    我有足够的冰块，但橘子有点缺。
+    能帮我带&e3个橘子罐头&7过来吗？
+  format: generic
+  player:
+    - reply: '没问题，我帮你找找。'
+      then: |
+        quest select OrangeCool quest accept
+    - reply: '抱歉，我现在没空。'
+      then: |
+        goto BoFeng_OrangeCool_1_1
+
+BoFeng_OrangeCool_1_1:
+  npc: |-
+    好吧，如果你改变主意了，随时来找我哈。
+  format: generic
+  player:
+    - reply: '嗯。'
+      then: |
+        close
+BoFeng_BowlGame_1:
+  npc: |-
+    我们来玩个小游戏吧！我有三个碗：大、中、小！
+    选择一个碗，看看你会得到什么奖励。
+    每几个小时都可以来玩一次哦！每个碗里面可能出现四种不同的食物哦！
+  format: generic
+  player:
+    - reply: '我选大碗。'
+      then: |
+        set rands to random 1 to 10
+        case &rands [
+          when 1 -> {
+            set foodId to mre
+            set foodName to "MRE单兵口粮"
+            set amount to 1
+          }
+          when [ 2 3 ] -> {
+            set foodId to muffin
+            set foodName to "松饼"
+            set amount to { random 1 to 4 }
+          }
+          when [ 4 5 6 ] -> {
+            set foodId to pizza
+            set foodName to "披萨"
+            set amount to { random 1 to 3 }
+          }
+          when [ 7 8 9 10 ] -> {
+            set foodId to oreo
+            set foodName to "奥利奥"
+            set amount to { random 2 to 5 }
+          }
+        ]
+        command papi "lp user AkaCandyLi2CO3 permission settemp bofengbowlgame true 10h" as console
+        talk "不错，这{{ if check &amount > 1 then &amount else '' }}份{{ &foodName }}就给你了。祝你吃的开心。"
+        command papi inline "si give {{ &foodId }} %player_name% {{ &amount }}" as console
+        close
+    - reply: '我选中碗。'
+      then: |
+        set rands to random 1 to 10
+        case &rands [
+          when 1 -> {
+            set foodId to moonshine
+            set foodName to "我自己酿的酒"
+            set amount to 1
+          }
+          when [ 2 3 ] -> {
+            set foodId to mayonnaise
+            set foodName to "蛋黄酱"
+            set amount to 1
+          }
+          when [ 4 5 6 ] -> {
+            set foodId to french_fries
+            set foodName to "炸薯条"
+            set amount to { random 1 to 4 }
+          }
+          when [ 7 8 9 10 ] -> {
+            set foodId to bread
+            set foodName to "面包"
+            set amount to { random 2 to 5 }
+          }
+        ]
+        command papi "lp user AkaCandyLi2CO3 permission settemp bofengbowlgame true 10h" as console
+        talk "不错，这{{ if check &amount > 1 then &amount else '' }}份{{ &foodName }}就给你了。祝你吃的开心。"
+        command papi inline "si give {{ &foodId }} %player_name% {{ &amount }}" as console
+        close
+    - reply: '我选小碗。'
+      then: |
+        set rands to random 1 to 10
+        case &rands [
+          when 1 -> {
+            set foodId to pie
+            set foodName to "派"
+            set amount to { random 1 to 4 }
+          }
+          when [ 2 3 ] -> {
+            set foodId to cola
+            set foodName to "可乐"
+            set amount to { random 1 to 4 }
+          }
+          when [ 4 5 6 ] -> {
+            set foodId to crisps
+            set foodName to "脆片"
+            set amount to { random 2 to 4 }
+          }
+          when [ 7 8 9 10 ] -> {
+            set foodId to cracker
+            set foodName to "饼干"
+            set amount to 4
+          }
+        ]
+        command papi "lp user AkaCandyLi2CO3 permission settemp bofengbowlgame true 10h" as console
+        talk "不错，这{{ if check &amount > 1 then &amount else '' }}份{{ &foodName }}就给你了。祝你吃的开心。"
+        command papi inline "si give {{ &foodId }} %player_name% {{ &amount }}" as console
+        close
+
+BoFeng_BigStomach_1:
+  npc: |-
+    朋友的话，我倒是有一个很能吃的朋友，得有三四百斤。
+    叫良子。他最近情况不太好。
+    刚掉进后室的时候可把他饿坏了，幸好脂肪足够才活了下来找到了基地。
+  format: generic
+  player:
+    - reply: '他现在怎么样了？'
+      then: |
+        goto BoFeng_BigStomach_2
+    - reply: '需要我帮忙吗？'
+      then: |
+        goto BoFeng_BigStomach_3
+
+BoFeng_BigStomach_2:
+  npc: |-
+    现在倒是稳定下来了，就是胃口变得特别大。
+    可能是之前饿太久了，身体急需补充能量。
+    他现在一天能吃下正常人三倍的食物。
+  format: generic
+  player:
+    - reply: '我能帮上什么忙？'
+      then: |
+        goto BoFeng_BigStomach_3
+    - reply: '这听起来有点夸张。'
+      then: |
+        goto BoFeng_BigStomach_4
+
+BoFeng_BigStomach_3:
+  npc: |-
+    你能帮忙就太好了！
+    他现在特别需要杏仁水，灰色杏仁水就行。
+    你能帮忙收集30个灰色杏仁水吗？
+    我会给你不错的报酬。
+  format: generic
+  player:
+    - reply: '没问题，交给我吧。'
+      then: |
+        quest select BigStomach quest accept
+    - reply: '30个太多了，我可能不行。'
+      then: |
+        goto BoFeng_BigStomach_5
+
+BoFeng_BigStomach_4:
+  npc: |-
+    确实夸张，但这是真的。
+    他刚来基地的时候，一口气喝光了库存的一半杏仁水。
+    把我们都吓坏了。
+  format: generic
+  player:
+    - reply: '那他现在需要什么帮助？'
+      then: |
+        goto BoFeng_BigStomach_3
+    - reply: '听起来是个大胃王。'
+      then: |
+        goto BoFeng_BigStomach_6
+
+BoFeng_BigStomach_5:
+  npc: |-
+    好吧，如果你改变主意了，随时来找我。
+    良子真的很需要这些杏仁水。
+  format: generic
+  player:
+    - reply: '嗯，我再考虑考虑。'
+      then: |
+        close
+
+BoFeng_BigStomach_6:
+  npc: |-
+    没错，就是个大胃袋！
+    所以这个任务就叫“大胃袋”。
+    怎么样，能帮忙收集30个灰色杏仁水吗？
+  format: generic
+  player:
+    - reply: '好吧，我试试看。'
+      then: |
+        quest select BigStomach quest accept
+    - reply: '抱歉，我现在没空。'
+      then: |
+        goto BoFeng_BigStomach_5
+BoFeng_LevelInfo_1:
+  npc: |-
+    你想了解哪个层级？我作为食品销售，对各层级的资源情况有些了解。
+  format: generic
+  player:
+    - reply: 'Level 2：废弃公共带'
+      then: |
+        goto BoFeng_Level_2
+    - reply: 'Level 4：废弃办公室'
+      then: |
+        goto BoFeng_Level_4
+    - reply: 'Level 10：丰裕'
+      then: |
+        goto BoFeng_Level_10
+    - reply: 'Level 11：无尽城市'
+      then: |
+        goto BoFeng_Level_11
+    - reply: 'Level 76：无尽下水道'
+      then: |
+        goto BoFeng_Level_76
+    - reply: 'Level 283：游乐天地'
+      then: |
+        goto BoFeng_Level_283
+    - reply: '更多层级...'
+      then: |
+        goto BoFeng_LevelInfo_2
+    - reply: '暂时不了解了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_2:
+  npc: |-
+    Level 2是管道系统，B.N.T.G.的办公区EL3A在那里。
+    作为食品销售，我所知道的是那儿是物资存储和分拣中心。
+    不过那里的环境不太好就是。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_4:
+  npc: |-
+    Level 4是废弃办公室，非常安全，实体稀少。
+    那里杏仁水储量丰富，是我们重要的杏仁水来源。
+    还有办公终端网络，可以跨层级通讯。
+    如果你需要杏仁水，可以去那里收集。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_10:
+  npc: |-
+    Level 10叫丰裕，有无限麦田，气候宜人。
+    但那里的小麦没有营养，不能吃，吃了最多带点饱腹感。
+    B.N.T.G.在那里有个小基地，作为贸易中转站。
+    从食品角度来说，那个层级没什么价值。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_11:
+  npc: |-
+    Level 11是无尽城市，B.N.T.G.的新时代广场就在那里。
+    那是后室最大的贸易中心，什么都能买到。
+    我的一些高级食材也是从那里进货的。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_76:
+  npc: |-
+    Level 76是无尽下水道，情况复杂。
+    U.E.C.控制一部分，还有无尽下水道政府和自由阵线。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_Level_283:
+  npc: |-
+    Level 283是游乐天地，被一堵墙分成两边。
+    M.E.G.控制一侧，U.E.C.控制另一侧，有瑞萨毒气存储。
+    目前属于两方争夺比较前线的层级，非常危险，不建议去。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_LevelInfo_2:
+  npc: |-
+    你还想了解哪些层级？从食品销售的角度，我可以告诉你一些资源信息。
+  format: generic
+  player:
+    - reply: 'Level 1：宜居地带'
+      then: |
+        goto BoFeng_Level_1
+    - reply: 'Level 6：熄灯'
+      then: |
+        goto BoFeng_Level_6
+    - reply: '返回上一级'
+      then: |
+        goto BoFeng_LevelInfo_1
+
+BoFeng_Level_1:
+  npc: |-
+    Level 1就是我们所在的宜居地带，这里的基础物资箱里有食物、水、布料。
+    天鹰区和衔尾区的物资箱比较丰富，但实体也多。
+    跃金区相对安全，物资箱质量中等。
+    花园区有药用植物，但木纹化危险很大，不建议去采集。
+    总的来说，Level 1是食物来源的重要层级，但要注意安全。
+  format: generic
+  player:
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_2
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_LevelInfo_2
+
+BoFeng_Level_6:
+  npc: |-
+    Level 6叫熄灯，几乎完全黑暗，电子元件和金属材料资源丰富。
+    呃，从我食品销售的角度，那里没什么食物资源，但电子元件可以用于食品加工设备。
+    不过探索风险很高，容易迷路，而且没有实体不代表安全。
+  format: generic
+  player:
+    - if: check profile data ZhiChenMat default 0 == 0
+      reply: '金属材料？'
+      then: |
+        goto BoFeng_Level_6_2
+    - reply: '还有其他层级吗？'
+      then: |
+        goto BoFeng_LevelInfo_2
+    - reply: '明白了。'
+      then: |
+        goto BoFeng_LevelInfo_2
+
+BoFeng_Level_6_2:
+  npc: |-
+    对没错，说起这个，知陈最近缺一些金属材料。
+    你或许可以帮一帮他。
+  format: generic
+  player:
+    - reply: '好的。'
+      then: |
+        profile data ZhiChenMat to 1
+
+BoFeng_info:
+  npc: |-
+    你想了解什么？
+  format: generic
+  player:
+    - reply: '我想了解后室的其他层级。'
+      then: |
+        goto BoFeng_LevelInfo_1
+    - reply: '师傅你是做什么工作的?'
+      then: |
+        goto BoFeng_1
+    - reply: '暂时不了解了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_chat:
+  npc: |-
+    想聊什么？
+  format: generic
+  player:
+    - if: "all [ { quest select FunGesture quest accepted } { check profile data learn_electric_finger default 0 != 1 } ]"
+      reply: '关于最近兴起的手势动作...'
+      then: |
+        goto BoFeng_FunGesture_1
+    - if: "quest select OrangeCool not any [ quest accepted quest completed ]"
+      reply: '你看起来不太舒服？'
+      then: |
+        goto BoFeng_OrangeCool_1
+    - if: "quest select FoodSender not any [ quest accepted quest completed ]"
+      reply: '你的食物从哪里来?'
+      then: |
+        goto BoFeng_2
+    - if: "all [ { quest select FoodSender quest completed } { quest select BigStomach not any [ quest accepted quest completed ] } ]"
+      reply: '你有没有朋友什么的掉进来?'
+      then: |
+        goto BoFeng_BigStomach_1
+    - if: "all [ { quest select FoodSender quest completed } { quest select MedicinalHelper not any [ quest accepted quest completed ] } ]"
+      reply: '你还缺什么东西吗?'
+      then: |
+        goto BoFeng_3
+    - if: "all [ { quest select MedicinalHelper quest completed } { quest select DinnerTime not any [ quest accepted quest completed ] } ]"
+      reply: '话说你为什么是食品销售?'
+      then: |
+        goto BoFeng_5
+    - if: "check papi %luckperms_expiry_time_bofengbowlgame% == ''"
+      reply: '有没有什么娱乐的项目'
+      then: |
+        goto BoFeng_BowlGame_1
+    - reply: '没什么了。'
+      then: |
+        goto BoFeng_0
+
+BoFeng_business:
+  npc: |-
+    有什么事？
+  format: generic
+  player:
+    - if: "all [ { quest select MedicinalHelper quest completed } { quest select DarkPipe not any [ quest accepted quest completed ] } ]"
+      reply: '你其实不只是M.E.G.的人吧?'
+      then: |
+        goto BoFeng_4
+    - if: "all [ { check profile data interfere_power default 0 == 1 } { quest select BlackFlags not any [ quest accepted quest completed ] } ]"
+      reply: '关于M.E.G.内部的权力斗争...'
+      then: |
+        goto BoFeng_BlackFlags_1
+    - reply: '没什么了。'
+      then: |
+        goto BoFeng_0
