@@ -297,6 +297,12 @@ function init() {
     }
   });
 
+  // 隐藏加载页面（从设置页返回时 inline script 已直接 display:none）
+  var splash = document.getElementById('splash-overlay');
+  if (splash && splash.style.display !== 'none') {
+    setTimeout(function() { splash.classList.add('hidden'); }, 400);
+  }
+
   // 恢复上次的会话
   restoreAppState();
 
@@ -334,6 +340,8 @@ function setupEventListeners() {
   if (newFileBtn) newFileBtn.addEventListener('click', () => { playSound('click'); createNewFile(); });
   if (saveBtn) saveBtn.addEventListener('click', () => { playSound('save'); saveCurrentFile(); });
   if (settingsBtn) settingsBtn.addEventListener('click', () => { playSound('select'); openSettings(); });
+  const remoteBtn = document.getElementById('remote-btn');
+  if (remoteBtn) remoteBtn.addEventListener('click', () => { playSound('select'); openRemoteMode(); });
 
   // 编辑器模式按钮
   if (sourceModeBtn) sourceModeBtn.addEventListener('click', () => { playSound('click'); switchEditorMode(false); });
@@ -782,19 +790,17 @@ window.__showDirtyConfirm = showDirtyConfirmDialog;
 window.__saveAllDirtyFiles = saveAllDirtyFiles;
 
 async function saveAllDirtyFiles() {
+  // 只有当前文件（CodeMirror 中加载的）才能保存，其他标签切换时内容已丢失
+  if (currentFile && dirtyTabs[currentFile] && codeMirrorEditor) {
+    await saveCurrentFile();
+  }
+  // 无法保存其他标签的未保存更改（切换标签时编辑内容已丢失）
+  // 将它们的脏标记清除
   for (var p = 0; p < openTabs.length; p++) {
     var fp = openTabs[p];
-    if (dirtyTabs[fp]) {
-      var oldFile = currentFile;
-      currentFile = fp;
-      // 获取对应内容（如果正好是当前 CodeMirror 的内容则直接保存）
-      if (fp === currentFile && codeMirrorEditor) {
-        await saveCurrentFile();
-      } else {
-        // 其他标签页的内容未在 CodeMirror 中加载，跳过（需要从磁盘读取再写入）
-        // 简化处理：只保存当前标签
-      }
-      currentFile = oldFile;
+    if (dirtyTabs[fp] && fp !== currentFile) {
+      delete dirtyTabs[fp];
+      updateTabDirtyIndicator(fp);
     }
   }
 }
@@ -1518,3 +1524,504 @@ function updateCodeMirrorMode(filePath) {
 function camelToKebab(str) {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
+
+// ============================================
+// 远程模式
+// ============================================
+
+let _remoteListenersAttached = false;
+let _pendingFileChanges = {}; // key: clientId_path → { clientId, path, content }
+
+function openRemoteMode() {
+  const overlay = document.getElementById('rm-overlay');
+  if (overlay) overlay.style.display = '';
+
+  // 从 sessionStorage 加载密码明文（由设置页在同会话中保存）
+  try {
+    var pw = sessionStorage.getItem('remotePassword');
+    if (pw) {
+      var pwInput = document.getElementById('rm-server-password');
+      if (pwInput) pwInput.value = pw;
+    }
+  } catch (e) {}
+
+  // 刷新状态
+  refreshRemoteUI();
+  attachRemoteListeners();
+}
+
+function closeRemoteMode() {
+  const overlay = document.getElementById('rm-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function attachRemoteListeners() {
+  if (_remoteListenersAttached) return;
+  _remoteListenersAttached = true;
+
+  // 关闭按钮
+  const closeBtn = document.getElementById('rm-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', closeRemoteMode);
+
+  // 点击蒙层关闭
+  const overlay = document.getElementById('rm-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === this) closeRemoteMode();
+    });
+  }
+
+  // 标签切换
+  document.querySelectorAll('.rm-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.rm-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.rm-panel').forEach(function(p) { p.classList.remove('active'); });
+      this.classList.add('active');
+      var panel = document.getElementById('rm-panel-' + this.dataset.rmTab);
+      if (panel) panel.classList.add('active');
+      playSound('click');
+    });
+  });
+
+  // 服务器：启动
+  const startBtn = document.getElementById('rm-server-start');
+  if (startBtn) {
+    startBtn.addEventListener('click', async function() {
+      var port = parseInt(document.getElementById('rm-server-port').value) || 12345;
+      var password = document.getElementById('rm-server-password').value || 'choten';
+      if (!window.electronAPI || !window.electronAPI.remote) {
+        setRemoteStatus('rm-server-status', '错误: 远程 API 不可用', true);
+        return;
+      }
+      setRemoteStatus('rm-server-status', '正在启动服务器...');
+      try {
+        var result = await window.electronAPI.remote.startServer({ port, password });
+        if (result && result.stage !== undefined) {
+          setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + port);
+          document.getElementById('rm-server-start').style.display = 'none';
+          document.getElementById('rm-server-stop').style.display = '';
+        } else if (result && result.success === false) {
+          setRemoteStatus('rm-server-status', '启动失败: ' + (result.error || '未知错误'), true);
+        } else {
+          setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + port);
+          document.getElementById('rm-server-start').style.display = 'none';
+          document.getElementById('rm-server-stop').style.display = '';
+        }
+      } catch (err) {
+        setRemoteStatus('rm-server-status', '启动失败: ' + err.message, true);
+      }
+    });
+  }
+
+  // 服务器：停止
+  const stopBtn = document.getElementById('rm-server-stop');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', async function() {
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.stopServer();
+      setRemoteStatus('rm-server-status', '服务器已停止');
+      document.getElementById('rm-server-start').style.display = '';
+      document.getElementById('rm-server-stop').style.display = 'none';
+      document.getElementById('rm-clients').style.display = 'none';
+    });
+  }
+
+  // 客户端：连接
+  const connectBtn = document.getElementById('rm-client-connect');
+  if (connectBtn) {
+    connectBtn.addEventListener('click', async function() {
+      var host = document.getElementById('rm-client-host').value || '127.0.0.1';
+      var port = parseInt(document.getElementById('rm-client-port').value) || 12345;
+      var password = document.getElementById('rm-client-password').value || '';
+      if (!window.electronAPI || !window.electronAPI.remote) {
+        setRemoteStatus('rm-client-status', '错误: 远程 API 不可用', true);
+        return;
+      }
+      setRemoteStatus('rm-client-status', '正在连接...');
+      try {
+        var result = await window.electronAPI.remote.connectToServer({ host, port, password });
+        if (result && result.stage === 'challenge') {
+          setRemoteStatus('rm-client-status', '已连接，等待管理员确认...');
+          document.getElementById('rm-client-connect').style.display = 'none';
+          document.getElementById('rm-client-disconnect').style.display = '';
+          // 显示安全码
+          var codeArea = document.getElementById('rm-security-code-area');
+          var codeDisplay = document.getElementById('rm-security-code-display');
+          if (codeArea) codeArea.style.display = '';
+          if (codeDisplay) codeDisplay.textContent = result.securityCode || '------';
+          var sendBtn = document.getElementById('rm-security-send');
+          if (sendBtn) sendBtn.style.display = '';
+        } else if (result && result.stage === 'approved') {
+          setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+          document.getElementById('rm-client-connect').style.display = 'none';
+          document.getElementById('rm-client-disconnect').style.display = '';
+          document.getElementById('rm-security-code-area').style.display = 'none';
+        } else if (result && result.success === false) {
+          setRemoteStatus('rm-client-status', '连接失败: ' + (result.error || '未知错误'), true);
+        } else {
+          setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+          document.getElementById('rm-client-connect').style.display = 'none';
+          document.getElementById('rm-client-disconnect').style.display = '';
+        }
+      } catch (err) {
+        setRemoteStatus('rm-client-status', '连接失败: ' + err.message, true);
+      }
+    });
+  }
+
+  // 客户端：断开
+  const disconnectBtn = document.getElementById('rm-client-disconnect');
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', async function() {
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.disconnectFromServer();
+      setRemoteStatus('rm-client-status', '已断开连接');
+      document.getElementById('rm-client-connect').style.display = '';
+      document.getElementById('rm-client-disconnect').style.display = 'none';
+      document.getElementById('rm-security-code-area').style.display = 'none';
+    });
+  }
+
+  // 客户端：发送安全码
+  const sendCodeBtn = document.getElementById('rm-security-send');
+  if (sendCodeBtn) {
+    sendCodeBtn.addEventListener('click', async function() {
+      var code = document.getElementById('rm-security-code-display').textContent;
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.sendSecurityCode({ securityCode: code });
+      setRemoteStatus('rm-client-status', '安全码已发送，等待管理员确认...');
+      document.getElementById('rm-security-send').style.display = 'none';
+    });
+  }
+
+  // 断开全部
+  const disconnectAllBtn = document.getElementById('rm-disconnect-all');
+  if (disconnectAllBtn) {
+    disconnectAllBtn.addEventListener('click', async function() {
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.disconnectAll();
+    });
+  }
+
+  // 确认对话框按钮
+  const acceptBtn = document.getElementById('rm-confirm-accept');
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', async function() {
+      var clientId = this.dataset.clientId;
+      if (!clientId || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.confirmClient({ clientId });
+      document.getElementById('rm-confirm-dialog').style.display = 'none';
+      refreshRemoteUI();
+    });
+  }
+  const rejectBtn = document.getElementById('rm-confirm-reject');
+  if (rejectBtn) {
+    rejectBtn.addEventListener('click', async function() {
+      var clientId = this.dataset.clientId;
+      if (!clientId || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.rejectClient({ clientId });
+      document.getElementById('rm-confirm-dialog').style.display = 'none';
+    });
+  }
+
+  // 文件更改对话框按钮
+  const fcApproveBtn = document.getElementById('rm-fc-approve');
+  if (fcApproveBtn) {
+    fcApproveBtn.addEventListener('click', async function() {
+      var key = this.dataset.key;
+      var change = _pendingFileChanges[key];
+      if (!change || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.applyApprovedWrite({
+        clientId: change.clientId,
+        filePath: change.path,
+        content: change.content,
+      });
+      delete _pendingFileChanges[key];
+      document.getElementById('rm-filechange-dialog').style.display = 'none';
+    });
+  }
+  const fcRejectBtn = document.getElementById('rm-fc-reject');
+  if (fcRejectBtn) {
+    fcRejectBtn.addEventListener('click', async function() {
+      var key = this.dataset.key;
+      var change = _pendingFileChanges[key];
+      if (!change || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.notifyFileChangeRejected({
+        clientId: change.clientId,
+        filePath: change.path,
+      });
+      delete _pendingFileChanges[key];
+      document.getElementById('rm-filechange-dialog').style.display = 'none';
+    });
+  }
+}
+
+function setRemoteStatus(elId, msg, isError) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--color-error)' : 'var(--color-text-secondary)';
+}
+
+async function refreshRemoteUI() {
+  if (!window.electronAPI || !window.electronAPI.remote) return;
+
+  // 服务器状态
+  try {
+    var serverStatus = await window.electronAPI.remote.getServerStatus();
+    if (serverStatus && serverStatus.running) {
+      document.getElementById('rm-server-start').style.display = 'none';
+      document.getElementById('rm-server-stop').style.display = '';
+      renderClientList(serverStatus.clients || []);
+    } else {
+      document.getElementById('rm-server-start').style.display = '';
+      document.getElementById('rm-server-stop').style.display = 'none';
+      document.getElementById('rm-clients').style.display = 'none';
+    }
+  } catch (e) {}
+
+  // 客户端状态
+  try {
+    var clientStatus = await window.electronAPI.remote.getClientStatus();
+    if (clientStatus && clientStatus.connected) {
+      document.getElementById('rm-client-connect').style.display = 'none';
+      document.getElementById('rm-client-disconnect').style.display = '';
+    }
+  } catch (e) {}
+}
+
+function renderClientList(clients) {
+  var container = document.getElementById('rm-clients-list');
+  var section = document.getElementById('rm-clients');
+  if (!container) return;
+
+  if (!clients || clients.length === 0) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+  if (section) section.style.display = '';
+
+  var html = '';
+  for (var i = 0; i < clients.length; i++) {
+    var c = clients[i];
+    var perm = c.permission || 'confirm';
+    var isPending = c.pending;
+    html += '<div class="rm-client-card">';
+    html += '  <div class="rm-client-card-header">';
+    html += '    <div>';
+    html += '      <div class="rm-client-id">' + _escHtml(c.id) + (isPending ? ' ⏳' : '') + '</div>';
+    html += '      <div class="rm-client-ip">' + _escHtml(c.ip || 'unknown') + '</div>';
+    if (!isPending && c.securityCode) {
+      html += '      <div style="font-size:10px;color:var(--color-text-tertiary);">安全码: ' + _escHtml(c.securityCode) + '</div>';
+    }
+    html += '    </div>';
+    if (isPending) {
+      html += '    <button class="rm-btn rm-btn-primary rm-btn-sm rm-confirm-btn" data-client-id="' + _escHtml(c.id) + '">确认连接</button>';
+    } else {
+      html += '    <button class="rm-btn rm-btn-danger rm-btn-sm rm-disconnect-btn" data-client-id="' + _escHtml(c.id) + '">断开</button>';
+    }
+    html += '  </div>';
+    if (!isPending) {
+      html += '  <div class="rm-client-perm">';
+      var levels = [
+        { id: 'guest', label: '访客' },
+        { id: 'confirm', label: '更改需确认' },
+        { id: 'full', label: '完全控制' },
+      ];
+      for (var p = 0; p < levels.length; p++) {
+        var active = perm === levels[p].id ? ' active' : '';
+        html += '    <button class="rm-perm-btn' + active + '" data-client-id="' + _escHtml(c.id) + '" data-perm="' + levels[p].id + '">' + levels[p].label + '</button>';
+      }
+      html += '  </div>';
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+
+  // 绑定事件
+  // 确认按钮
+  container.querySelectorAll('.rm-confirm-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var clientId = this.dataset.clientId;
+      // 查找对应的客户端信息
+      for (var i = 0; i < clients.length; i++) {
+        if (clients[i].id === clientId) {
+          document.getElementById('rm-confirm-ip').textContent = clients[i].ip || 'unknown';
+          document.getElementById('rm-confirm-code').textContent = clients[i].securityCode || '--';
+          document.getElementById('rm-confirm-accept').dataset.clientId = clientId;
+          document.getElementById('rm-confirm-reject').dataset.clientId = clientId;
+          document.getElementById('rm-confirm-dialog').style.display = '';
+          break;
+        }
+      }
+    });
+  });
+
+  // 断开按钮
+  container.querySelectorAll('.rm-disconnect-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.disconnectClient({ clientId: this.dataset.clientId });
+      refreshRemoteUI();
+    });
+  });
+
+  // 权限按钮
+  container.querySelectorAll('.rm-perm-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      if (!window.electronAPI || !window.electronAPI.remote) return;
+      var clientId = this.dataset.clientId;
+      var perm = this.dataset.perm;
+      await window.electronAPI.remote.setClientPermission({ clientId, permission: perm });
+      // 更新 UI 状态
+      var parent = this.parentElement;
+      parent.querySelectorAll('.rm-perm-btn').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+}
+
+// ---- 远程事件监听 ----
+let _remoteEventsInited = false;
+function initRemoteEvents() {
+  if (_remoteEventsInited) return;
+  _remoteEventsInited = true;
+  if (!window.electronAPI || !window.electronAPI.remote) return;
+
+  window.electronAPI.remote.onEvent(function(type, data) {
+    console.log('[REMOTE] 事件:', type, data);
+    switch (type) {
+
+      // 服务器事件
+      case 'server:started':
+        setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + (data.port || ''));
+        document.getElementById('rm-server-start').style.display = 'none';
+        document.getElementById('rm-server-stop').style.display = '';
+        break;
+
+      case 'server:stopped':
+        setRemoteStatus('rm-server-status', '服务器已停止');
+        document.getElementById('rm-server-start').style.display = '';
+        document.getElementById('rm-server-stop').style.display = 'none';
+        document.getElementById('rm-clients').style.display = 'none';
+        break;
+
+      case 'server:error':
+        setRemoteStatus('rm-server-status', '错误: ' + data.message, true);
+        break;
+
+      case 'client:joined':
+        setRemoteStatus('rm-server-status', '新客户端连接: ' + (data.ip || ''));
+        refreshRemoteUI();
+        break;
+
+      case 'client:left':
+        refreshRemoteUI();
+        break;
+
+      case 'client:approved':
+        refreshRemoteUI();
+        break;
+
+      case 'client:rejected':
+        refreshRemoteUI();
+        break;
+
+      case 'client:permission-changed':
+        refreshRemoteUI();
+        break;
+
+      case 'file:change:request':
+        // 显示文件更改确认对话框
+        var key = data.clientId + '_' + data.path;
+        _pendingFileChanges[key] = data;
+        document.getElementById('rm-fc-client').textContent = data.ip || data.clientId;
+        document.getElementById('rm-fc-path').textContent = data.path;
+        document.getElementById('rm-fc-approve').dataset.key = key;
+        document.getElementById('rm-fc-reject').dataset.key = key;
+        document.getElementById('rm-filechange-dialog').style.display = '';
+        playSound('click');
+        break;
+
+      case 'file:change:applied':
+        setRemoteStatus('rm-server-status', '文件已更新: ' + data.path);
+        break;
+
+      // 客户端事件
+      case 'client:connecting':
+        setRemoteStatus('rm-client-status', '正在连接...');
+        break;
+
+      case 'client:auth:challenge':
+        setRemoteStatus('rm-client-status', '已连接，等待管理员确认...');
+        document.getElementById('rm-client-connect').style.display = 'none';
+        document.getElementById('rm-client-disconnect').style.display = '';
+        var codeArea = document.getElementById('rm-security-code-area');
+        var codeDisplay = document.getElementById('rm-security-code-display');
+        if (codeArea) codeArea.style.display = '';
+        if (codeDisplay) codeDisplay.textContent = data.securityCode || '------';
+        var sendBtn = document.getElementById('rm-security-send');
+        if (sendBtn) sendBtn.style.display = '';
+        break;
+
+      case 'client:auth:approved':
+        setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+        document.getElementById('rm-client-connect').style.display = 'none';
+        document.getElementById('rm-client-disconnect').style.display = '';
+        document.getElementById('rm-security-code-area').style.display = 'none';
+        break;
+
+      case 'client:disconnected':
+        setRemoteStatus('rm-client-status', '已断开连接');
+        document.getElementById('rm-client-connect').style.display = '';
+        document.getElementById('rm-client-disconnect').style.display = 'none';
+        document.getElementById('rm-security-code-area').style.display = 'none';
+        break;
+
+      case 'client:error':
+        setRemoteStatus('rm-client-status', '错误: ' + data.message, true);
+        break;
+
+      case 'client:security-code:sent':
+        setRemoteStatus('rm-client-status', '安全码已发送，等待管理员确认...');
+        break;
+
+      case 'client:permission:updated':
+        setRemoteStatus('rm-client-status', '权限已更新: ' + (data.permissions ? data.permissions.level : ''));
+        break;
+
+      case 'client:file:write:result':
+        if (data.success) {
+          setRemoteStatus('rm-client-status', '文件保存成功: ' + data.path);
+        } else {
+          setRemoteStatus('rm-client-status', '文件保存失败: ' + (data.error || ''), true);
+        }
+        break;
+
+      case 'client:file:write:pending':
+        setRemoteStatus('rm-client-status', '等待管理员批准文件更改...');
+        break;
+
+      case 'client:server:stopped':
+        setRemoteStatus('rm-client-status', '服务器已关闭');
+        document.getElementById('rm-client-connect').style.display = '';
+        document.getElementById('rm-client-disconnect').style.display = 'none';
+        document.getElementById('rm-security-code-area').style.display = 'none';
+        break;
+    }
+  });
+}
+
+// 在初始化时设置远程事件监听
+// 注意：不能在 init() 中调用，因为 electronAPI 可能尚未就绪
+// 在 DOMContentLoaded 后的 setTimeout 中调用
+(function scheduleRemoteInit() {
+  var check = setInterval(function() {
+    if (window.electronAPI && window.electronAPI.remote) {
+      clearInterval(check);
+      initRemoteEvents();
+    }
+  }, 200);
+  // 最多等待 10 秒
+  setTimeout(function() { clearInterval(check); }, 10000);
+})();

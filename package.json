@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder && node -e \"const {rcedit}=require('rcedit');rcedit('release/ChotenEditor 1.0.0.exe',{icon:'icon.ico'}).then(()=>{const fs=require('fs');try{fs.rmSync('release/win-unpacked',{recursive:true,force:true});fs.unlinkSync('release/builder-debug.yml');}catch(e){}console.log('Done')})\""
+    "dist": "electron-builder && node -e \"const fs=require('fs');try{fs.rmSync('release/win-unpacked',{recursive:true,force:true});fs.unlinkSync('release/builder-debug.yml');}catch(e){}console.log('Done')\""
   },
   "build": {
     "appId": "com.choten.editor",
@@ -38,6 +38,7 @@
   "dependencies": {
     "codemirror": "^5.65.21",
     "js-yaml": "^4.1.1",
-    "prismjs": "^1.30.0"
+    "prismjs": "^1.30.0",
+    "ws": "^8.20.1"
   }
 }

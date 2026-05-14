@@ -120,6 +120,7 @@
   let _categoryList = [];
   let _state = null;
   let _clipboard = null;
+  let _keMouseX = 0, _keMouseY = 0;
   let _savedBlocks = []; // { name, code }
   let _stashBlocks = [];
   let _undoStack = [];
@@ -2038,6 +2039,35 @@
         e.dataTransfer.effectAllowed = 'copy';
       };
       bindTooltip(item, highlightBraces(act.description), true);
+      item.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        var oldMenu = document.querySelector('.ke-ctx-menu');
+        if (oldMenu) oldMenu.remove();
+        var menu = document.createElement('div');
+        menu.className = 'ke-ctx-menu';
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        menu.innerHTML =
+          '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
+          '<div class="ke-ctx-sep"></div>' +
+          '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>';
+        menu.querySelector('[data-act="copy-block"]').onclick = function() {
+          playSound('click');
+          _clipboard = createBlock(act);
+          menu.remove();
+        };
+        menu.querySelector('[data-act="view-detail"]').onclick = function() {
+          playSound('click');
+          menu.remove();
+          showBlockDetail({ actionId: act.id }, null);
+        };
+        document.body.appendChild(menu);
+        var closeCtx = function(e2) {
+          if (!menu.contains(e2.target)) { menu.remove(); document.removeEventListener('mousedown', closeCtx); }
+        };
+        setTimeout(function() { document.addEventListener('mousedown', closeCtx); }, 100);
+      };
       list.appendChild(item);
     }
     if (acts.length === 0) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:11px;">无匹配动作</div>';
@@ -3693,6 +3723,37 @@ document.addEventListener('dragover', function (e) {
           if (act) { playSound('select'); addBlock(overlay, state, act, parentId, slotType); }
           tb.remove();
         };
+        el.oncontextmenu = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const act = _actions.find(a => a.id === el.dataset.id);
+          if (!act) return;
+          var oldMenu = document.querySelector('.ke-ctx-menu');
+          if (oldMenu) oldMenu.remove();
+          var menu = document.createElement('div');
+          menu.className = 'ke-ctx-menu';
+          menu.style.left = e.clientX + 'px';
+          menu.style.top = e.clientY + 'px';
+          menu.innerHTML =
+            '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
+            '<div class="ke-ctx-sep"></div>' +
+            '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>';
+          menu.querySelector('[data-act="copy-block"]').onclick = function() {
+            playSound('click');
+            _clipboard = createBlock(act);
+            menu.remove();
+          };
+          menu.querySelector('[data-act="view-detail"]').onclick = function() {
+            playSound('click');
+            menu.remove();
+            showBlockDetail({ actionId: act.id }, null);
+          };
+          document.body.appendChild(menu);
+          var closeCtx = function(e2) {
+            if (!menu.contains(e2.target)) { menu.remove(); document.removeEventListener('mousedown', closeCtx); }
+          };
+          setTimeout(function() { document.addEventListener('mousedown', closeCtx); }, 100);
+        };
       });
     }
     render('');
@@ -3933,7 +3994,13 @@ document.addEventListener('dragover', function (e) {
       }
     }, true);
 
-    // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 快捷键（仅在可视模式下）
+    // 追踪鼠标位置，用于粘贴定位
+    overlay.addEventListener('mousemove', (e) => {
+      _keMouseX = e.clientX;
+      _keMouseY = e.clientY;
+    });
+
+    // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y / Ctrl+V 快捷键（仅在可视模式下）
     overlay.addEventListener('keydown', (e) => {
       if (state.mode !== 'visual') return;
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -3942,6 +4009,53 @@ document.addEventListener('dragover', function (e) {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         _redo(state, overlay); e.preventDefault();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (!_clipboard) return;
+        e.preventDefault();
+        _pushUndo(state);
+        const copy = cloneBlock(_clipboard);
+        resetBlockIds(copy);
+        // 检测鼠标下方的槽位
+        const el = document.elementFromPoint(_keMouseX, _keMouseY);
+        const slotEl = el ? el.closest('.ke-b-slot, .ke-entry-slot') : null;
+        if (slotEl && slotEl.dataset.bid) {
+          const parentBlock = findBlock(state.blocks, slotEl.dataset.bid);
+          if (parentBlock) {
+            const slotType = slotEl.dataset.slotType;
+            if (slotType === 'entry' || slotType === 'then') parentBlock.thenBlocks.push(copy);
+            else if (slotType === 'cond') parentBlock.condBlocks.push(copy);
+            else if (slotType === 'else') parentBlock.elseBlocks.push(copy);
+            else if (slotType.startsWith('val-')) {
+              const key = slotType.slice(4);
+              if (!parentBlock._actSlots) parentBlock._actSlots = {};
+              if (!parentBlock._actSlots[key]) parentBlock._actSlots[key] = [];
+              parentBlock._actSlots[key].push(copy);
+            } else if (slotType.startsWith('branch-')) {
+              const idx = parseInt(slotType.slice(7), 10);
+              if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
+              if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
+              if (!parentBlock._whenBranches[idx].blocks) parentBlock._whenBranches[idx].blocks = [];
+              parentBlock._whenBranches[idx].blocks.push(copy);
+            } else if (slotType.startsWith('wcond-')) {
+              const idx = parseInt(slotType.slice(6), 10);
+              if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
+              if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
+              if (!parentBlock._whenBranches[idx].condBlocks) parentBlock._whenBranches[idx].condBlocks = [];
+              parentBlock._whenBranches[idx].condBlocks.push(copy);
+            }
+            refreshCanvas(overlay, state);
+            updatePreview(overlay, state);
+            return;
+          }
+        }
+        // 没有槽位则追加到第一个入口
+        const entry = state.blocks.find(b => b.isEntry);
+        if (entry) {
+          entry.thenBlocks.push(copy);
+          refreshCanvas(overlay, state);
+          updatePreview(overlay, state);
+        }
       }
     });
   }

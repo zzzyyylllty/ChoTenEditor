@@ -164,3 +164,108 @@ ipcMain.handle('window:isMaximized', (event) => {
 ipcMain.handle('shell:openExternal', async (event, url) => {
   await shell.openExternal(url);
 });
+
+// ============================================
+// 远程模式
+// ============================================
+
+const remote = require('./remote.js');
+
+// 设置事件回调：将 remote 模块的事件转发到 renderer
+remote.setEventHandler((event, data) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('remote:event', event, data);
+  }
+});
+
+// 服务器
+ipcMain.handle('remote:startServer', async (event, { port, password }) => {
+  try {
+    return await remote.startServer(port, password);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('remote:stopServer', async () => {
+  await remote.stopServer();
+  return { success: true };
+});
+
+ipcMain.handle('remote:getServerStatus', () => {
+  return remote.getServerStatus();
+});
+
+ipcMain.handle('remote:confirmClient', (event, { clientId }) => {
+  return remote.confirmClient(clientId);
+});
+
+ipcMain.handle('remote:rejectClient', (event, { clientId }) => {
+  return remote.rejectClient(clientId);
+});
+
+ipcMain.handle('remote:setClientPermission', (event, { clientId, permission }) => {
+  return remote.setClientPermission(clientId, permission);
+});
+
+ipcMain.handle('remote:setClientFilePermission', (event, { clientId, filePath, permission }) => {
+  return remote.setClientFilePermission(clientId, filePath, permission);
+});
+
+ipcMain.handle('remote:disconnectClient', (event, { clientId }) => {
+  remote.disconnectClient(clientId);
+  return { success: true };
+});
+
+ipcMain.handle('remote:disconnectAll', () => {
+  remote.disconnectAll();
+  return { success: true };
+});
+
+ipcMain.handle('remote:applyApprovedWrite', (event, { clientId, filePath, content }) => {
+  remote.applyApprovedWrite(clientId, filePath, content);
+  return { success: true };
+});
+
+ipcMain.handle('remote:notifyFileChangeRejected', (event, { clientId, filePath }) => {
+  remote.notifyFileChangeRejected(clientId, filePath, '管理员拒绝了更改');
+  return { success: true };
+});
+
+// 客户端
+ipcMain.handle('remote:connectToServer', async (event, { host, port, password }) => {
+  try {
+    return await remote.connectToServer(host, port, password);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('remote:disconnectFromServer', async () => {
+  await remote.disconnectFromServer();
+  return { success: true };
+});
+
+ipcMain.handle('remote:getClientStatus', () => {
+  return remote.getClientStatus();
+});
+
+ipcMain.handle('remote:sendSecurityCode', (event, { securityCode }) => {
+  remote.sendSecurityCode(securityCode);
+  return { success: true };
+});
+
+ipcMain.handle('remote:requestFileRead', (event, { filePath }) => {
+  remote.requestFileRead(filePath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:requestFileWrite', (event, { filePath, content }) => {
+  remote.requestFileWrite(filePath, content);
+  return { success: true };
+});
+
+ipcMain.handle('remote:requestFileList', (event, { dirPath }) => {
+  remote.requestFileList(dirPath);
+  return { success: true };
+});

@@ -96,10 +96,66 @@
       text-align: center;
       margin-top: 10px;
     }
+
+    /* ---- 加载页面 ---- */
+    .splash-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--color-bg-primary);
+      z-index: 9999998;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.6s ease;
+    }
+    .splash-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash-icon {
+      width: 72px; height: 72px;
+      margin-bottom: 20px;
+      border-radius: 16px;
+    }
+    .splash-title {
+      font-size: 26px; font-weight: 800;
+      color: #ff69b4;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+    .splash-sub {
+      font-size: 13px;
+      color: var(--color-text-tertiary);
+      margin-bottom: 30px;
+    }
+    .splash-loader {
+      width: 200px; height: 2px;
+      background: var(--color-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .splash-loader-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #ff69b4, #ff1493);
+      border-radius: 2px;
+      animation: splash-load 1.2s ease-in-out forwards;
+    }
+    @keyframes splash-load {
+      0% { width: 0; }
+      50% { width: 60%; }
+      100% { width: 100%; }
+    }
   </style>
 </head>
 <body data-theme="dark">
   <div id="app">
+    <!-- 加载页面 -->
+    <div class="splash-overlay" id="splash-overlay">
+      <img class="splash-icon" src="icon.png" alt="icon">
+      <div class="splash-title">Choten Editor</div>
+      <div class="splash-sub">正在加载...</div>
+      <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+    </div>
+
     <div class="title-bar" id="title-bar">
       <div class="title-bar-drag">
         <span class="title-bar-icon"><img src="icon.png" style="height:16px;width:16px;vertical-align:middle;"></span>
@@ -118,6 +174,7 @@
         <button id="new-file-btn" class="btn">📄 新文件</button>
         <button id="save-btn" class="btn">💾 保存</button>
         <button id="settings-btn" class="btn btn-secondary">⚙️ 设置</button>
+        <button id="remote-btn" class="btn btn-secondary" style="margin-left:4px;">🌐 远程</button>
       </div>
     </div>
 
@@ -204,6 +261,111 @@
     </div>
   </div>
 
+  <!-- 远程模式 -->
+  <div class="rm-overlay" id="rm-overlay" style="display:none;">
+    <div class="rm-modal">
+      <div class="rm-header">
+        <h2>🌐 远程模式</h2>
+        <button class="rm-close-btn" id="rm-close-btn">&times;</button>
+      </div>
+
+      <!-- 标签切换 -->
+      <div class="rm-tabs">
+        <button class="rm-tab active" data-rm-tab="server">作为服务器</button>
+        <button class="rm-tab" data-rm-tab="client">连接远程</button>
+      </div>
+
+      <!-- ===== 服务器面板 ===== -->
+      <div class="rm-panel active" id="rm-panel-server">
+        <div class="rm-form" id="rm-server-form">
+          <div class="rm-field">
+            <label>端口</label>
+            <input type="number" class="rm-input" id="rm-server-port" value="12345" min="1024" max="65535">
+          </div>
+          <div class="rm-field">
+            <label>连接密码</label>
+            <input type="password" class="rm-input" id="rm-server-password" placeholder="设置连接密码">
+          </div>
+          <button class="rm-btn rm-btn-primary" id="rm-server-start">启动服务器</button>
+          <button class="rm-btn rm-btn-danger" id="rm-server-stop" style="display:none;">停止服务器</button>
+        </div>
+        <div class="rm-status" id="rm-server-status"></div>
+
+        <!-- 客户端管理 -->
+        <div class="rm-clients" id="rm-clients" style="display:none;">
+          <div class="rm-clients-header">
+            <h3>已连接的客户端</h3>
+            <button class="rm-btn rm-btn-danger rm-btn-sm" id="rm-disconnect-all">断开全部</button>
+          </div>
+          <div class="rm-clients-list" id="rm-clients-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== 客户端面板 ===== -->
+      <div class="rm-panel" id="rm-panel-client">
+        <div class="rm-form" id="rm-client-form">
+          <div class="rm-field">
+            <label>服务器地址</label>
+            <input type="text" class="rm-input" id="rm-client-host" value="127.0.0.1" placeholder="IP 地址">
+          </div>
+          <div class="rm-field">
+            <label>端口</label>
+            <input type="number" class="rm-input" id="rm-client-port" value="12345" min="1024" max="65535">
+          </div>
+          <div class="rm-field">
+            <label>连接密码</label>
+            <input type="password" class="rm-input" id="rm-client-password" placeholder="服务器设置的密码">
+          </div>
+          <button class="rm-btn rm-btn-primary" id="rm-client-connect">连接</button>
+          <button class="rm-btn rm-btn-danger" id="rm-client-disconnect" style="display:none;">断开连接</button>
+        </div>
+        <div class="rm-status" id="rm-client-status"></div>
+
+        <!-- 安全码区域 -->
+        <div class="rm-security-code" id="rm-security-code-area" style="display:none;">
+          <div class="rm-security-label">安全码</div>
+          <div class="rm-security-value" id="rm-security-code-display">------</div>
+          <div class="rm-security-hint">请将此安全码告知服务器管理员以完成连接确认</div>
+          <button class="rm-btn rm-btn-primary" id="rm-security-send" style="display:none;">已确认，发送安全码</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 连接请求确认对话框 -->
+  <div class="rm-dialog-overlay" id="rm-confirm-dialog" style="display:none;">
+    <div class="rm-dialog">
+      <h3>🔌 新的连接请求</h3>
+      <div class="rm-dialog-info">
+        <div class="rm-dialog-row"><span>客户端 IP：</span><strong id="rm-confirm-ip">--</strong></div>
+        <div class="rm-dialog-row"><span>安全码：</span><strong id="rm-confirm-code">--</strong></div>
+      </div>
+      <div class="rm-dialog-warning">
+        ⚠️ 请确保对方提供的安全码与上述安全码一致，否则对方可能无法正确连接。
+        随意确认连接可能导致数据泄露或损失，<strong>请仔细核对安全码</strong>，对此造成的损失本软件概不负责。
+      </div>
+      <div class="rm-dialog-buttons">
+        <button class="rm-btn rm-btn-primary" id="rm-confirm-accept">确认连接</button>
+        <button class="rm-btn rm-btn-secondary" id="rm-confirm-reject">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件更改确认对话框 -->
+  <div class="rm-dialog-overlay" id="rm-filechange-dialog" style="display:none;">
+    <div class="rm-dialog">
+      <h3>📝 文件更改请求</h3>
+      <div class="rm-dialog-info">
+        <div class="rm-dialog-row"><span>客户端：</span><strong id="rm-fc-client">--</strong></div>
+        <div class="rm-dialog-row"><span>文件路径：</span><strong id="rm-fc-path">--</strong></div>
+      </div>
+      <div class="rm-dialog-buttons">
+        <button class="rm-btn rm-btn-primary" id="rm-fc-approve">批准</button>
+        <button class="rm-btn rm-btn-danger" id="rm-fc-reject">拒绝</button>
+      </div>
+    </div>
+  </div>
+
   <script src="node_modules/prismjs/prism.js"></script>
   <script src="node_modules/prismjs/components/prism-yaml.js"></script>
   <script src="node_modules/prismjs/components/prism-json.js"></script>
@@ -222,6 +384,16 @@
 
 <script>
   var body = document.body;
+
+  // 从设置页返回时立即隐藏加载动画（在首次渲染之前）
+  if (document.location.search.indexOf('fromSettings=1') >= 0) {
+    var sp = document.getElementById('splash-overlay');
+    if (sp) sp.style.display = 'none';
+    // 清除 URL 参数
+    if (history.replaceState) {
+      history.replaceState(null, '', document.location.pathname);
+    }
+  }
 
   // 从 localStorage 读取保存的主题（优先级：本地配置 > localStorage > 默认值）
   var savedTheme = localStorage.getItem('editorConfig');
@@ -262,6 +434,9 @@
     if (window.__hasDirtyTabs && window.__showDirtyConfirm) {
       var result = await window.__showDirtyConfirm('');
       if (result === 'cancel') return;
+      if (result === 'save' && window.__saveAllDirtyFiles) {
+        await window.__saveAllDirtyFiles();
+      }
     }
     window.__allowUnload = true;
     if (window.electronAPI) window.electronAPI.close();

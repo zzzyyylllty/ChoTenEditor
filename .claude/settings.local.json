@@ -51,7 +51,14 @@
       "PowerShell(\\(Get-Content \"E:\\\\ChotenEditor\\\\styles.css\" | Measure-Object -Line\\).Lines)",
       "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"E:\\\\ChotenEditor\\\\icon.png\"\\); \"Size: $\\($img.Width\\)x$\\($img.Height\\)\"; \"Format: $\\($img.RawFormat\\)\"; $img.Dispose\\(\\))",
       "PowerShell(magick *)",
-      "PowerShell(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")"
+      "PowerShell(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "PowerShell(Get-ChildItem -Path E:\\\\ChotenEditor\\\\release -ErrorAction SilentlyContinue | Select-Object Length, Name; if \\(-not \\(Test-Path E:\\\\ChotenEditor\\\\release\\)\\) { Write-Host \"release directory does not exist\" })",
+      "PowerShell(cd E:\\\\ChotenEditor; npx electron-builder 2>&1 | ForEach-Object { Write-Host $_ })",
+      "Bash(cmd.exe /c \"dir E:\\\\ChotenEditor\\\\release\")",
+      "Bash(cmd.exe *)",
+      "PowerShell(Write-Host \"Checking release directory...\"; $items = Get-ChildItem -LiteralPath \"E:\\\\ChotenEditor\\\\release\" -ErrorAction SilentlyContinue; if \\($items -eq $null\\) { Write-Host \"No items found or directory doesn't exist\" } else { Write-Host \"Found $\\($items.Count\\) items\"; $items | ForEach-Object { Write-Host \"$\\($_.Length\\) $\\($_.Name\\)\" } })",
+      "PowerShell(Remove-Item *)",
+      "Bash(npx electron-builder *)"
     ]
   }
 }

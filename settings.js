@@ -29,6 +29,9 @@ let shortcutInputs = {};
 let resetShortcutsBtn;
 let editShortcutsBtn;
 
+// 远程设置
+let remotePassword;
+
 // 背景图片
 let bgGrid;
 let bgOpacity;
@@ -95,6 +98,7 @@ const defaultConfig = {
     filename: '',
     opacity: 0.3,
   },
+  remotePasswordHash: '',
 };
 
 // 预设主题配置
@@ -295,6 +299,9 @@ function initializeDOMElements() {
   bgOpacityValue = document.getElementById('bg-opacity-value');
   bgUploadBtn = document.getElementById('bg-upload-btn');
 
+  // 远程设置
+  remotePassword = document.getElementById('remote-password');
+
   console.log('  - themeSelect:', !!themeSelect);
   console.log('  - backBtn:', !!backBtn);
   console.log('  - saveBtn:', !!saveBtn);
@@ -334,7 +341,7 @@ function setupEventListeners() {
     backBtn.addEventListener('click', () => {
       playSound('back');
       console.log('[SETTINGS] 返回到编辑器');
-      window.location.href = 'index.html';
+      window.location.href = 'index.html?fromSettings=1';
     });
   }
 
@@ -363,10 +370,10 @@ function setupEventListeners() {
 
   // 保存按钮
   if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       playSound('save');
       console.log('[SETTINGS] 保存设置');
-      saveSettings();
+      await saveSettings();
     });
   }
 
@@ -713,8 +720,19 @@ async function uploadBackground() {
 // ============================================
 // 设置保存
 
-function saveSettings() {
+async function hashPassword(pw) {
+  var encoder = new TextEncoder();
+  var data = encoder.encode(pw);
+  var hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+async function saveSettings() {
   console.log('[SETTINGS] 保存设置');
+
+  // 读取现有配置以保留未修改的字段
+  var existingRaw = localStorage.getItem('editorConfig');
+  var existing = existingRaw ? JSON.parse(existingRaw) : {};
 
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
@@ -750,6 +768,16 @@ function saveSettings() {
   Object.entries(catColorInputs).forEach(([cat, input]) => {
     if (input) config.categoryColors[cat] = input.value;
   });
+
+  // 远程设置 - 只存 hash，明文暂存 sessionStorage（当前会话有效）
+  var pw = remotePassword ? remotePassword.value : '';
+  if (pw) {
+    config.remotePasswordHash = await hashPassword(pw);
+    sessionStorage.setItem('remotePassword', pw);
+  } else if (existing && existing.remotePasswordHash) {
+    // 未填写新密码，保留已有 hash
+    config.remotePasswordHash = existing.remotePasswordHash;
+  }
 
   // 保留背景设置
   const currentBg = getBackgroundConfig();
@@ -839,6 +867,17 @@ function loadSettings() {
     }
     applyBackgroundPreview();
   });
+
+  // 远程设置 - 不显示明文，只通过 placeholder 提示是否已设置
+  if (remotePassword) {
+    remotePassword.value = '';
+    remotePassword.placeholder = config.remotePasswordHash ? '已设置密码' : '设置远程连接密码';
+  }
+  // 如 sessionStorage 有明文（同会话），加载到输入框方便确认
+  if (remotePassword && sessionStorage.getItem('remotePassword')) {
+    remotePassword.value = sessionStorage.getItem('remotePassword');
+    remotePassword.placeholder = '已设置密码';
+  }
 }
 
 function resetSettings() {

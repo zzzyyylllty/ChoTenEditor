@@ -1541,6 +1541,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  background: rgba(128, 128, 128, 0.2);
+  color: var(--color-text-secondary);
 }
 .qv-type-main {
   background: rgba(0, 152, 255, 0.2);
@@ -1980,4 +1982,252 @@ button, .btn, .btn-secondary, .tb-btn, .ke-btn, .cv-btn,
 .btn, .btn-secondary {
   padding: 5px 10px;
   font-size: 12px;
+}
+
+/* ============================================
+   远程模式样式
+   ============================================ */
+
+.rm-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 999997;
+  display: flex; align-items: center; justify-content: center;
+  animation: ke-fade-in 0.15s ease;
+}
+.rm-modal {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  width: 95%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: ke-slide-up 0.2s ease;
+}
+.rm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.rm-header h2 { margin: 0; font-size: 16px; }
+.rm-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.rm-close-btn:hover { color: var(--color-text-primary); }
+
+.rm-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+.rm-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.rm-tab:hover { color: var(--color-text-primary); background: var(--color-bg-tertiary); }
+.rm-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.rm-panel {
+  display: none;
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.rm-panel.active { display: block; }
+
+.rm-form { margin-bottom: 12px; }
+.rm-field {
+  margin-bottom: 10px;
+}
+.rm-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+.rm-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.rm-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.rm-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 6px !important;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.rm-btn:hover { opacity: 0.85; }
+.rm-btn-primary { background: var(--color-primary); color: #fff; }
+.rm-btn-secondary { background: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); }
+.rm-btn-danger { background: #e53935; color: #fff; }
+.rm-btn-sm { padding: 4px 10px; font-size: 11px; }
+
+.rm-status {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding: 8px 0;
+  min-height: 20px;
+}
+
+/* 安全码 */
+.rm-security-code {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  text-align: center;
+}
+.rm-security-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 4px;
+}
+.rm-security-value {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: var(--color-primary);
+  letter-spacing: 4px;
+  margin: 6px 0;
+}
+.rm-security-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 6px;
+}
+
+/* 客户端管理列表 */
+.rm-clients { margin-top: 12px; }
+.rm-clients-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.rm-clients-header h3 { margin: 0; font-size: 14px; }
+
+.rm-client-card {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.rm-client-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.rm-client-id { font-weight: 600; font-size: 13px; }
+.rm-client-ip { font-size: 11px; color: var(--color-text-tertiary); }
+.rm-client-perm {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.rm-perm-btn {
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px !important;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.rm-perm-btn:hover { border-color: var(--color-primary); color: var(--color-text-primary); }
+.rm-perm-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+.rm-client-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.rm-client-actions button {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px !important;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+/* 确认对话框 */
+.rm-dialog-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 999998;
+  display: flex; align-items: center; justify-content: center;
+}
+.rm-dialog {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.rm-dialog h3 { margin: 0 0 14px; font-size: 15px; }
+.rm-dialog-info {
+  margin-bottom: 14px;
+}
+.rm-dialog-row {
+  font-size: 13px;
+  margin: 6px 0;
+}
+.rm-dialog-warning {
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.rm-dialog-warning strong { color: var(--color-warning); }
+.rm-dialog-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }

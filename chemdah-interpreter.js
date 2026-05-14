@@ -1559,7 +1559,7 @@ window.ChemdahInterpreter = (() => {
 
   function _renderQuestCard(quest, qi) {
     const label = quest.meta.name || quest.id;
-    const typeLabel = quest.meta.type || 'main';
+    const typeLabel = quest.meta.type || 'L1';
 
     let html = `<div class="qv-card collapsed" data-q-index="${qi}">`;
 
@@ -1588,12 +1588,8 @@ window.ChemdahInterpreter = (() => {
       <input class="cv-input" data-field="q.meta.name" data-q-index="${qi}"
         value="${_escHtml(quest.meta.name || '')}" placeholder="任务显示名称"></div>`;
     html += `<div class="cv-field"><label>类型</label>
-      <select class="cv-select" data-field="q.meta.type" data-q-index="${qi}">
-        <option value="main" ${quest.meta.type === 'main' ? 'selected' : ''}>主线 main</option>
-        <option value="side" ${quest.meta.type === 'side' ? 'selected' : ''}>支线 side</option>
-        <option value="daily" ${quest.meta.type === 'daily' ? 'selected' : ''}>每日 daily</option>
-        <option value="" ${!quest.meta.type ? 'selected' : ''}>其他</option>
-      </select></div>`;
+      <input class="cv-input cv-input-mono" data-field="q.meta.type" data-q-index="${qi}"
+        value="${_escHtml(quest.meta.type || 'L1')}" placeholder="L1"></div>`;
     html += '</div>'; // qv-grid-2
 
     html += `<div class="cv-field cv-field-wide"><label>描述</label>
@@ -2962,7 +2958,7 @@ window.ChemdahInterpreter = (() => {
         case 'q-add-quest': {
           parsed.quests.push({
             id: '新任务_' + (parsed.quests.length + 1),
-            meta: { name: '', type: 'main' },
+            meta: { name: '', type: 'L1' },
             start: { npc: '', script: '' },
             accept: { script: '' },
             tasks: [],
