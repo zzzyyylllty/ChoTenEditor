@@ -1722,6 +1722,7 @@
     const o = document.createElement('div');
     o.id = 'ke-editor-overlay';
     o.className = 'ke-overlay';
+    o.tabIndex = 0;
     return o;
   }
 
