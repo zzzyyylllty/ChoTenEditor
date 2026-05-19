@@ -30,12 +30,14 @@ try {
 
     // 文件操作
     copyFile: (src, dest) => ipcRenderer.invoke('fs:copyFile', src, dest),
+    deleteFile: (filePath) => ipcRenderer.invoke('fs:deleteFile', filePath),
   };
 
   // Window controls
   api.minimize = () => ipcRenderer.send('window:minimize');
   api.maximize = () => ipcRenderer.send('window:maximize');
   api.close = () => ipcRenderer.send('window:close');
+  api.openDevTools = () => ipcRenderer.send('window:openDevTools');
   api.isMaximized = () => ipcRenderer.invoke('window:isMaximized');
   api.appVersion = ipcRenderer.sendSync('app:getVersionSync');
   api.openExternal = (url) => ipcRenderer.invoke('shell:openExternal', url);
@@ -54,6 +56,8 @@ try {
     disconnectAll: () => ipcRenderer.invoke('remote:disconnectAll'),
     applyApprovedWrite: (opts) => ipcRenderer.invoke('remote:applyApprovedWrite', opts),
     notifyFileChangeRejected: (opts) => ipcRenderer.invoke('remote:notifyFileChangeRejected', opts),
+    applyApprovedDelete: (opts) => ipcRenderer.invoke('remote:applyApprovedDelete', opts),
+    notifyFileDeleteRejected: (opts) => ipcRenderer.invoke('remote:notifyFileDeleteRejected', opts),
     // 客户端
     connectToServer: (opts) => ipcRenderer.invoke('remote:connectToServer', opts),
     disconnectFromServer: () => ipcRenderer.invoke('remote:disconnectFromServer'),
@@ -62,6 +66,10 @@ try {
     requestFileRead: (opts) => ipcRenderer.invoke('remote:requestFileRead', opts),
     requestFileWrite: (opts) => ipcRenderer.invoke('remote:requestFileWrite', opts),
     requestFileList: (opts) => ipcRenderer.invoke('remote:requestFileList', opts),
+    requestFileDelete: (opts) => ipcRenderer.invoke('remote:requestFileDelete', opts),
+    notifyEditingStart: (opts) => ipcRenderer.invoke('remote:notifyEditingStart', opts),
+    notifyEditingEnd: (opts) => ipcRenderer.invoke('remote:notifyEditingEnd', opts),
+    requestEditingList: () => ipcRenderer.invoke('remote:requestEditingList'),
     // 事件监听
     onEvent: (callback) => {
       ipcRenderer.on('remote:event', (event, type, data) => callback(type, data));

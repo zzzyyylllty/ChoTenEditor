@@ -21,7 +21,6 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -80,9 +79,11 @@ ipcMain.handle('dialog:saveFile', async (event, options) => {
 });
 ipcMain.handle('fs:readFile', async (event, filePath) => {
   try {
+    console.log('[MAIN] readFile:', filePath);
     const content = await fs.promises.readFile(filePath, 'utf-8');
     return { success: true, content };
   } catch (error) {
+    console.error('[MAIN] readFile error:', filePath, error.message);
     return { success: false, error: error.message };
   }
 });
@@ -124,6 +125,15 @@ ipcMain.handle('fs:stat', async (event, filePath) => {
   }
 });
 
+ipcMain.handle('fs:deleteFile', async (event, filePath) => {
+  try {
+    await fs.promises.unlink(filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('app:getPath', async () => {
   return __dirname;
 });
@@ -138,6 +148,10 @@ ipcMain.handle('fs:copyFile', async (event, src, dest) => {
 });
 
 // Window controls
+ipcMain.on('window:openDevTools', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.webContents.openDevTools();
+});
 ipcMain.on('window:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) win.minimize();
@@ -179,9 +193,9 @@ remote.setEventHandler((event, data) => {
 });
 
 // 服务器
-ipcMain.handle('remote:startServer', async (event, { port, password }) => {
+ipcMain.handle('remote:startServer', async (event, { port, password, allowDifferentVersions }) => {
   try {
-    return await remote.startServer(port, password);
+    return await remote.startServer(port, password, { allowDifferentVersions });
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -232,10 +246,20 @@ ipcMain.handle('remote:notifyFileChangeRejected', (event, { clientId, filePath }
   return { success: true };
 });
 
+ipcMain.handle('remote:applyApprovedDelete', (event, { clientId, filePath }) => {
+  remote.applyApprovedDelete(clientId, filePath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:notifyFileDeleteRejected', (event, { clientId, filePath }) => {
+  remote.notifyFileDeleteRejected(clientId, filePath, '管理员拒绝了删除请求');
+  return { success: true };
+});
+
 // 客户端
-ipcMain.handle('remote:connectToServer', async (event, { host, port, password }) => {
+ipcMain.handle('remote:connectToServer', async (event, { host, port, password, version }) => {
   try {
-    return await remote.connectToServer(host, port, password);
+    return await remote.connectToServer(host, port, password, version);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -267,5 +291,25 @@ ipcMain.handle('remote:requestFileWrite', (event, { filePath, content }) => {
 
 ipcMain.handle('remote:requestFileList', (event, { dirPath }) => {
   remote.requestFileList(dirPath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:requestFileDelete', (event, { filePath }) => {
+  remote.requestFileDelete(filePath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:notifyEditingStart', (event, { filePath }) => {
+  remote.notifyEditingStart(filePath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:notifyEditingEnd', (event, { filePath }) => {
+  remote.notifyEditingEnd(filePath);
+  return { success: true };
+});
+
+ipcMain.handle('remote:requestEditingList', () => {
+  remote.requestEditingList();
   return { success: true };
 });

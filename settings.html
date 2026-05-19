@@ -411,12 +411,46 @@
                     </div>
                     <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">开启后，编辑器内容将在每次修改后自动保存</div>
                 </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="editor-devtools" style="vertical-align:middle;margin-right:6px;">
+                        启动时打开 F12 调试屏幕
+                    </label>
+                </div>
+                <div class="setting-section-divider"></div>
+                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">启动预热</h3>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="prewarm-files" style="vertical-align:middle;margin-right:6px;">
+                        预热上次打开的项目文件
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                        <span style="font-size:12px;color:var(--color-text-tertiary);">上限</span>
+                        <input type="number" id="prewarm-files-max" class="shortcut-input" value="50" min="0" max="1000" style="width:70px;text-align:center;">
+                        <span style="font-size:12px;color:var(--color-text-tertiary);">MB</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">启动时将上次打开的文件内容读入内存缓存，秒切标签页</div>
+                </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="prewarm-kether" style="vertical-align:middle;margin-right:6px;">
+                        预热 Kether 动作
+                    </label>
+                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">启动时加载 Kether 动作定义文件，打开积木编辑器时无需等待</div>
+                </div>
                 <div class="setting-section-divider"></div>
                 <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">远程模式</h3>
                 <div class="setting-group">
                     <label for="remote-password">远程连接密码</label>
                     <input type="password" id="remote-password" class="shortcut-input" placeholder="设置远程连接密码" style="width:100%;box-sizing:border-box;">
                     <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">远程模式下启动服务器时默认使用的连接密码</div>
+                </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="remote-allow-different-versions" style="vertical-align:middle;margin-right:6px;">
+                        允许不同版本的客户端连接
+                    </label>
+                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">关闭后，只有版本匹配的客户端才能连接服务器</div>
                 </div>
                 <div class="setting-section-divider"></div>
                 <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">积木块显示</h3>

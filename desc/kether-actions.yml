@@ -938,7 +938,7 @@
   id: "equipment_check"
   name: "Equipment Check"
   desc: "检查玩家装备是否为特定物品，使用 {Chemdah} 物品表达式。<br>表达式帮助详见 {Chemdah} 文档。<br><br>可用位置：<br>{主手}：hand, mainhand<br>{副手}：offhand<br>{头盔}：head, helmet<br>{胸甲}：chest, chestplate<br>{护腿}：legs, leggings<br>{鞋子}：boots, feet"
-  syntax: "inventory {equipment} is {token} [amount {int}]"
+  syntax: "inventory (hand|mainhand|offhand|head|helmet|chest|chestplate|legs|leggings|boots|feet) is {token} [amount {int}]"
   example: "inventory helmet is \"minecraft:iron_helmet\"<br>inventory chestplate is \"minecraft:diamond_chestplate\" amount 1"
   semantic: "检查装备 {0} 是否为 {1} 数量 {2}"
 
@@ -1130,16 +1130,16 @@
   id: "quest_check"
   name: "Quest Check"
   desc: "检测玩家正在进行的或尚未接受的任务（已选择的）。<br><br>可用行为：<br>accept-check（允许接受）accepted（是否已经接受）completed（是否已经完成）"
-  syntax: "quest {check}"
-  example: "{quest accepted}<br>{quest completed}"
+  syntax: "quest (accept-check|accepted|completed)"
+  example: "quest accepted<br>quest completed"
   semantic: "检测任务 {0}"
 
 "Chemdah:quest_control":
   id: "quest_control"
   name: "Quest Control"
   desc: "控制玩家正在进行的或尚未接受的任务 (已选择的）。<br><br>可用行为：<br>accept（接受任务）complete（完成任务）fail（放弃任务）restart（重置任务）stop（结束任务）"
-  syntax: "quest {control}"
-  example: "{quest accept}<br>{quest complete}"
+  syntax: "quest (accept|complete|fail|restart|stop)"
+  example: "quest accept<br>quest complete"
   semantic: "控制任务 {0}"
 
 "Chemdah:quest_progress":

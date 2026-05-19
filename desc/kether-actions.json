@@ -1684,7 +1684,7 @@
           "物品管理",
           "实体控制"
         ],
-        "syntax": "inventory {equipment} is {token} [amount {int}]",
+        "syntax": "inventory (hand|mainhand|offhand|head|helmet|chest|chestplate|legs|leggings|boots|feet) is {token} [amount {int}]",
         "example": "inventory helmet is \"minecraft:iron_helmet\"<br>inventory chestplate is \"minecraft:diamond_chestplate\" amount 1",
         "semantic": "检查装备 {0} 是否为 {1} 数量 {2}"
       },
@@ -1820,7 +1820,7 @@
           "逻辑与数学"
         ],
         "syntax": "min {action} {action}",
-        "example": "max 1 10",
+        "example": "min 1 10",
         "semantic": "最小值 {0} {1}"
       },
       {
@@ -2013,8 +2013,8 @@
         "categories": [
           "游戏系统"
         ],
-        "syntax": "quest {check}",
-        "example": "{quest accepted}<br>{quest completed}",
+        "syntax": "quest (accept-check|accepted|completed)",
+        "example": "quest accepted<br>quest completed",
         "semantic": "检测任务 {0}"
       },
       {
@@ -2026,8 +2026,8 @@
         "categories": [
           "游戏系统"
         ],
-        "syntax": "quest {control}",
-        "example": "{quest accept}<br>{quest complete}",
+        "syntax": "quest (accept|complete|fail|restart|stop)",
+        "example": "quest accept<br>quest complete",
         "semantic": "控制任务 {0}"
       },
       {

@@ -38,6 +38,13 @@ let currentDirectoryPath = null;
 let directoryHistory = [];
 let breadcrumbs = [];
 
+// 远程文件管理
+let _fmMode = 'local'; // 'local' | 'remote'
+let _remoteFiles = [];
+let _remoteDirPath = '';
+let _editingFilesMap = {}; // { filePath: true } 当前客户端正在编辑的文件
+let _otherEditingFiles = {}; // { filePath: true } 其他人正在编辑的文件
+
 // ============================================
 // 应用状态持久化
 // ============================================
@@ -269,6 +276,15 @@ function initCodeMirror() {
 
   // 暴露给 ChemdahInterpreter（可视化编辑器需要同步到源码）
   window.codeMirrorEditor = codeMirrorEditor;
+
+  // 包装 setValue 以追踪所有写入 CodeMirror 的调用
+  var _origSetValue = codeMirrorEditor.setValue.bind(codeMirrorEditor);
+  codeMirrorEditor.setValue = function(content) {
+    var caller = new Error().stack.split('\n').slice(2, 5).join(' | ');
+    var preview = content ? content.substring(0, 60).replace(/\n/g, '\\n') : 'null';
+    console.log('[CM] setValue (len=' + (content ? content.length : 0) + ') preview="' + preview + '" caller:', caller);
+    return _origSetValue(content);
+  };
 }
 
 // ============================================
@@ -289,6 +305,9 @@ function init() {
   // 从 desc/ 目录加载任务定义数据
   loadQuestDefinitions();
 
+  // 启动预热（异步，不阻塞界面）
+  prewarmStartup();
+
   // 监听 localStorage 变化，更新 CodeMirror 主题
   window.addEventListener('storage', (e) => {
     if (e.key === 'editorConfig') {
@@ -305,6 +324,16 @@ function init() {
 
   // 恢复上次的会话
   restoreAppState();
+
+  // 根据设置决定是否打开 DevTools
+  if (window.electronAPI && window.electronAPI.openDevTools) {
+    try {
+      var cfg = JSON.parse(localStorage.getItem('editorConfig') || '{}');
+      if (cfg.devTools === true) {
+        window.electronAPI.openDevTools();
+      }
+    } catch (_) {}
+  }
 
   // 监听页面关闭/刷新，防止丢失未保存更改
   window.addEventListener('beforeunload', function (e) {
@@ -344,8 +373,8 @@ function setupEventListeners() {
   if (remoteBtn) remoteBtn.addEventListener('click', () => { playSound('select'); openRemoteMode(); });
 
   // 编辑器模式按钮
-  if (sourceModeBtn) sourceModeBtn.addEventListener('click', () => { playSound('click'); switchEditorMode(false); });
-  if (visualModeBtn) visualModeBtn.addEventListener('click', () => { playSound('click'); switchEditorMode(true); });
+  if (sourceModeBtn) sourceModeBtn.addEventListener('click', async () => { playSound('click'); await switchEditorMode(false); });
+  if (visualModeBtn) visualModeBtn.addEventListener('click', async () => { playSound('click'); await switchEditorMode(true); });
 
   // 编辑器文本框
   if (codeMirrorEditor) codeMirrorEditor.on('change', handleEditorChange);
@@ -388,7 +417,7 @@ function setupEventListeners() {
   }
 
   // 键盘快捷键
-  document.addEventListener('keydown', function (e) {
+  document.addEventListener('keydown', async function (e) {
     // Ctrl+S: 保存
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
@@ -413,10 +442,98 @@ function setupEventListeners() {
       playSound('click');
       // 检查是否可以对当前文件切换
       if (currentFile && (currentFile.endsWith('.yml') || currentFile.endsWith('.yaml'))) {
-        switchEditorMode(!isVisualMode);
+        await switchEditorMode(!isVisualMode);
       }
     }
   });
+
+  // 文件管理器选项卡切换
+  document.querySelectorAll('.fm-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var mode = this.dataset.fm;
+      if (mode === _fmMode) return;
+      _fmMode = mode;
+      document.querySelectorAll('.fm-tab').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      // 显示/隐藏删除按钮
+      document.getElementById('fm-delete').style.display = 'none';
+      if (mode === 'remote') {
+        // 切换到远程：请求远程文件列表
+        if (window.electronAPI && window.electronAPI.remote) {
+          window.electronAPI.remote.getClientStatus().then(function(rs) {
+            if (rs && rs.connected) {
+              window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath || '/' });
+            }
+          }).catch(function() {});
+        }
+      } else {
+        // 切换到本地：重新加载当前目录
+        if (currentDirectoryPath) {
+          loadDirectory(currentDirectoryPath, true);
+        }
+      }
+    });
+  });
+
+  // 重新加载按钮
+  var reloadBtn = document.getElementById('fm-reload');
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', function() {
+      playSound('click');
+      if (_fmMode === 'remote') {
+        if (window.electronAPI && window.electronAPI.remote) {
+          window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath || '/' });
+        }
+      } else if (currentDirectoryPath) {
+        loadDirectory(currentDirectoryPath, true);
+      }
+    });
+  }
+
+  // 删除按钮
+  var deleteBtn = document.getElementById('fm-delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async function() {
+      var selected = fileTreeEl.querySelector('li.selected');
+      if (!selected) return;
+      var path = selected.dataset.path;
+      if (!path) return;
+      if (!confirm('确定要删除 "' + getFileName(path) + '" 吗？')) return;
+      playSound('click');
+      if (_fmMode === 'remote') {
+        if (window.electronAPI && window.electronAPI.remote) {
+          window.electronAPI.remote.requestFileDelete({ filePath: path });
+          setRemoteStatus('rm-client-status', '正在请求删除文件...');
+        }
+      } else {
+        // 本地删除
+        try {
+          await _electronAPI.deleteFile(path);
+          if (currentDirectoryPath) loadDirectory(currentDirectoryPath, true);
+        } catch (e) {
+          showErrorDialog('删除失败', e.message);
+        }
+      }
+    });
+  }
+
+  // 文件树右键菜单 - 选择文件以显示删除按钮
+  if (fileTreeEl) {
+    fileTreeEl.addEventListener('contextmenu', function(e) {
+      var li = e.target.closest('li');
+      if (li) {
+        li.classList.add('selected');
+        document.getElementById('fm-delete').style.display = '';
+        e.preventDefault();
+      }
+    });
+    // 点击其他地方取消选择
+    fileTreeEl.addEventListener('click', function(e) {
+      var li = e.target.closest('li');
+      fileTreeEl.querySelectorAll('li.selected').forEach(function(el) { el.classList.remove('selected'); });
+      if (li) li.classList.add('selected');
+    });
+  }
 
   console.log('[RENDERER] 事件监听器设置完成');
 }
@@ -528,7 +645,11 @@ function renderFileTree(files) {
     li.textContent = file.name;
     li.classList.add(file.isDirectory ? 'directory' : 'file');
     li.dataset.path = file.path;
-    li.addEventListener('click', () => { playSound('click'); handleFileClick(file); });
+    // 远程模式下标记其他人正在编辑的文件
+    if (_fmMode === 'remote' && !file.isDirectory && _otherEditingFiles[file.path]) {
+      li.classList.add('editing-by-other');
+    }
+    li.addEventListener('click', async () => { playSound('click'); await handleFileClick(file); });
     fileTreeEl.appendChild(li);
   });
 }
@@ -541,9 +662,33 @@ async function handleFileClick(file) {
   console.log('[RENDERER] 文件点击:', file.name);
 
   if (file.isDirectory) {
-    await navigateToDirectory(file.path);
+    if (_fmMode === 'remote') {
+      // 远程模式：向服务器请求目录列表
+      _remoteDirPath = file.path;
+      if (window.electronAPI && window.electronAPI.remote) {
+        window.electronAPI.remote.requestFileList({ dirPath: file.path });
+        setRemoteStatus('rm-client-status', '正在加载远程目录...');
+      }
+    } else {
+      await navigateToDirectory(file.path);
+    }
   } else {
-    await openFile(file.path);
+    if (_fmMode === 'remote') {
+      // 远程模式：向服务器请求文件内容
+      if (window.electronAPI && window.electronAPI.remote) {
+        setRemoteStatus('rm-client-status', '正在读取远程文件...');
+        window.electronAPI.remote.requestFileRead({ filePath: file.path });
+      }
+    } else {
+      // 检查不支持的格式
+      var ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+      var unsupportedExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.exe', '.dll', '.so', '.bin', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.mp3', '.wav', '.ogg', '.mp4', '.avi', '.mov', '.mkv', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jar', '.class', '.ttf', '.otf', '.woff', '.woff2', '.iso', '.img', '.db', '.sqlite'];
+      if (unsupportedExts.indexOf(ext) >= 0) {
+        var confirmed = await showUnsupportedFormatDialog(ext);
+        if (!confirmed) return;
+      }
+      await openFile(file.path);
+    }
   }
 }
 
@@ -554,13 +699,18 @@ async function handleFileClick(file) {
 let _openingFile = null;
 let _closingTabs = {};
 let _loadingFile = false;
+let _fileContents = {}; // 文件内容缓存，用于标签页切换
 
-async function openFile(filePath) {
+async function openFile(filePath, content) {
   console.log('[RENDERER] 打开文件:', filePath);
 
   // 防止重复打开同一文件
   if (_openingFile === filePath) {
-    console.log('[RENDERER] 正在打开中，跳过重复请求');
+    // 如果正在打开中但有内容到达（远程响应），先缓存内容供等待者使用
+    if (content) {
+      _fileContents[filePath] = content;
+      console.log('[RENDERER] 缓存远程到达的内容:', filePath);
+    }
     return;
   }
   // 防止在关闭过程中重新打开
@@ -575,12 +725,53 @@ async function openFile(filePath) {
   }
 
   if (currentFile === filePath && openTabs.includes(filePath)) {
-    setActiveTab(filePath);
+    await setActiveTab(filePath);
     return;
   }
   _openingFile = filePath;
 
-  if (!_electronAPI || !_electronAPI.readFile) {
+  // 缓存内容（当从远程加载或首次读取时）
+  if (content) {
+    _fileContents[filePath] = content;
+  }
+
+  // 无内容时尝试从缓存读取
+  if (!content && _fileContents[filePath]) {
+    content = _fileContents[filePath];
+    console.log('[RENDERER] 从缓存读取内容:', filePath);
+  }
+
+  // 仍无内容时为远程模式：向服务器请求并等待
+  if (!content && _fmMode === 'remote') {
+    if (window.electronAPI && window.electronAPI.remote) {
+      window.electronAPI.remote.requestFileRead({ filePath: filePath });
+      setRemoteStatus('rm-client-status', '正在读取远程文件...');
+      // 等待远程内容加载（最多等待 10 秒）
+      for (var _w = 0; _w < 200; _w++) {
+        await new Promise(function(r) { setTimeout(r, 50); });
+        if (_fileContents[filePath]) {
+          content = _fileContents[filePath];
+          console.log('[RENDERER] 远程内容已加载');
+          break;
+        }
+        if (_closingTabs[filePath]) {
+          _openingFile = null;
+          return;
+        }
+      }
+      if (!content) {
+        showErrorDialog('读取失败', '无法从远程服务器读取文件');
+        _openingFile = null;
+        return;
+      }
+    } else {
+      showErrorDialog('错误', '远程 API 不可用');
+      _openingFile = null;
+      return;
+    }
+  }
+
+  if (!content && (!_electronAPI || !_electronAPI.readFile)) {
     showErrorDialog('API 错误', 'readFile API 不可用');
     _openingFile = null;
     return;
@@ -599,58 +790,66 @@ async function openFile(filePath) {
       }
     }
 
-    const result = await _electronAPI.readFile(filePath);
-    console.log('[RENDERER] 读取文件成功');
-
-    if (result.success) {
-      currentFile = filePath;
-      const content = result.content;
-
-      // 添加标签页
-      if (!openTabs.includes(filePath)) {
-        openTabs.push(filePath);
-        addTab(filePath);
+    if (!content) {
+      const result = await _electronAPI.readFile(filePath);
+      if (!result.success) {
+        showErrorDialog('读取失败', result.error || '无法读取文件');
+        _openingFile = null;
+        return;
       }
+      content = result.content;
+      _fileContents[filePath] = content; // 缓存本地读取的内容
+      console.log('[RENDERER] 读取文件成功');
+    }
 
-      // 更新编辑器内容（临时禁止脏标记）
-      if (codeMirrorEditor) {
-        _loadingFile = true;
-        codeMirrorEditor.setValue(content);
-        _loadingFile = false;
-        delete dirtyTabs[filePath];
-        updateTabDirtyIndicator(filePath);
-        updateCodeMirrorMode(filePath);
-      }
+    // 添加标签页
+    if (!openTabs.includes(filePath)) {
+      openTabs.push(filePath);
+      addTab(filePath);
+    }
 
-      // 激活标签页（放于 setValue 之后，以使 renderVisualEditor 读到最新内容）
-      setActiveTab(filePath);
+    // 更新编辑器内容（临时禁止脏标记）
+    if (codeMirrorEditor) {
+      _loadingFile = true;
+      codeMirrorEditor.setValue(content);
+      _loadingFile = false;
+      delete dirtyTabs[filePath];
+      updateTabDirtyIndicator(filePath);
+      updateCodeMirrorMode(filePath);
+    }
 
-      // 更新编辑器模式
-      updateEditorModeForFile(filePath);
+    // 激活标签页（放于 setValue 之后，以使 renderVisualEditor 读到最新内容）
+    currentFile = filePath;
+    activeTab = filePath;
+    await setActiveTab(filePath);
 
-      // 更新状态栏
-      if (filePathEl) {
-        filePathEl.textContent = filePath;
-      }
+    // 更新编辑器模式
+    updateEditorModeForFile(filePath);
 
-      // 检测类型并显示在状态栏
-      if (typeof ChemdahInterpreter !== 'undefined') {
-        const detectedType = ChemdahInterpreter.detectFileType(filePath, content);
-        if (detectedType !== 'unknown') {
-          updateStatus(`文件: ${getFileName(filePath)} [${detectedType}]`);
-        } else {
-          updateStatus(`文件: ${getFileName(filePath)}`);
-        }
+    // 更新状态栏
+    if (filePathEl) {
+      filePathEl.textContent = filePath;
+    }
+
+    // 检测类型并显示在状态栏
+    if (typeof ChemdahInterpreter !== 'undefined') {
+      const detectedType = ChemdahInterpreter.detectFileType(filePath, content);
+      if (detectedType !== 'unknown') {
+        updateStatus(`文件: ${getFileName(filePath)} [${detectedType}]`);
       } else {
         updateStatus(`文件: ${getFileName(filePath)}`);
       }
-
-      saveAppState();
-      _openingFile = null;
     } else {
-      showErrorDialog('读取文件失败', result.error);
-      _openingFile = null;
+      updateStatus(`文件: ${getFileName(filePath)}`);
     }
+
+    // 如果是远程文件，通知服务器开始编辑
+    if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
+      window.electronAPI.remote.notifyEditingStart({ filePath: filePath });
+    }
+
+    saveAppState();
+    _openingFile = null;
   } catch (error) {
     console.error('[RENDERER] 打开文件错误:', error);
     showErrorDialog('打开文件失败', error.message || error);
@@ -695,9 +894,9 @@ function addTab(filePath) {
   nameSpan.title = dirtyTabs[filePath] ? baseName + ' (未保存)' : baseName;
   tab.appendChild(nameSpan);
 
-  tab.addEventListener('click', () => {
+  tab.addEventListener('click', async () => {
     playSound('click');
-    setActiveTab(filePath);
+    await setActiveTab(filePath);
   });
 
   // 右键菜单
@@ -736,6 +935,8 @@ async function setActiveTab(filePath) {
   // 如果文件不同，加载内容
   if (currentFile !== filePath) {
     await openFile(filePath);
+    // 如果 openFile 未能成功加载（如远程缓存未命中），跳过后续操作
+    if (currentFile !== filePath) return;
   }
 
   activeTab = filePath;
@@ -789,6 +990,34 @@ async function showDirtyConfirmDialog(fileName) {
 window.__showDirtyConfirm = showDirtyConfirmDialog;
 window.__saveAllDirtyFiles = saveAllDirtyFiles;
 
+async function showUnsupportedFormatDialog(ext) {
+  return await new Promise(function (resolve) {
+    var overlay = document.createElement('div');
+    overlay.className = 'cv-modal';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML =
+      '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;">不支持的格式</h3>' +
+        '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">目前不支持 ' + escapeHtml(ext) + ' 格式，确定要加载吗？</p>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="cv-btn cv-btn-danger" id="unsup-force" style="padding:6px 14px;border:none;background:#c0392b;color:#fff;cursor:pointer;">强制加载</button>' +
+          '<button class="cv-btn cv-btn-primary" id="unsup-cancel" style="padding:6px 14px;border:none;background:var(--color-primary);color:#fff;cursor:pointer;">取消</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#unsup-force').addEventListener('click', function () {
+      overlay.remove(); resolve(true);
+    });
+    overlay.querySelector('#unsup-cancel').addEventListener('click', function () {
+      overlay.remove(); resolve(false);
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === this) { this.remove(); resolve(false); }
+    });
+  });
+}
+
 async function saveAllDirtyFiles() {
   // 只有当前文件（CodeMirror 中加载的）才能保存，其他标签切换时内容已丢失
   if (currentFile && dirtyTabs[currentFile] && codeMirrorEditor) {
@@ -826,6 +1055,7 @@ async function closeTab(filePath, force = false) {
   }
 
   delete dirtyTabs[filePath];
+  delete _fileContents[filePath];
 
   const index = openTabs.indexOf(filePath);
   if (index > -1) {
@@ -852,6 +1082,11 @@ async function closeTab(filePath, force = false) {
       }
       updateStatus('没有打开的文件');
     }
+  }
+
+  // 如果是远程文件，通知服务器停止编辑
+  if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
+    try { window.electronAPI.remote.notifyEditingEnd({ filePath: filePath }); } catch (e) {}
   }
 
   delete _closingTabs[filePath];
@@ -1098,10 +1333,21 @@ async function saveCurrentFile() {
   const content = codeMirrorEditor.getValue();
 
   try {
+    if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
+      // 远程保存
+      window.electronAPI.remote.requestFileWrite({ filePath: currentFile, content: content });
+      dirtyTabs[currentFile] = false;
+      _fileContents[currentFile] = content; // 更新缓存
+      updateTabDirtyIndicator(currentFile);
+      setRemoteStatus('rm-client-status', '正在保存远程文件...');
+      return;
+    }
+
     const result = await _electronAPI.writeFile(currentFile, content);
     if (result.success) {
       playSound('save');
       dirtyTabs[currentFile] = false;
+      _fileContents[currentFile] = content; // 更新缓存
       updateTabDirtyIndicator(currentFile);
       updateStatus(`文件已保存: ${currentFile}`);
     } else {
@@ -1116,8 +1362,59 @@ async function saveCurrentFile() {
 // 编辑器模式
 // ============================================
 
-function switchEditorMode(visual) {
-  console.log('[RENDERER] 切换编辑器模式:', visual ? '可视化' : '源代码');
+async function switchEditorMode(visual) {
+  // 从激活标签页 DOM 获取当前文件路径（比 currentFile 更可靠）
+  var tabEl = document.querySelector('.editor-tab.active');
+  var activeTabPath = tabEl ? tabEl.dataset.path : null;
+  if (activeTabPath && activeTabPath !== currentFile) {
+    console.log('[RENDERER] 修正 currentFile: "' + currentFile + '" → "' + activeTabPath + '"');
+    currentFile = activeTabPath;
+  }
+
+  console.log('[RENDERER] 切换编辑器模式:', visual ? '可视化' : '源代码', 'currentFile=', currentFile, 'dirty=', dirtyTabs[currentFile] ? 'Y' : 'N');
+
+  // 切换模式前处理未保存更改
+  if (currentFile && dirtyTabs[currentFile]) {
+    var swResult = await showDirtyConfirmDialog(getFileName(currentFile));
+    if (swResult === 'cancel') {
+      console.log('[RENDERER] 用户取消模式切换');
+      return;
+    }
+    if (swResult === 'save') {
+      await saveCurrentFile();
+    }
+  }
+
+  // 切换到源代码模式：始终从磁盘重新加载（CodeMirror 在隐藏时 DOM 可能过期）
+  if (currentFile && !visual) {
+    console.log('[RENDERER] 源代码模式：从磁盘重新加载:', currentFile);
+    if (_fmMode !== 'remote' && _electronAPI && _electronAPI.readFile) {
+      var reloadResult = await _electronAPI.readFile(currentFile);
+      console.log('[RENDERER] 读取结果:', reloadResult ? 'ok=' + reloadResult.success : 'null');
+      if (reloadResult && reloadResult.success) {
+        var freshContent = reloadResult.content;
+        console.log('[RENDERER] 内容长度:', freshContent ? freshContent.length : 0);
+        _loadingFile = true;
+        codeMirrorEditor.setValue(freshContent);
+        _loadingFile = false;
+        delete dirtyTabs[currentFile];
+        updateTabDirtyIndicator(currentFile);
+        _fileContents[currentFile] = freshContent;
+        updateCodeMirrorMode(currentFile);
+      }
+    } else if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
+      console.log('[RENDERER] 远程模式：请求服务器刷新');
+      window.electronAPI.remote.requestFileRead({ filePath: currentFile });
+    }
+  } else if (currentFile && visual && _fileContents[currentFile]) {
+    // 切换到可视化模式：从缓存加载正确内容
+    console.log('[RENDERER] 可视化模式：从缓存加载内容:', currentFile);
+    _loadingFile = true;
+    codeMirrorEditor.setValue(_fileContents[currentFile]);
+    _loadingFile = false;
+    delete dirtyTabs[currentFile];
+    updateTabDirtyIndicator(currentFile);
+  }
 
   isVisualMode = visual;
 
@@ -1144,8 +1441,13 @@ function switchEditorMode(visual) {
       typeSelect.value = override || 'auto';
     }
 
-    if (currentFile && (currentFile.endsWith('.yml') || currentFile.endsWith('.yaml') || currentFile.endsWith('.json'))) {
+    if (currentFile && (currentFile.endsWith('.yml') || currentFile.endsWith('.yaml'))) {
       renderVisualEditor();
+    } else if (visualEditor) {
+      // 不支持可视化编辑的文件类型，显示提示
+      visualEditor.innerHTML = currentFile
+        ? '<div class="empty-state"><h2>可视化编辑</h2><p>仅支持 .yml / .yaml 文件的可视化编辑。</p></div>'
+        : '<div class="empty-state"><h2>可视化编辑</h2><p>打开 .yml / .yaml 文件后可切换到可视化编辑</p></div>';
     }
   } else {
     if (sourceEditor) sourceEditor.style.display = 'block';
@@ -1154,6 +1456,11 @@ function switchEditorMode(visual) {
     if (visualModeBtn) visualModeBtn.classList.remove('active');
     if (typeSelector) typeSelector.style.display = 'none';
     updateStatus('源代码编辑器模式');
+    // 在可视化模式下，CodeMirror 被隐藏，setValue 的 DOM 更新可能被延迟。
+    // 恢复显示后强制刷新，确保显示正确的文件内容。
+    if (codeMirrorEditor) {
+      setTimeout(function() { codeMirrorEditor.refresh(); }, 50);
+    }
   }
 }
 
@@ -1168,21 +1475,14 @@ function updateEditorModeForFile(filePath) {
   }
 
   if (!isConfigFile && isVisualMode) {
-    switchEditorMode(false);
+    switchEditorMode(false).catch(function(e) { console.error('[RENDERER] 强制切换模式失败:', e); });
   }
 }
 
 function renderVisualEditor() {
+  console.log('[RENDERER] renderVisualEditor, currentFile=', currentFile);
   if (!codeMirrorEditor || !visualEditor) return;
-  if (!currentFile) {
-    visualEditor.innerHTML = `
-      <div class="empty-state">
-        <h2>可视化编辑器</h2>
-        <p>请先打开一个文件。</p>
-      </div>
-    `;
-    return;
-  }
+  if (!currentFile) return;
 
   // 仅支持 YAML 文件
   if (!currentFile.endsWith('.yml') && !currentFile.endsWith('.yaml')) {
@@ -1327,6 +1627,48 @@ function openSettings() {
  * 从 desc/ 目录加载 Chemdah 定义数据（objective、addon 等）
  * 读取 api-default.json + api-*.json，合并后传入解释器
  */
+// ============================================
+// 启动预热
+// ============================================
+
+async function prewarmStartup() {
+  try {
+    var cfg = JSON.parse(localStorage.getItem('editorConfig') || '{}');
+    var pw = cfg.prewarm || {};
+    var prewarmSize = 0;
+    var maxBytes = (pw.filesMaxMb || 50) * 1024 * 1024;
+
+    // 预热文件
+    if (pw.files !== false && _electronAPI && _electronAPI.readFile) {
+      var appStateStr = localStorage.getItem('appState');
+      if (appStateStr) {
+        try {
+          var state = JSON.parse(appStateStr);
+          var tabs = state.openTabs || [];
+          for (var i = 0; i < tabs.length; i++) {
+            if (prewarmSize >= maxBytes) break;
+            if (tabs[i] === state.currentFile) continue; // 当前文件将在 restoreAppState 中加载
+            if (_fileContents[tabs[i]]) continue; // 已缓存
+            var result = await _electronAPI.readFile(tabs[i]);
+            if (result && result.success && result.content) {
+              _fileContents[tabs[i]] = result.content;
+              prewarmSize += result.content.length;
+            }
+          }
+          console.log('[RENDERER] 预热文件完成，已缓存 ' + Object.keys(_fileContents).length + ' 个文件，约 ' + Math.round(prewarmSize / 1024) + ' KB');
+        } catch (_) {}
+      }
+    }
+
+    // 预热 Kether 动作
+    if (pw.kether !== false && window.KetherEditor && window.KetherEditor.loadActions) {
+      window.KetherEditor.loadActions().then(function() {
+        console.log('[RENDERER] 预热 Kether 动作完成');
+      }).catch(function() {});
+    }
+  } catch (_) {}
+}
+
 async function loadQuestDefinitions() {
   if (!_electronAPI || typeof ChemdahInterpreter === 'undefined' || !ChemdahInterpreter.setDefinitions) return;
 
@@ -1531,12 +1873,34 @@ function camelToKebab(str) {
 
 let _remoteListenersAttached = false;
 let _pendingFileChanges = {}; // key: clientId_path → { clientId, path, content }
+let _pendingFileDeletes = {}; // key: clientId_path → { clientId, path }
 
 function openRemoteMode() {
   const overlay = document.getElementById('rm-overlay');
   if (overlay) overlay.style.display = '';
 
-  // 从 sessionStorage 加载密码明文（由设置页在同会话中保存）
+  // 加载已保存的远程设置
+  try {
+    var saved = localStorage.getItem('editorConfig');
+    if (saved) {
+      var config = JSON.parse(saved);
+      var rc = config.remoteClient || {};
+      // 客户端
+      if (rc.host) document.getElementById('rm-client-host').value = rc.host;
+      if (rc.port) document.getElementById('rm-client-port').value = rc.port;
+      var cpw = sessionStorage.getItem('remoteClientPassword');
+      if (cpw) {
+        document.getElementById('rm-client-password').value = cpw;
+      } else if (rc.password) {
+        try { document.getElementById('rm-client-password').value = decodeURIComponent(escape(atob(rc.password))); } catch (e) {}
+      }
+      // 服务器端口
+      var rs = config.remoteServer || {};
+      if (rs.port) document.getElementById('rm-server-port').value = rs.port;
+    }
+  } catch (e) {}
+
+  // 从 sessionStorage 加载服务器密码明文（由设置页在同会话中保存）
   try {
     var pw = sessionStorage.getItem('remotePassword');
     if (pw) {
@@ -1545,8 +1909,18 @@ function openRemoteMode() {
     }
   } catch (e) {}
 
-  // 刷新状态
-  refreshRemoteUI();
+  // 刷新状态并检测远程连接
+  refreshRemoteUI().then(function() {
+    if (window.electronAPI && window.electronAPI.remote) {
+      window.electronAPI.remote.getClientStatus().then(function(cs) {
+        if (cs && cs.connected) {
+          var tabs = document.getElementById('fm-tabs');
+          if (tabs) tabs.style.display = '';
+        }
+      }).catch(function() {});
+    }
+  });
+
   attachRemoteListeners();
 }
 
@@ -1563,13 +1937,13 @@ function attachRemoteListeners() {
   const closeBtn = document.getElementById('rm-close-btn');
   if (closeBtn) closeBtn.addEventListener('click', closeRemoteMode);
 
-  // 点击蒙层关闭
-  const overlay = document.getElementById('rm-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', function(e) {
-      if (e.target === this) closeRemoteMode();
-    });
-  }
+  // 点击蒙层关闭（已禁用，防止编辑时误触）
+  // const overlay = document.getElementById('rm-overlay');
+  // if (overlay) {
+  //   overlay.addEventListener('click', function(e) {
+  //     if (e.target === this) closeRemoteMode();
+  //   });
+  // }
 
   // 标签切换
   document.querySelectorAll('.rm-tab').forEach(function(tab) {
@@ -1589,13 +1963,30 @@ function attachRemoteListeners() {
     startBtn.addEventListener('click', async function() {
       var port = parseInt(document.getElementById('rm-server-port').value) || 12345;
       var password = document.getElementById('rm-server-password').value || 'choten';
+
+      // 保存服务器端口到 localStorage
+      try {
+        var saved = localStorage.getItem('editorConfig');
+        var config = saved ? JSON.parse(saved) : {};
+        config.remoteServer = { port: port };
+        localStorage.setItem('editorConfig', JSON.stringify(config));
+      } catch (e) {}
       if (!window.electronAPI || !window.electronAPI.remote) {
         setRemoteStatus('rm-server-status', '错误: 远程 API 不可用', true);
         return;
       }
+      // 读取设置：是否允许不同版本
+      var serverCfg = {};
+      try {
+        var savedCfg = localStorage.getItem('editorConfig');
+        if (savedCfg) {
+          var parsedCfg = JSON.parse(savedCfg);
+          serverCfg.allowDifferentVersions = parsedCfg.allowDifferentVersions === true;
+        }
+      } catch (e) {}
       setRemoteStatus('rm-server-status', '正在启动服务器...');
       try {
-        var result = await window.electronAPI.remote.startServer({ port, password });
+        var result = await window.electronAPI.remote.startServer({ port, password, allowDifferentVersions: serverCfg.allowDifferentVersions });
         if (result && result.stage !== undefined) {
           setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + port);
           document.getElementById('rm-server-start').style.display = 'none';
@@ -1633,24 +2024,32 @@ function attachRemoteListeners() {
       var host = document.getElementById('rm-client-host').value || '127.0.0.1';
       var port = parseInt(document.getElementById('rm-client-port').value) || 12345;
       var password = document.getElementById('rm-client-password').value || '';
+
+      // 保存地址、端口、密码到 localStorage
+      try {
+        var saved = localStorage.getItem('editorConfig');
+        var config = saved ? JSON.parse(saved) : {};
+        config.remoteClient = { host: host, port: port, password: btoa(unescape(encodeURIComponent(password))) };
+        localStorage.setItem('editorConfig', JSON.stringify(config));
+        sessionStorage.setItem('remoteClientPassword', password);
+      } catch (e) {}
       if (!window.electronAPI || !window.electronAPI.remote) {
         setRemoteStatus('rm-client-status', '错误: 远程 API 不可用', true);
         return;
       }
       setRemoteStatus('rm-client-status', '正在连接...');
       try {
-        var result = await window.electronAPI.remote.connectToServer({ host, port, password });
+        var appVer = window.electronAPI && window.electronAPI.appVersion ? window.electronAPI.appVersion : '';
+        var result = await window.electronAPI.remote.connectToServer({ host, port, password, version: appVer });
         if (result && result.stage === 'challenge') {
-          setRemoteStatus('rm-client-status', '已连接，等待管理员确认...');
+          setRemoteStatus('rm-client-status', '已连接，请将安全码告知管理员');
           document.getElementById('rm-client-connect').style.display = 'none';
           document.getElementById('rm-client-disconnect').style.display = '';
-          // 显示安全码
+          // 显示安全码，等待管理员确认
           var codeArea = document.getElementById('rm-security-code-area');
           var codeDisplay = document.getElementById('rm-security-code-display');
           if (codeArea) codeArea.style.display = '';
           if (codeDisplay) codeDisplay.textContent = result.securityCode || '------';
-          var sendBtn = document.getElementById('rm-security-send');
-          if (sendBtn) sendBtn.style.display = '';
         } else if (result && result.stage === 'approved') {
           setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
           document.getElementById('rm-client-connect').style.display = 'none';
@@ -1679,18 +2078,6 @@ function attachRemoteListeners() {
       document.getElementById('rm-client-connect').style.display = '';
       document.getElementById('rm-client-disconnect').style.display = 'none';
       document.getElementById('rm-security-code-area').style.display = 'none';
-    });
-  }
-
-  // 客户端：发送安全码
-  const sendCodeBtn = document.getElementById('rm-security-send');
-  if (sendCodeBtn) {
-    sendCodeBtn.addEventListener('click', async function() {
-      var code = document.getElementById('rm-security-code-display').textContent;
-      if (!window.electronAPI || !window.electronAPI.remote) return;
-      await window.electronAPI.remote.sendSecurityCode({ securityCode: code });
-      setRemoteStatus('rm-client-status', '安全码已发送，等待管理员确认...');
-      document.getElementById('rm-security-send').style.display = 'none';
     });
   }
 
@@ -1724,6 +2111,14 @@ function attachRemoteListeners() {
     });
   }
 
+  // 点击确认对话框背景关闭
+  const confirmDialog = document.getElementById('rm-confirm-dialog');
+  if (confirmDialog) {
+    confirmDialog.addEventListener('click', function(e) {
+      if (e.target === this) this.style.display = 'none';
+    });
+  }
+
   // 文件更改对话框按钮
   const fcApproveBtn = document.getElementById('rm-fc-approve');
   if (fcApproveBtn) {
@@ -1752,6 +2147,37 @@ function attachRemoteListeners() {
       });
       delete _pendingFileChanges[key];
       document.getElementById('rm-filechange-dialog').style.display = 'none';
+    });
+  }
+
+  // 文件删除对话框按钮
+  const fdApproveBtn = document.getElementById('rm-fd-approve');
+  if (fdApproveBtn) {
+    fdApproveBtn.addEventListener('click', async function() {
+      var key = this.dataset.key;
+      var del = _pendingFileDeletes[key];
+      if (!del || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.applyApprovedDelete({
+        clientId: del.clientId,
+        filePath: del.path,
+      });
+      delete _pendingFileDeletes[key];
+      document.getElementById('rm-filedelete-dialog').style.display = 'none';
+      refreshRemoteUI();
+    });
+  }
+  const fdRejectBtn = document.getElementById('rm-fd-reject');
+  if (fdRejectBtn) {
+    fdRejectBtn.addEventListener('click', async function() {
+      var key = this.dataset.key;
+      var del = _pendingFileDeletes[key];
+      if (!del || !window.electronAPI || !window.electronAPI.remote) return;
+      await window.electronAPI.remote.notifyFileDeleteRejected({
+        clientId: del.clientId,
+        filePath: del.path,
+      });
+      delete _pendingFileDeletes[key];
+      document.getElementById('rm-filedelete-dialog').style.display = 'none';
     });
   }
 }
@@ -1913,6 +2339,14 @@ function initRemoteEvents() {
       case 'client:joined':
         setRemoteStatus('rm-server-status', '新客户端连接: ' + (data.ip || ''));
         refreshRemoteUI();
+        // 自动弹出确认对话框
+        if (data.clientId) {
+          document.getElementById('rm-confirm-ip').textContent = data.ip || 'unknown';
+          document.getElementById('rm-confirm-code').textContent = data.securityCode || '--';
+          document.getElementById('rm-confirm-accept').dataset.clientId = data.clientId;
+          document.getElementById('rm-confirm-reject').dataset.clientId = data.clientId;
+          document.getElementById('rm-confirm-dialog').style.display = '';
+        }
         break;
 
       case 'client:left':
@@ -1947,21 +2381,52 @@ function initRemoteEvents() {
         setRemoteStatus('rm-server-status', '文件已更新: ' + data.path);
         break;
 
+      case 'file:delete:request':
+        // 显示文件删除确认对话框
+        var delKey = data.clientId + '_' + data.path;
+        _pendingFileDeletes[delKey] = data;
+        document.getElementById('rm-fd-client').textContent = data.ip || data.clientId;
+        document.getElementById('rm-fd-path').textContent = data.path;
+        document.getElementById('rm-fd-approve').dataset.key = delKey;
+        document.getElementById('rm-fd-reject').dataset.key = delKey;
+        document.getElementById('rm-filedelete-dialog').style.display = '';
+        playSound('click');
+        break;
+
+      case 'file:delete:applied':
+        setRemoteStatus('rm-server-status', '文件已删除: ' + data.path);
+        if (currentFile === data.path) {
+          closeTab(data.path);
+        }
+        break;
+
+      case 'file:editing:started':
+        _otherEditingFiles[data.path] = true;
+        if (_fmMode === 'remote') {
+          renderFileTree(_remoteFiles);
+        }
+        break;
+
+      case 'file:editing:ended':
+        delete _otherEditingFiles[data.path];
+        if (_fmMode === 'remote') {
+          renderFileTree(_remoteFiles);
+        }
+        break;
+
       // 客户端事件
       case 'client:connecting':
         setRemoteStatus('rm-client-status', '正在连接...');
         break;
 
       case 'client:auth:challenge':
-        setRemoteStatus('rm-client-status', '已连接，等待管理员确认...');
+        setRemoteStatus('rm-client-status', '已连接，请将安全码告知管理员');
         document.getElementById('rm-client-connect').style.display = 'none';
         document.getElementById('rm-client-disconnect').style.display = '';
         var codeArea = document.getElementById('rm-security-code-area');
         var codeDisplay = document.getElementById('rm-security-code-display');
         if (codeArea) codeArea.style.display = '';
         if (codeDisplay) codeDisplay.textContent = data.securityCode || '------';
-        var sendBtn = document.getElementById('rm-security-send');
-        if (sendBtn) sendBtn.style.display = '';
         break;
 
       case 'client:auth:approved':
@@ -1969,6 +2434,9 @@ function initRemoteEvents() {
         document.getElementById('rm-client-connect').style.display = 'none';
         document.getElementById('rm-client-disconnect').style.display = '';
         document.getElementById('rm-security-code-area').style.display = 'none';
+        // 显示文件管理器远程选项卡
+        var fmTabs = document.getElementById('fm-tabs');
+        if (fmTabs) fmTabs.style.display = '';
         break;
 
       case 'client:disconnected':
@@ -1976,14 +2444,22 @@ function initRemoteEvents() {
         document.getElementById('rm-client-connect').style.display = '';
         document.getElementById('rm-client-disconnect').style.display = 'none';
         document.getElementById('rm-security-code-area').style.display = 'none';
+        // 清除远程文件状态并切回本地
+        _remoteFiles = [];
+        _otherEditingFiles = {};
+        var fmTabs = document.getElementById('fm-tabs');
+        if (fmTabs) fmTabs.style.display = 'none';
+        if (_fmMode === 'remote') {
+          _fmMode = 'local';
+          document.querySelectorAll('.fm-tab').forEach(function(t) { t.classList.remove('active'); });
+          var localTab = document.querySelector('.fm-tab[data-fm="local"]');
+          if (localTab) localTab.classList.add('active');
+          if (currentDirectoryPath) loadDirectory(currentDirectoryPath, true);
+        }
         break;
 
       case 'client:error':
         setRemoteStatus('rm-client-status', '错误: ' + data.message, true);
-        break;
-
-      case 'client:security-code:sent':
-        setRemoteStatus('rm-client-status', '安全码已发送，等待管理员确认...');
         break;
 
       case 'client:permission:updated':
@@ -2000,6 +2476,45 @@ function initRemoteEvents() {
 
       case 'client:file:write:pending':
         setRemoteStatus('rm-client-status', '等待管理员批准文件更改...');
+        break;
+
+      case 'client:file:read':
+        if (data.success) {
+          setRemoteStatus('rm-client-status', '已读取远程文件');
+          openFile(data.path, data.content);
+        } else {
+          setRemoteStatus('rm-client-status', '读取远程文件失败: ' + (data.error || ''), true);
+        }
+        break;
+
+      case 'client:file:list':
+        if (data.success && data.files) {
+          _remoteFiles = data.files;
+          _remoteDirPath = data.path;
+          renderFileTree(_remoteFiles);
+          setRemoteStatus('rm-client-status', '已加载远程文件列表');
+        } else {
+          setRemoteStatus('rm-client-status', '加载远程文件列表失败: ' + (data.error || ''), true);
+        }
+        break;
+
+      case 'client:file:delete:result':
+        if (data.success) {
+          setRemoteStatus('rm-client-status', '文件已删除: ' + data.path);
+          if (currentFile === data.path) {
+            closeTab(data.path);
+          }
+          // 刷新远程文件列表
+          if (_remoteDirPath && window.electronAPI && window.electronAPI.remote) {
+            window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath });
+          }
+        } else {
+          setRemoteStatus('rm-client-status', '删除失败: ' + (data.error || ''), true);
+        }
+        break;
+
+      case 'client:file:delete:pending':
+        setRemoteStatus('rm-client-status', '等待管理员批准删除...');
         break;
 
       case 'client:server:stopped':

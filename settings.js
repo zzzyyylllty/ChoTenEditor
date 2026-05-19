@@ -19,6 +19,10 @@ let editorLineNumbers;
 let editorLineWrapping;
 let editorTheme;
 let editorAutoSync;
+let editorDevtools;
+let prewarmFiles;
+let prewarmFilesMax;
+let prewarmKether;
 
 // 积木块显示
 let blockFontSize;
@@ -31,6 +35,7 @@ let editShortcutsBtn;
 
 // 远程设置
 let remotePassword;
+let remoteAllowDifferentVersions;
 
 // 背景图片
 let bgGrid;
@@ -99,6 +104,13 @@ const defaultConfig = {
     opacity: 0.3,
   },
   remotePasswordHash: '',
+  allowDifferentVersions: false,
+  devTools: false,
+  prewarm: {
+    files: true,
+    filesMaxMb: 50,
+    kether: true,
+  },
 };
 
 // 预设主题配置
@@ -301,6 +313,15 @@ function initializeDOMElements() {
 
   // 远程设置
   remotePassword = document.getElementById('remote-password');
+  remoteAllowDifferentVersions = document.getElementById('remote-allow-different-versions');
+
+  // 开发者工具
+  editorDevtools = document.getElementById('editor-devtools');
+
+  // 启动预热
+  prewarmFiles = document.getElementById('prewarm-files');
+  prewarmFilesMax = document.getElementById('prewarm-files-max');
+  prewarmKether = document.getElementById('prewarm-kether');
 
   console.log('  - themeSelect:', !!themeSelect);
   console.log('  - backBtn:', !!backBtn);
@@ -745,6 +766,12 @@ async function saveSettings() {
       theme: editorTheme ? editorTheme.value : defaultConfig.editor.theme,
     },
     autoSync: editorAutoSync ? editorAutoSync.value === 'true' : defaultConfig.autoSync,
+    devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
+    prewarm: {
+      files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
+      filesMaxMb: prewarmFilesMax ? parseInt(prewarmFilesMax.value) || defaultConfig.prewarm.filesMaxMb : defaultConfig.prewarm.filesMaxMb,
+      kether: prewarmKether ? prewarmKether.checked : defaultConfig.prewarm.kether,
+    },
     blockFontSize: blockFontSize ? blockFontSize.value : defaultConfig.blockFontSize,
     categoryColors: {},
     shortcuts: {
@@ -769,15 +796,15 @@ async function saveSettings() {
     if (input) config.categoryColors[cat] = input.value;
   });
 
-  // 远程设置 - 只存 hash，明文暂存 sessionStorage（当前会话有效）
+  // 远程设置
   var pw = remotePassword ? remotePassword.value : '';
   if (pw) {
     config.remotePasswordHash = await hashPassword(pw);
     sessionStorage.setItem('remotePassword', pw);
   } else if (existing && existing.remotePasswordHash) {
-    // 未填写新密码，保留已有 hash
     config.remotePasswordHash = existing.remotePasswordHash;
   }
+  config.allowDifferentVersions = remoteAllowDifferentVersions ? remoteAllowDifferentVersions.checked : false;
 
   // 保留背景设置
   const currentBg = getBackgroundConfig();
@@ -828,6 +855,13 @@ function loadSettings() {
   if (editorLineWrapping) editorLineWrapping.value = editorConfig.lineWrapping.toString();
   if (editorTheme) editorTheme.value = editorConfig.theme;
   if (editorAutoSync) editorAutoSync.value = String(config.autoSync === true);
+  if (editorDevtools) editorDevtools.checked = config.devTools === true;
+
+  // 启动预热设置
+  var pw = config.prewarm || defaultConfig.prewarm;
+  if (prewarmFiles) prewarmFiles.checked = pw.files !== false;
+  if (prewarmFilesMax) prewarmFilesMax.value = pw.filesMaxMb || 50;
+  if (prewarmKether) prewarmKether.checked = pw.kether !== false;
 
   // 应用积木块显示设置
   if (blockFontSize) {
@@ -877,6 +911,9 @@ function loadSettings() {
   if (remotePassword && sessionStorage.getItem('remotePassword')) {
     remotePassword.value = sessionStorage.getItem('remotePassword');
     remotePassword.placeholder = '已设置密码';
+  }
+  if (remoteAllowDifferentVersions) {
+    remoteAllowDifferentVersions.checked = config.allowDifferentVersions === true;
   }
 }
 

@@ -58,7 +58,14 @@
       "Bash(cmd.exe *)",
       "PowerShell(Write-Host \"Checking release directory...\"; $items = Get-ChildItem -LiteralPath \"E:\\\\ChotenEditor\\\\release\" -ErrorAction SilentlyContinue; if \\($items -eq $null\\) { Write-Host \"No items found or directory doesn't exist\" } else { Write-Host \"Found $\\($items.Count\\) items\"; $items | ForEach-Object { Write-Host \"$\\($_.Length\\) $\\($_.Name\\)\" } })",
       "PowerShell(Remove-Item *)",
-      "Bash(npx electron-builder *)"
+      "Bash(npx electron-builder *)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"E:\\\\ChoTenEditor\" -File)",
+      "Bash(Select-Object Name)",
+      "Bash(findstr /n \"bindTooltip\" kether-editor.js)",
+      "PowerShell(Select-String *)",
+      "Bash(git restore *)",
+      "Bash(git add *)"
     ]
   }
 }

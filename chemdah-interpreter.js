@@ -949,14 +949,19 @@ window.ChemdahInterpreter = (() => {
     });
 
     // --- 自动同步（字段编辑后自动同步到源码） ---
-    container.addEventListener('change', function (e) {
+    // 移除旧的 change 监听器防止累积（每次渲染替换监听，避免旧闭包引用旧 parsed 数据）
+    if (container._cvChangeListener) {
+      container.removeEventListener('change', container._cvChangeListener);
+    }
+    container._cvChangeListener = function (e) {
       if (window.__keAutoSync && e.target) {
         var tag = e.target.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
           _syncConversationToSource(parsed);
         }
       }
-    });
+    };
+    container.addEventListener('change', container._cvChangeListener);
 
   }
 
@@ -3223,14 +3228,18 @@ window.ChemdahInterpreter = (() => {
     // 已经包含在 change 事件代理中
 
     // --- 自动同步（字段编辑后自动同步到源码） ---
-    container.addEventListener('change', function (e) {
+    if (container._qvChangeListener) {
+      container.removeEventListener('change', container._qvChangeListener);
+    }
+    container._qvChangeListener = function (e) {
       if (window.__keAutoSync && e.target) {
         var tag = e.target.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
           _syncQuestToSource(parsed);
         }
       }
-    });
+    };
+    container.addEventListener('change', container._qvChangeListener);
   }
 
   function _setNestedValue(obj, path, value) {
@@ -3710,6 +3719,7 @@ window.ChemdahInterpreter = (() => {
    * @param {object} options - { forceType, onSync }
    */
   function render(filePath, content, containerEl, options = {}) {
+    console.log('[CHEMDAH] render called:', filePath ? filePath.split(/[\\/]/).pop() : 'null', 'contentLen=' + (content ? content.length : 0));
     if (!containerEl) return;
 
     const forceType = options.forceType || null;

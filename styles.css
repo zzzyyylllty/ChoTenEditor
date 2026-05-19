@@ -464,6 +464,91 @@ body {
   font-size: 14px;
 }
 
+.file-tree li.editing-by-other::after {
+  content: '✏️';
+  font-size: 11px;
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+/* ============================================
+   文件管理器选项卡
+   ============================================ */
+
+.fm-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--spacing-xs);
+}
+
+.fm-tab {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: all var(--transition-fast);
+}
+
+.fm-tab:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.fm-tab.active {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-bg-primary);
+}
+
+.fm-tab[data-fm="remote"].active {
+  border-top: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.fm-tab[data-fm="local"].active {
+  border-top: 2px solid var(--color-success);
+  color: var(--color-success);
+}
+
+/* 文件管理器操作按钮 */
+
+.fm-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.fm-btn {
+  padding: 2px 8px;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  line-height: 1.4;
+}
+
+.fm-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.fm-btn.fm-btn-danger {
+  color: var(--color-error);
+}
+
+.fm-btn.fm-btn-danger:hover {
+  background: var(--color-error);
+  color: #fff;
+}
+
 /* ============================================
    编辑器容器
    ============================================ */

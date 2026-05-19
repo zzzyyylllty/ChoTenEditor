@@ -123,6 +123,9 @@
   let _keMouseX = 0, _keMouseY = 0;
   let _savedBlocks = []; // { name, code }
   let _stashBlocks = [];
+  let _commonBlocks = []; // 常用积木（来自文件 + 用户自定义）
+  let _userCommonBlocks = []; // 用户自定义常用积木（localStorage）
+  let _COMMON_CAT = '⭐ 常用';
   let _undoStack = [];
   let _redoStack = [];
   let _undoDuringRedo = false;
@@ -187,6 +190,8 @@
       if (b) _savedBlocks = JSON.parse(b);
       const st = localStorage.getItem('kether_stash_blocks');
       if (st) _stashBlocks = JSON.parse(st);
+      const uc = localStorage.getItem('kether_user_common');
+      if (uc) _userCommonBlocks = JSON.parse(uc);
     } catch (e) { /* ignore */ }
   }
   let _savedSettings = {};
@@ -199,6 +204,9 @@
   }
   function saveStashBlocks() {
     try { localStorage.setItem('kether_stash_blocks', JSON.stringify(_stashBlocks)); } catch (e) {}
+  }
+  function saveUserCommonBlocks() {
+    try { localStorage.setItem('kether_user_common', JSON.stringify(_userCommonBlocks)); } catch (e) {}
   }
 
   // ============================================
@@ -352,6 +360,50 @@
     } catch (e) {
       console.error('[KE] Failed to load actions:', e);
     }
+  }
+
+  async function loadCommonBlocks() {
+    try {
+      const resp = await fetch('desc/common-kether.json');
+      const data = await resp.json();
+      _commonBlocks = [];
+      for (const [id, entry] of Object.entries(data)) {
+        _commonBlocks.push({ id: id, isUser: false, ...entry });
+      }
+    } catch (e) { console.warn('[KE] 无法加载常用积木文件:', e); }
+    // 合并用户自定义
+    for (const ub of _userCommonBlocks) {
+      if (!_commonBlocks.find(function(b) { return b.id === ub.id; })) {
+        _commonBlocks.push(ub);
+      }
+    }
+  }
+
+  function resolveCommonSyntax(syntax, params, values) {
+    var result = syntax;
+    for (var key in params) {
+      var val = values[key];
+      if (val != null) {
+        result = result.split('%' + key + '%').join(val);
+      }
+    }
+    return result;
+  }
+
+  function addUserCommonBlock(name, syntax) {
+    var id = 'user_' + Date.now().toString(36);
+    _userCommonBlocks.push({ id: id, name: name, isUser: true, desc: '', syntax: syntax, params: {} });
+    saveUserCommonBlocks();
+    // 合并到 _commonBlocks
+    if (!_commonBlocks.find(function(b) { return b.id === id; })) {
+      _commonBlocks.push(_userCommonBlocks[_userCommonBlocks.length - 1]);
+    }
+  }
+
+  function removeUserCommonBlock(id) {
+    _userCommonBlocks = _userCommonBlocks.filter(function(b) { return b.id !== id; });
+    _commonBlocks = _commonBlocks.filter(function(b) { return b.id !== id; });
+    saveUserCommonBlocks();
   }
 
   // ============================================
@@ -1987,9 +2039,147 @@
     }
   }
 
+  function renderCommonActions(overlay, state, list, search) {
+    var blocks = _commonBlocks;
+    var q = (search || '').toLowerCase();
+    if (q) {
+      blocks = blocks.filter(function(b) { return b.name.toLowerCase().indexOf(q) >= 0 || b.desc.toLowerCase().indexOf(q) >= 0; });
+    }
+    for (var i = 0; i < blocks.length; i++) {
+      var cb = blocks[i];
+      var item = document.createElement('div');
+      item.className = 'ke-action-item ke-action-warn';
+      item.innerHTML = '<span class="ke-action-color" style="background:#ff69b4"></span><span class="ke-action-name">' + esc(cb.name) + '</span><span class="ke-action-provider">' + (cb.isUser ? '自定义' : '常用') + '</span>';
+      item.onclick = function(cb) {
+        return function() {
+          playSound('select');
+          var params = cb.params;
+          var paramKeys = Object.keys(params || {});
+          if (paramKeys.length === 0) {
+            var code = cb.syntax;
+            if (cb.isUser) {
+              insertCommonCode(overlay, state, code);
+            } else {
+              insertRawCodeBlock(overlay, state, code);
+            }
+          } else {
+            showCommonParamDialog(overlay, state, cb, !cb.isUser);
+          }
+        };
+      }(cb);
+      if (cb.isUser) {
+        item.oncontextmenu = function(cb) {
+          return function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm('删除常用积木 "' + cb.name + '"？')) {
+              removeUserCommonBlock(cb.id);
+              renderActions(overlay, state, _COMMON_CAT, '');
+            }
+          };
+        }(cb);
+      }
+      list.appendChild(item);
+    }
+    if (blocks.length === 0) {
+      list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">暂无常用积木<br><small>右键积木可添加为常用</small></div>';
+    }
+  }
+
+  function showCommonParamDialog(overlay, state, cb, asCustom) {
+    var modal = document.createElement('div');
+    modal.className = 'cv-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:200001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+    var html = '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
+      '<h3 style="margin:0 0 4px;font-size:15px;">' + esc(cb.name) + '</h3>' +
+      (cb.desc ? '<p style="margin:0 0 16px;font-size:12px;color:var(--color-text-tertiary);">' + esc(cb.desc) + '</p>' : '') +
+      '<div class="ke-param-fields">';
+    var params = cb.params || {};
+    var inputs = {};
+    for (var key in params) {
+      var p = params[key];
+      if (typeof p === 'string') {
+        html += '<div style="margin-bottom:10px;"><label style="display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:3px;">' + esc(p) + '</label><input class="ke-param-input" id="ke-pi-' + key + '" style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg-tertiary);color:var(--color-text-primary);box-sizing:border-box;"></div>';
+      } else if (p.selectable) {
+        html += '<div style="margin-bottom:10px;"><label style="display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:3px;">' + esc(p.name || key) + '</label><select class="ke-param-select" id="ke-pi-' + key + '" style="width:100%;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg-tertiary);color:var(--color-text-primary);">';
+        for (var label in p.selectable) {
+          var val = p.selectable[label];
+          html += '<option value="' + esc(val) + '">' + esc(label) + '</option>';
+        }
+        html += '</select></div>';
+      }
+    }
+    html += '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+      '<button class="ke-btn" id="ke-param-cancel" style="padding:6px 16px;">取消</button>' +
+      '<button class="ke-btn ke-btn-primary" id="ke-param-ok" style="padding:6px 16px;">插入</button>' +
+      '</div></div>';
+    modal.innerHTML = html;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#ke-param-cancel').onclick = function() { modal.remove(); };
+    modal.querySelector('#ke-param-ok').onclick = function() {
+      var values = {};
+      for (var key in params) {
+        var inp = modal.querySelector('#ke-pi-' + key);
+        if (inp) values[key] = inp.value;
+      }
+      var code = resolveCommonSyntax(cb.syntax, params, values);
+      modal.remove();
+      if (asCustom) {
+        insertRawCodeBlock(overlay, state, code);
+      } else {
+        insertCommonCode(overlay, state, code);
+      }
+    };
+    modal.addEventListener('click', function(e) { if (e.target === this) modal.remove(); });
+    // 回车确认
+    modal.querySelector('.ke-param-input')?.addEventListener('keydown', function(e) { if (e.key === 'Enter') modal.querySelector('#ke-param-ok').click(); });
+  }
+
+  function insertRawCodeBlock(overlay, state, code) {
+    if (!code || !code.trim()) return;
+    try {
+      var block = createCustomBlock(code.trim());
+      var entry = state.blocks.find(function(b) { return b.isEntry; });
+      if (entry) {
+        entry.thenBlocks.push(block);
+      } else {
+        state.blocks.push(block);
+      }
+      refreshCanvas(overlay, state);
+      updatePreview(overlay, state);
+    } catch (e) { console.error('[KE] 插入原始代码失败:', e); }
+  }
+
+  function insertCommonCode(overlay, state, code) {
+    if (!code || !code.trim()) return;
+    try {
+      var parsed = parseCodeToBlocks(code);
+      if (parsed.length === 0) return;
+      var entry = state.blocks.find(function(b) { return b.isEntry; });
+      if (entry) {
+        for (var pi = 0; pi < parsed.length; pi++) {
+          entry.thenBlocks.push(parsed[pi]);
+        }
+      } else {
+        for (var pj = 0; pj < parsed.length; pj++) {
+          state.blocks.push(parsed[pj]);
+        }
+      }
+      refreshCanvas(overlay, state);
+      updatePreview(overlay, state);
+    } catch (e) { console.error('[KE] 插入常用积木失败:', e); }
+  }
+
   function renderCatList(overlay, state) {
     const list = overlay.querySelector('#ke-cat-list');
     list.innerHTML = '';
+    // ⭐ 常用
+    var favItem = mk('div', 'ke-cat-item' + (state.activeCategory === _COMMON_CAT ? ' ke-cat-active' : ''), '<span style="font-weight:600;">' + _COMMON_CAT + '</span><span class="ke-cat-count">' + _commonBlocks.length + '</span>');
+    favItem.onclick = function() { playSound('lightclick'); state.activeCategory = _COMMON_CAT; list.querySelectorAll('.ke-cat-item').forEach(function(el) { el.classList.remove('ke-cat-active'); }); favItem.classList.add('ke-cat-active'); renderActions(overlay, state, _COMMON_CAT, ''); };
+    list.appendChild(favItem);
+
     const allItem = mk('div', 'ke-cat-item' + (state.activeCategory == null ? ' ke-cat-active' : ''), '<span style="font-weight:600;">全部</span><span class="ke-cat-count">' + _actions.length + '</span>');
     allItem.onclick = () => { playSound('lightclick'); state.activeCategory = null; list.querySelectorAll('.ke-cat-item').forEach(el => el.classList.remove('ke-cat-active')); allItem.classList.add('ke-cat-active'); renderActions(overlay, state, null, ''); };
     list.appendChild(allItem);
@@ -2006,6 +2196,11 @@
   function renderActions(overlay, state, category, search) {
     const list = overlay.querySelector('#ke-action-list');
     list.innerHTML = '';
+    // ⭐ 常用：渲染常用积木列表
+    if (category === _COMMON_CAT) {
+      renderCommonActions(overlay, state, list, search);
+      return;
+    }
     let acts = category ? (_categorizedActions[category] || []) : _actions;
     const q = (search || '').toLowerCase();
     if (q) {
@@ -2052,16 +2247,24 @@
         menu.innerHTML =
           '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
           '<div class="ke-ctx-sep"></div>' +
-          '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>';
+          '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>' +
+          '<div class="ke-ctx-sep"></div>' +
+          '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> 添加为常用积木</div>';
         menu.querySelector('[data-act="copy-block"]').onclick = function() {
           playSound('click');
-          _clipboard = createBlock(act);
+          _clipboard = { _type: 'act', action: act };
+          console.log('[KE] 复制积木:', act.id, act.name);
           menu.remove();
         };
         menu.querySelector('[data-act="view-detail"]').onclick = function() {
           playSound('click');
           menu.remove();
           showBlockDetail({ actionId: act.id }, null);
+        };
+        menu.querySelector('[data-act="fav-block"]').onclick = function() {
+          playSound('click');
+          menu.remove();
+          addUserCommonBlock(act.name, act.syntax);
         };
         document.body.appendChild(menu);
         var closeCtx = function(e2) {
@@ -3452,6 +3655,30 @@ document.addEventListener('dragover', function (e) {
     console.log('[KE] moveBlock DONE');
   }
 
+  function pasteIntoSlot(copy, parentBlock, slotType) {
+    if (slotType === 'entry' || slotType === 'then') parentBlock.thenBlocks.push(copy);
+    else if (slotType === 'cond') parentBlock.condBlocks.push(copy);
+    else if (slotType === 'else') parentBlock.elseBlocks.push(copy);
+    else if (slotType.startsWith('val-')) {
+      const key = slotType.slice(4);
+      if (!parentBlock._actSlots) parentBlock._actSlots = {};
+      if (!parentBlock._actSlots[key]) parentBlock._actSlots[key] = [];
+      parentBlock._actSlots[key].push(copy);
+    } else if (slotType.startsWith('branch-')) {
+      const idx = parseInt(slotType.slice(7), 10);
+      if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
+      if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
+      if (!parentBlock._whenBranches[idx].blocks) parentBlock._whenBranches[idx].blocks = [];
+      parentBlock._whenBranches[idx].blocks.push(copy);
+    } else if (slotType.startsWith('wcond-')) {
+      const idx = parseInt(slotType.slice(6), 10);
+      if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
+      if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
+      if (!parentBlock._whenBranches[idx].condBlocks) parentBlock._whenBranches[idx].condBlocks = [];
+      parentBlock._whenBranches[idx].condBlocks.push(copy);
+    }
+  }
+
   function showContextMenu(e, block, state, overlay) {
     e.preventDefault();
     e.stopPropagation();
@@ -3472,39 +3699,44 @@ document.addEventListener('dragover', function (e) {
       '<div class="ke-ctx-item ke-ctx-item-danger" data-action="delete"><span>🗑</span> 删除<span class="ke-ctx-shortcut">Del</span></div>';
     menu.querySelector('[data-action="copy"]').onclick = () => {
       playSound('click');
-      _clipboard = cloneBlock(block);
+      _clipboard = { _type: 'block', block: cloneBlock(block) };
+      console.log('[KE] 复制画布积木:', block.actionId);
       menu.remove();
     };
     menu.querySelector('[data-action="paste"]').onclick = () => {
       playSound('click');
       menu.remove();
-      if (!_clipboard) return;
+      if (!_clipboard) { console.log('[KE] 粘贴失败: _clipboard 为空'); return; }
+      console.log('[KE] 粘贴, _clipboard:', _clipboard._type, _clipboard._type === 'act' ? _clipboard.action.id : 'block');
+      const blockEl = e.target.closest('.ke-b');
+      const slotEl = blockEl ? blockEl.parentNode.closest('.ke-b-slot, .ke-entry-slot') : null;
+      const pid = slotEl ? slotEl.dataset.bid : null;
+      const stp = slotEl ? slotEl.dataset.slotType : null;
+      console.log('[KE] 槽位检测:', !!slotEl, 'pid:', pid ? pid.slice(-8) : null, 'stp:', stp);
       _pushUndo(state);
-      const parentBlock = findParentBlock(state.blocks, block.id);
-      if (parentBlock && _clipboard) {
-        const copy = cloneBlock(_clipboard);
+      if (_clipboard._type === 'act') {
+        console.log('[KE] 粘贴动作:', _clipboard.action.id);
+        addBlock(overlay, state, _clipboard.action, pid, stp, null);
+      } else if (_clipboard._type === 'block') {
+        const copy = cloneBlock(_clipboard.block);
         resetBlockIds(copy);
-        let slotType = 'then';
-        if (parentBlock.isEntry) slotType = 'entry';
-        if (parentBlock._actSlots) {
-          for (const k of Object.keys(parentBlock._actSlots)) {
-            if (parentBlock._actSlots[k].some(b => b.id === block.id)) {
-              slotType = 'val-' + k; break;
-            }
+        if (pid && stp) {
+          const parentBlock = findBlock(state.blocks, pid);
+          if (parentBlock) {
+            pasteIntoSlot(copy, parentBlock, stp);
+            refreshCanvas(overlay, state);
+            updatePreview(overlay, state);
+            return;
           }
         }
-        if (slotType === 'entry' || slotType === 'then') parentBlock.thenBlocks.push(copy);
-        else if (slotType.startsWith('val-')) {
-          const key = slotType.slice(4);
-          if (!parentBlock._actSlots) parentBlock._actSlots = {};
-          if (!parentBlock._actSlots[key]) parentBlock._actSlots[key] = [];
-          parentBlock._actSlots[key].push(copy);
+        const entry = state.blocks.find(b => b.isEntry);
+        if (entry) {
+          entry.thenBlocks.push(copy);
+          refreshCanvas(overlay, state);
+          updatePreview(overlay, state);
         }
-        refreshCanvas(overlay, state);
-        updatePreview(overlay, state);
       }
-    };
-    
+    };    
     menu.querySelector('[data-action="detail"]').onclick = () => {
       menu.remove();
       showBlockDetail(block, state);
@@ -3738,16 +3970,23 @@ document.addEventListener('dragover', function (e) {
           menu.innerHTML =
             '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
             '<div class="ke-ctx-sep"></div>' +
-            '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>';
+            '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>' +
+            '<div class="ke-ctx-sep"></div>' +
+            '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> 添加为常用积木</div>';
           menu.querySelector('[data-act="copy-block"]').onclick = function() {
             playSound('click');
-            _clipboard = createBlock(act);
+            _clipboard = { _type: 'act', action: act };
             menu.remove();
           };
           menu.querySelector('[data-act="view-detail"]').onclick = function() {
             playSound('click');
             menu.remove();
             showBlockDetail({ actionId: act.id }, null);
+          };
+          menu.querySelector('[data-act="fav-block"]').onclick = function() {
+            playSound('click');
+            menu.remove();
+            addUserCommonBlock(act.name, act.syntax);
           };
           document.body.appendChild(menu);
           var closeCtx = function(e2) {
@@ -4012,50 +4251,36 @@ document.addEventListener('dragover', function (e) {
         _redo(state, overlay); e.preventDefault();
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        if (!_clipboard) return;
+        if (!_clipboard) { console.log('[KE] Ctrl+V: _clipboard 为空'); return; }
+        console.log('[KE] Ctrl+V: type=', _clipboard._type, _clipboard._type === 'act' ? _clipboard.action.id : 'block');
         e.preventDefault();
-        _pushUndo(state);
-        const copy = cloneBlock(_clipboard);
-        resetBlockIds(copy);
-        // 检测鼠标下方的槽位
         const el = document.elementFromPoint(_keMouseX, _keMouseY);
-        const slotEl = el ? el.closest('.ke-b-slot, .ke-entry-slot') : null;
-        if (slotEl && slotEl.dataset.bid) {
-          const parentBlock = findBlock(state.blocks, slotEl.dataset.bid);
-          if (parentBlock) {
-            const slotType = slotEl.dataset.slotType;
-            if (slotType === 'entry' || slotType === 'then') parentBlock.thenBlocks.push(copy);
-            else if (slotType === 'cond') parentBlock.condBlocks.push(copy);
-            else if (slotType === 'else') parentBlock.elseBlocks.push(copy);
-            else if (slotType.startsWith('val-')) {
-              const key = slotType.slice(4);
-              if (!parentBlock._actSlots) parentBlock._actSlots = {};
-              if (!parentBlock._actSlots[key]) parentBlock._actSlots[key] = [];
-              parentBlock._actSlots[key].push(copy);
-            } else if (slotType.startsWith('branch-')) {
-              const idx = parseInt(slotType.slice(7), 10);
-              if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
-              if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
-              if (!parentBlock._whenBranches[idx].blocks) parentBlock._whenBranches[idx].blocks = [];
-              parentBlock._whenBranches[idx].blocks.push(copy);
-            } else if (slotType.startsWith('wcond-')) {
-              const idx = parseInt(slotType.slice(6), 10);
-              if (!parentBlock._whenBranches) parentBlock._whenBranches = [];
-              if (!parentBlock._whenBranches[idx]) parentBlock._whenBranches[idx] = { id: uid(), condition: '', condBlocks: [], blocks: [] };
-              if (!parentBlock._whenBranches[idx].condBlocks) parentBlock._whenBranches[idx].condBlocks = [];
-              parentBlock._whenBranches[idx].condBlocks.push(copy);
+        const slotEl2 = el ? el.closest('.ke-b-slot, .ke-entry-slot') : null;
+        const pid2 = slotEl2 ? slotEl2.dataset.bid : null;
+        const stp2 = slotEl2 ? slotEl2.dataset.slotType : null;
+        console.log('[KE] Ctrl+V 槽位:', !!slotEl2, 'pid:', pid2 ? pid2.slice(-8) : null, 'stp:', stp2);
+        _pushUndo(state);
+        if (_clipboard._type === 'act') {
+          console.log('[KE] Ctrl+V 粘贴动作:', _clipboard.action.id);
+          addBlock(overlay, state, _clipboard.action, pid2, stp2, null);
+        } else if (_clipboard._type === 'block') {
+          const copy = cloneBlock(_clipboard.block);
+          resetBlockIds(copy);
+          if (pid2 && stp2) {
+            const parentBlock = findBlock(state.blocks, pid2);
+            if (parentBlock) {
+              pasteIntoSlot(copy, parentBlock, stp2);
+              refreshCanvas(overlay, state);
+              updatePreview(overlay, state);
+              return;
             }
+          }
+          const entry = state.blocks.find(b => b.isEntry);
+          if (entry) {
+            entry.thenBlocks.push(copy);
             refreshCanvas(overlay, state);
             updatePreview(overlay, state);
-            return;
           }
-        }
-        // 没有槽位则追加到第一个入口
-        const entry = state.blocks.find(b => b.isEntry);
-        if (entry) {
-          entry.thenBlocks.push(copy);
-          refreshCanvas(overlay, state);
-          updatePreview(overlay, state);
         }
       }
     });
@@ -4069,7 +4294,7 @@ document.addEventListener('dragover', function (e) {
       if (el.dataset.keHooked) return;
       const ph = (el.placeholder || '').toLowerCase();
       const f = (el.dataset.qteField || '').toLowerCase();
-      const parent = el.closest('.cv-field');
+      const parent = el.closest('.cv-field, .cv-option-then');
       const label = parent ? parent.querySelector('label') : null;
       const lt = label ? label.textContent.toLowerCase() : '';
 
@@ -4109,6 +4334,6 @@ document.addEventListener('dragover', function (e) {
   // ============================================
   // 导出
   // ============================================
-  window.KetherEditor = { open: openEditor };
+  window.KetherEditor = { open: openEditor, loadActions: loadActions };
 
 })();

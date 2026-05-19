@@ -1,0 +1,20 @@
+{
+  "quest": {
+    "name": "快速任务控制",
+    "desc": "快速创建任务相关操作",
+    "params": {
+      "quest": "任务名称",
+      "operation": {
+        "name": "操作类型",
+        "selectable": {
+          "接受": "accept",
+          "完成": "complete",
+          "取消": "stop",
+          "重启": "restart",
+          "失败": "fail"
+        }
+      }
+    },
+    "syntax": "quest select %quest%\nquest %operation%"
+  }
+}

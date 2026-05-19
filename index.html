@@ -144,6 +144,28 @@
       50% { width: 60%; }
       100% { width: 100%; }
     }
+    .splash-tip {
+      margin-top: 24px;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      transition: opacity 0.3s ease;
+      min-height: 1.4em;
+      background: linear-gradient(90deg, #ff69b4, #ff1493, #ffd700, #ff69b4);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: splash-tip-grad 3s ease-in-out infinite;
+    }
+    .splash-tip.fade {
+      opacity: 0.4;
+    }
+    @keyframes splash-tip-grad {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -154,6 +176,7 @@
       <div class="splash-title">Choten Editor</div>
       <div class="splash-sub">正在加载...</div>
       <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+      <div class="splash-tip" id="splash-tip"></div>
     </div>
 
     <div class="title-bar" id="title-bar">
@@ -188,8 +211,16 @@
               <button id="nav-up-btn" class="nav-btn" title="上个文件"></button>
             </div>
           </div>
+          <div class="fm-tabs" id="fm-tabs" style="display:none;">
+            <button class="fm-tab active" data-fm="local">本地</button>
+            <button class="fm-tab" data-fm="remote">远程</button>
+          </div>
           <div class="breadcrumbs" id="breadcrumbs">
             <!-- Breadcrumbs will be rendered here -->
+          </div>
+          <div class="fm-actions" id="fm-actions">
+            <button class="fm-btn" id="fm-reload" title="重新加载">↻</button>
+            <button class="fm-btn fm-btn-danger" id="fm-delete" title="删除" style="display:none;">✕</button>
           </div>
         </div>
         <div class="sidebar-content">
@@ -224,7 +255,7 @@
           <div id="visual-editor" class="visual-editor">
             <div class="empty-state">
               <h2>可视化编辑</h2>
-              <p>可视化编辑器已经禁用</p>
+              <p>打开 .yml / .yaml 文件后可切换到可视化编辑</p>
             </div>
           </div>
         </div>
@@ -326,7 +357,6 @@
           <div class="rm-security-label">安全码</div>
           <div class="rm-security-value" id="rm-security-code-display">------</div>
           <div class="rm-security-hint">请将此安全码告知服务器管理员以完成连接确认</div>
-          <button class="rm-btn rm-btn-primary" id="rm-security-send" style="display:none;">已确认，发送安全码</button>
         </div>
       </div>
     </div>
@@ -362,6 +392,21 @@
       <div class="rm-dialog-buttons">
         <button class="rm-btn rm-btn-primary" id="rm-fc-approve">批准</button>
         <button class="rm-btn rm-btn-danger" id="rm-fc-reject">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件删除确认对话框 -->
+  <div class="rm-dialog-overlay" id="rm-filedelete-dialog" style="display:none;">
+    <div class="rm-dialog">
+      <h3>🗑️ 文件删除请求</h3>
+      <div class="rm-dialog-info">
+        <div class="rm-dialog-row"><span>客户端：</span><strong id="rm-fd-client">--</strong></div>
+        <div class="rm-dialog-row"><span>文件路径：</span><strong id="rm-fd-path">--</strong></div>
+      </div>
+      <div class="rm-dialog-buttons">
+        <button class="rm-btn rm-btn-primary" id="rm-fd-approve">批准删除</button>
+        <button class="rm-btn rm-btn-danger" id="rm-fd-reject">拒绝</button>
       </div>
     </div>
   </div>
@@ -426,6 +471,52 @@
     } catch (e) {
       // 静默失败
     }
+  })();
+
+  // ---- 加载提示：随机显示 loadingtips.txt 中的内容，每秒切换 ----
+  (function startLoadingTips() {
+    var defaultTips = [
+      "烹饪土豆烧牛肉的好菜...",
+      "正在飞八分钱...",
+      "准备《逃离块科夫》...",
+      "撰写任务...",
+      "✶ Thinking..."
+    ];
+    var tipEl = document.getElementById('splash-tip');
+    if (!tipEl) return;
+    var tips = [];
+    var lastIndex = -1;
+
+    // 尝试从文件加载，失败则用默认列表
+    fetch('loadingtips.txt').then(function(r) {
+      if (!r.ok) throw new Error('load failed');
+      return r.text();
+    }).then(function(text) {
+      var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+      if (lines.length) tips = lines;
+    }).catch(function() {
+      tips = defaultTips;
+    });
+
+    function showRandomTip() {
+      var pool = tips.length ? tips : defaultTips;
+      var idx;
+      do { idx = Math.floor(Math.random() * pool.length); } while (idx === lastIndex && pool.length > 1);
+      lastIndex = idx;
+      tipEl.textContent = pool[idx];
+      tipEl.classList.remove('fade');
+    }
+
+    showRandomTip();
+    var tipTimer = setInterval(function() {
+      var splash = document.getElementById('splash-overlay');
+      if (!splash || splash.classList.contains('hidden') || splash.style.display === 'none') {
+        clearInterval(tipTimer);
+        return;
+      }
+      tipEl.classList.add('fade');
+      setTimeout(showRandomTip, 300);
+    }, 1000);
   })();
 
   document.getElementById('tb-minimize').addEventListener('click', function() { if (window.electronAPI) window.electronAPI.minimize(); });
