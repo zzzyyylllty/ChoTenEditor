@@ -62,6 +62,14 @@
   example: "exit success <br>exit pause"
   semantic: "退出 {0}"
 
+"Chemdah:goto":
+  id: "goto"
+  name: "Goto"
+  desc: "跳转到特定对话结构中。"
+  syntax: "goto {token}"
+  example: "goto conversation_0"
+  semantic: "跳转到 {0}"
+
 "Kether:goto":
   id: "goto"
   name: "Goto"
@@ -949,14 +957,6 @@
   syntax: "floor {action}"
   example: "floor 3.9"
   semantic: "向下取整 {0}"
-
-"Chemdah:goto":
-  id: "goto"
-  name: "Goto"
-  desc: "跳转到特定对话结构中。"
-  syntax: "goto {token}"
-  example: "goto conversation_0"
-  semantic: "跳转到 {0}"
 
 "Chemdah:inventory_count":
   id: "inventory_count"

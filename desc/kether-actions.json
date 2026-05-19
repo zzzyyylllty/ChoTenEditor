@@ -110,6 +110,19 @@
       {
         "id": "goto",
         "name": "Goto",
+        "description": "跳转到特定对话结构中。",
+        "provider": "Chemdah",
+        "type": "private",
+        "categories": [
+          "游戏系统"
+        ],
+        "syntax": "goto {token}",
+        "example": "goto conversation_0",
+        "semantic": "跳转到 {0}"
+      },
+      {
+        "id": "goto",
+        "name": "Goto",
         "description": "{在 Shell 模式下该语句无任何意义。}<br>跳转到已声明的任何函数，包括 {main} 函数。",
         "provider": "Kether",
         "type": "public",
@@ -1700,19 +1713,6 @@
         "syntax": "floor {action}",
         "example": "floor 3.9",
         "semantic": "向下取整 {0}"
-      },
-      {
-        "id": "goto",
-        "name": "Goto",
-        "description": "跳转到特定对话结构中。",
-        "provider": "Chemdah",
-        "type": "private",
-        "categories": [
-          "游戏系统"
-        ],
-        "syntax": "goto {token}",
-        "example": "goto conversation_0",
-        "semantic": "跳转到 {0}"
       },
       {
         "id": "inventory_count",
