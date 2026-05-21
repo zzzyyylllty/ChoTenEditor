@@ -266,6 +266,80 @@ ipcMain.handle('ai:chat', async (event, { endpoint, model, apiKey, messages, max
 });
 
 // ============================================
+// 提示词管理
+// ============================================
+
+ipcMain.handle('ai:getUserDataPath', async () => {
+  return app.getPath('userData');
+});
+
+ipcMain.handle('ai:loadPrompts', async () => {
+  try {
+    var builtInDir = path.join(__dirname, 'prompts');
+    var userDataDir = path.join(app.getPath('userData'), 'prompts');
+    var prompts = {};
+
+    // 加载内置提示词
+    try {
+      var builtInFiles = await fs.promises.readdir(builtInDir);
+      for (var i = 0; i < builtInFiles.length; i++) {
+        var file = builtInFiles[i];
+        if (!file.endsWith('.md')) continue;
+        var name = file.slice(0, -3);
+        var content = await fs.promises.readFile(path.join(builtInDir, file), 'utf-8');
+        prompts[name] = { name: name, content: content, builtIn: true };
+      }
+    } catch (e) { /* 内置目录不存在则忽略 */ }
+
+    // 加载用户自定义提示词（覆盖内置同名）
+    try {
+      await fs.promises.mkdir(userDataDir, { recursive: true });
+      var userFiles = await fs.promises.readdir(userDataDir);
+      for (var j = 0; j < userFiles.length; j++) {
+        var uf = userFiles[j];
+        if (!uf.endsWith('.md')) continue;
+        var uname = uf.slice(0, -3);
+        var ucontent = await fs.promises.readFile(path.join(userDataDir, uf), 'utf-8');
+        // 用户提示词覆盖同名内置，保留原 builtIn 标志
+        if (prompts[uname]) {
+          prompts[uname].content = ucontent;
+          prompts[uname].overridden = true;
+        } else {
+          prompts[uname] = { name: uname, content: ucontent, builtIn: false };
+        }
+      }
+    } catch (e) { /* 用户目录异常忽略 */ }
+
+    return { success: true, prompts: prompts };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('ai:saveUserPrompt', async (event, promptName, content) => {
+  try {
+    var userDataDir = path.join(app.getPath('userData'), 'prompts');
+    await fs.promises.mkdir(userDataDir, { recursive: true });
+    var filePath = path.join(userDataDir, promptName + '.md');
+    await fs.promises.writeFile(filePath, content, 'utf-8');
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('ai:deleteUserPrompt', async (event, promptName) => {
+  try {
+    var userDataDir = path.join(app.getPath('userData'), 'prompts');
+    var filePath = path.join(userDataDir, promptName + '.md');
+    await fs.promises.unlink(filePath);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ============================================
 // 远程模式
 // ============================================
 

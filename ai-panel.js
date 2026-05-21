@@ -11,10 +11,8 @@ var AIPanel = (function() {
   var _fileOps = []; // { type: 'create'|'edit'|'delete', path, content, original?, accepted: bool }
   var _currentFileContext = ''; // currently open file path
 
-  // 内置系统提示词
-  var BUILTIN_PROMPTS = {
-    'default': '你是一个 Minecraft 插件开发助手，精通 TabooLib、Kether、Chemdah、Inari 等框架。\n\n你可以帮助用户：\n- 编写和修改 Kether 脚本\n- 创建和编辑插件配置文件\n- 生成插件项目代码\n- 调试和优化脚本\n\n当需要创建、编辑或删除文件时，请使用以下格式标记文件操作：\n\n```file:create 相对路径/文件名\n文件内容\n```\n\n```file:edit 相对路径/文件名\n---ORIGINAL---\n需要替换的原始内容\n---UPDATED---\n替换后的新内容\n```\n\n```file:delete 相对路径/文件名\n```\n\n当前工作目录是 Minecraft 插件项目目录。请根据用户需求提供完整的、可直接使用的代码。',
-  };
+  // 提示词缓存（从文件加载）
+  var _promptCache = {};
 
   // ============================================
   // 公共 API
@@ -84,6 +82,9 @@ var AIPanel = (function() {
     // 更新上下文文件信息
     setFileContext(_currentFileContext);
 
+    // 从磁盘加载提示词
+    loadPromptsFromDisk();
+
     // 恢复上次对话
     var saved = loadMessages();
     renderMessages(saved);
@@ -136,6 +137,39 @@ var AIPanel = (function() {
   }
 
   // ============================================
+  // 提示词加载
+  // ============================================
+
+  function loadPromptsFromDisk() {
+    if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
+      window.electronAPI.ai.loadPrompts().then(function(result) {
+        if (result.success) {
+          _promptCache = result.prompts || {};
+        }
+      }).catch(function(err) {
+        console.warn('[AI] 加载提示词失败:', err);
+      });
+    }
+  }
+
+  function resolvePrompt(aiConfig) {
+    // 自定义提示词优先
+    if (aiConfig.systemPrompt === 'custom' && aiConfig.customPrompt) {
+      return aiConfig.customPrompt;
+    }
+
+    // 从缓存中查找
+    var promptName = aiConfig.systemPrompt || 'default';
+    var prompt = _promptCache[promptName];
+    if (prompt && prompt.content) {
+      return prompt.content;
+    }
+
+    // fallback: 极简默认提示词
+    return '你是一个 Minecraft 插件开发助手。当需要创建、编辑或删除文件时，请使用以下格式标记文件操作：\n\n```file:create 相对路径/文件名\n文件内容\n```\n\n```file:edit 相对路径/文件名\n---ORIGINAL---\n需要替换的原始内容\n---UPDATED---\n替换后的新内容\n```\n\n```file:delete 相对路径/文件名\n```';
+  }
+
+  // ============================================
   // 发送消息
   // ============================================
 
@@ -154,12 +188,7 @@ var AIPanel = (function() {
       var apiKey = keys[0];
 
       // 获取系统提示词
-      var systemPrompt = '';
-      if (ai.systemPrompt === 'custom') {
-        systemPrompt = ai.customPrompt || BUILTIN_PROMPTS['default'];
-      } else {
-        systemPrompt = BUILTIN_PROMPTS[ai.systemPrompt] || BUILTIN_PROMPTS['default'];
-      }
+      var systemPrompt = resolvePrompt(ai);
 
       // 添加上下文信息
       if (_currentFileContext) {

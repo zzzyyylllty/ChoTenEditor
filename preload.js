@@ -81,6 +81,10 @@ try {
 
   // AI 制作
   api.ai = {
+    getUserDataPath: function() { return ipcRenderer.invoke('ai:getUserDataPath'); },
+    loadPrompts: function() { return ipcRenderer.invoke('ai:loadPrompts'); },
+    saveUserPrompt: function(name, content) { return ipcRenderer.invoke('ai:saveUserPrompt', name, content); },
+    deleteUserPrompt: function(name) { return ipcRenderer.invoke('ai:deleteUserPrompt', name); },
     chat: function(config, messages) {
       return ipcRenderer.invoke('ai:chat', {
         endpoint: config.endpoint,

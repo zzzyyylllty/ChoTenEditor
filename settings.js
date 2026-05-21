@@ -49,6 +49,11 @@ let aiSystemPrompt;
 let aiCustomPrompt;
 let aiMaxTokens;
 let aiTemperature;
+let aiPromptList;
+let aiNewPromptName;
+let aiNewPromptDesc;
+let aiSavePromptBtn;
+let aiPromptInfo;
 
 // 背景图片
 let bgGrid;
@@ -353,6 +358,11 @@ function initializeDOMElements() {
   aiCustomPrompt = document.getElementById('ai-custom-prompt');
   aiMaxTokens = document.getElementById('ai-max-tokens');
   aiTemperature = document.getElementById('ai-temperature');
+  aiPromptList = document.getElementById('ai-prompt-list');
+  aiNewPromptName = document.getElementById('ai-new-prompt-name');
+  aiNewPromptDesc = document.getElementById('ai-new-prompt-desc');
+  aiSavePromptBtn = document.getElementById('ai-save-prompt');
+  aiPromptInfo = document.getElementById('ai-prompt-info');
 
   // 启动预热
   prewarmFiles = document.getElementById('prewarm-files');
@@ -514,6 +524,65 @@ function setupEventListeners() {
     aiModel.addEventListener('change', function() {
       if (aiCustomModelGroup) {
         aiCustomModelGroup.style.display = this.value === 'custom' ? '' : 'none';
+      }
+    });
+  }
+
+  // AI 提示词切换
+  if (aiSystemPrompt) {
+    aiSystemPrompt.addEventListener('change', function() {
+      var val = this.value;
+      if (val === 'custom') {
+        if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = '';
+      } else {
+        if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = 'none';
+        // 从磁盘加载该提示词内容预览
+        if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
+          window.electronAPI.ai.loadPrompts().then(function(result) {
+            if (result.success && result.prompts[val]) {
+              if (aiCustomPrompt) aiCustomPrompt.value = result.prompts[val].content || '';
+            }
+          });
+        }
+      }
+      updatePromptInfo(val, null, null);
+      // 重新获取 diskPrompts 更新信息
+      if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
+        window.electronAPI.ai.loadPrompts().then(function(result) {
+          if (result.success) {
+            var cfg2 = getFullConfig();
+            updatePromptInfo(val, result.prompts, (cfg2.ai && cfg2.ai.customPrompts) || {});
+          }
+        });
+      }
+    });
+  }
+
+  // AI 保存自定义提示词
+  if (aiSavePromptBtn) {
+    aiSavePromptBtn.addEventListener('click', function() {
+      var name = aiNewPromptName ? aiNewPromptName.value.trim() : '';
+      var content = aiCustomPrompt ? aiCustomPrompt.value.trim() : '';
+      if (!name) { showNotification('请输入提示词名称', 'error'); return; }
+      if (!content) { showNotification('请输入提示词内容', 'error'); return; }
+      if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.saveUserPrompt) {
+        window.electronAPI.ai.saveUserPrompt(name, content).then(function(result) {
+          if (result.success) {
+            showNotification('提示词已保存', 'success');
+            loadAiPromptList();
+          } else {
+            showNotification('保存失败: ' + (result.error || ''), 'error');
+          }
+        });
+      } else {
+        // fallback: 保存到 localStorage
+        var cfg = getFullConfig();
+        if (!cfg.ai) cfg.ai = {};
+        cfg.ai.customPrompts = cfg.ai.customPrompts || {};
+        cfg.ai.customPrompts[name] = { desc: aiNewPromptDesc ? aiNewPromptDesc.value.trim() : '', content: content };
+        localStorage.setItem('editorConfig', JSON.stringify(cfg));
+        showNotification('提示词已保存（本地）', 'success');
+        loadAiPromptList();
       }
     });
   }
@@ -904,6 +973,135 @@ function getFullConfig() {
   } catch(e) { return JSON.parse(JSON.stringify(defaultConfig)); }
 }
 
+function loadAiPromptList() {
+  if (!aiPromptList) return;
+  aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">加载中...</div>';
+
+  // 从 localStorage 加载自定义提示词（fallback）
+  var cfg = getFullConfig();
+  var customPrompts = (cfg.ai && cfg.ai.customPrompts) || {};
+
+  if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
+    window.electronAPI.ai.loadPrompts().then(function(result) {
+      if (result.success) {
+        renderPromptList(result.prompts, customPrompts);
+        populatePromptSelect(result.prompts, customPrompts);
+      } else {
+        renderPromptList(null, customPrompts);
+      }
+    }).catch(function() {
+      renderPromptList(null, customPrompts);
+    });
+  } else {
+    renderPromptList(null, customPrompts);
+  }
+}
+
+function renderPromptList(diskPrompts, localCustom) {
+  if (!aiPromptList) return;
+  var html = '';
+  var count = 0;
+
+  // 内置提示词
+  if (diskPrompts) {
+    for (var key in diskPrompts) {
+      var p = diskPrompts[key];
+      var badge = p.builtIn ? '<span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-bg-tertiary);padding:1px 6px;border-radius:3px;">内置</span>' : '<span style="font-size:10px;color:var(--color-warning);background:rgba(255,214,0,0.1);padding:1px 6px;border-radius:3px;">用户</span>';
+      var delBtn = p.builtIn ? '' : '<button class="ai-prompt-del" data-name="' + key + '" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:2px;background:var(--color-bg-tertiary);border-radius:4px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;overflow:hidden;">' +
+        '<span style="font-weight:500;font-size:12px;">' + escHtml(key) + '</span>' +
+        badge +
+        (p.overridden ? '<span style="font-size:10px;color:var(--color-warning);">(已覆盖)</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+        delBtn +
+        '</div></div>';
+      count++;
+    }
+  }
+
+  // localStorage 自定义提示词（不在磁盘中的）
+  if (localCustom) {
+    for (var ck in localCustom) {
+      if (diskPrompts && diskPrompts[ck]) continue;
+      var cd = localCustom[ck];
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:2px;background:var(--color-bg-tertiary);border-radius:4px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<span style="font-weight:500;font-size:12px;">' + escHtml(ck) + '</span>' +
+        '<span style="font-size:10px;color:var(--color-text-tertiary);">本地</span>' +
+        (cd.desc ? '<span style="font-size:10px;color:var(--color-text-tertiary);">' + escHtml(cd.desc) + '</span>' : '') +
+        '</div></div>';
+      count++;
+    }
+  }
+
+  if (count === 0) {
+    aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">暂无提示词</div>';
+  } else {
+    aiPromptList.innerHTML = html;
+    // 绑定删除事件
+    aiPromptList.querySelectorAll('.ai-prompt-del').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var name = this.dataset.name;
+        if (!confirm('删除提示词 "' + name + '" ？')) return;
+        if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.deleteUserPrompt) {
+          window.electronAPI.ai.deleteUserPrompt(name).then(function(r) {
+            if (r.success) {
+              showNotification('提示词已删除', 'success');
+              loadAiPromptList();
+            } else {
+              showNotification('删除失败: ' + (r.error || ''), 'error');
+            }
+          });
+        }
+      });
+    });
+  }
+}
+
+function populatePromptSelect(diskPrompts, localCustom) {
+  if (!aiSystemPrompt) return;
+  var currentVal = aiSystemPrompt.value;
+  var html = '<option value="custom">自定义</option>';
+  if (diskPrompts) {
+    var keys = Object.keys(diskPrompts).sort();
+    for (var i = 0; i < keys.length; i++) {
+      var sel = keys[i] === currentVal ? ' selected' : '';
+      var label = diskPrompts[keys[i]].builtIn ? keys[i] : keys[i] + ' (用户)';
+      html += '<option value="' + keys[i] + '"' + sel + '>' + escHtml(label) + '</option>';
+    }
+  }
+  if (localCustom) {
+    for (var ck in localCustom) {
+      if (diskPrompts && diskPrompts[ck]) continue;
+      var sel2 = ck === currentVal ? ' selected' : '';
+      html += '<option value="' + ck + '"' + sel2 + '>' + escHtml(ck) + ' (本地)</option>';
+    }
+  }
+  aiSystemPrompt.innerHTML = html;
+  aiSystemPrompt.value = currentVal;
+
+  // 更新提示词信息
+  updatePromptInfo(currentVal, diskPrompts, localCustom);
+}
+
+function updatePromptInfo(selected, diskPrompts, localCustom) {
+  if (!aiPromptInfo) return;
+  if (selected === 'custom') {
+    aiPromptInfo.textContent = '使用下方自定义输入框中的内容作为系统提示词';
+    return;
+  }
+  var p = diskPrompts ? diskPrompts[selected] : null;
+  if (p) {
+    aiPromptInfo.textContent = (p.builtIn ? '内置提示词' : '用户自定义提示词') + (p.overridden ? ' (已被用户版本覆盖)' : '');
+  } else if (localCustom && localCustom[selected]) {
+    aiPromptInfo.textContent = '本地自定义提示词' + (localCustom[selected].desc ? ': ' + localCustom[selected].desc : '');
+  } else {
+    aiPromptInfo.textContent = '';
+  }
+}
+
 function renderAiKeys(keys) {
   if (!aiKeysList) return;
   aiKeysList.innerHTML = '';
@@ -993,6 +1191,7 @@ function loadSettings() {
   if (aiMaxTokens) aiMaxTokens.value = aiCfg.maxTokens || 4096;
   if (aiTemperature) aiTemperature.value = aiCfg.temperature || 0.7;
   renderAiKeys(aiCfg.keys || []);
+  loadAiPromptList();
 
   // 应用积木块显示设置
   if (blockFontSize) {

@@ -477,15 +477,27 @@
                     <label for="ai-system-prompt">系统提示词</label>
                     <div class="select-wrapper">
                         <select id="ai-system-prompt" style="width:100%;">
-                            <option value="default">默认 (Minecraft 插件开发助手)</option>
+                            <option value="default">默认</option>
                             <option value="custom">自定义</option>
                         </select>
                         <span class="select-icon">▼</span>
                     </div>
+                    <div id="ai-prompt-info" style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;"></div>
                 </div>
                 <div class="setting-group" id="ai-custom-prompt-group">
                     <label for="ai-custom-prompt">自定义提示词内容</label>
-                    <textarea id="ai-custom-prompt" class="shortcut-input" rows="4" placeholder="输入自定义系统提示词..." style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;font-family:inherit;"></textarea>
+                    <textarea id="ai-custom-prompt" class="shortcut-input" rows="5" placeholder="输入自定义系统提示词..." style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;font-family:inherit;"></textarea>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <button id="ai-save-prompt" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">保存为自定义提示词</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label>管理提示词</label>
+                    <div id="ai-prompt-list" style="font-size:12px;"></div>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <input type="text" id="ai-new-prompt-name" class="shortcut-input" placeholder="新提示词名称" style="flex:1;font-size:12px;">
+                        <input type="text" id="ai-new-prompt-desc" class="shortcut-input" placeholder="描述" style="flex:1;font-size:12px;">
+                    </div>
                 </div>
                 <div class="setting-group">
                     <label for="ai-max-tokens">最大输出 Token</label>
