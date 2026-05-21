@@ -37,6 +37,19 @@ let editShortcutsBtn;
 let remotePassword;
 let remoteAllowDifferentVersions;
 
+// AI 设置
+let aiEndpoint;
+let aiModel;
+let aiCustomModel;
+let aiCustomModelGroup;
+let aiKeysList;
+let aiNewKey;
+let aiAddKeyBtn;
+let aiSystemPrompt;
+let aiCustomPrompt;
+let aiMaxTokens;
+let aiTemperature;
+
 // 背景图片
 let bgGrid;
 let bgOpacity;
@@ -110,6 +123,16 @@ const defaultConfig = {
     files: true,
     filesMaxMb: 50,
     kether: true,
+  },
+  ai: {
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o',
+    customModel: '',
+    keys: [],
+    systemPrompt: 'default',
+    customPrompt: '',
+    maxTokens: 4096,
+    temperature: 0.7,
   },
 };
 
@@ -318,6 +341,19 @@ function initializeDOMElements() {
   // 开发者工具
   editorDevtools = document.getElementById('editor-devtools');
 
+  // AI 设置
+  aiEndpoint = document.getElementById('ai-endpoint');
+  aiModel = document.getElementById('ai-model');
+  aiCustomModel = document.getElementById('ai-custom-model');
+  aiCustomModelGroup = document.getElementById('ai-custom-model-group');
+  aiKeysList = document.getElementById('ai-keys-list');
+  aiNewKey = document.getElementById('ai-new-key');
+  aiAddKeyBtn = document.getElementById('ai-add-key');
+  aiSystemPrompt = document.getElementById('ai-system-prompt');
+  aiCustomPrompt = document.getElementById('ai-custom-prompt');
+  aiMaxTokens = document.getElementById('ai-max-tokens');
+  aiTemperature = document.getElementById('ai-temperature');
+
   // 启动预热
   prewarmFiles = document.getElementById('prewarm-files');
   prewarmFilesMax = document.getElementById('prewarm-files-max');
@@ -471,6 +507,36 @@ function setupEventListeners() {
   const editShortcutBtn = document.getElementById('edit-shortcuts');
   if (editShortcutBtn) {
     editShortcutBtn.addEventListener('click', () => { playSound('click'); console.log('[SETTINGS] 编辑快捷键'); });
+  }
+
+  // AI 模型切换
+  if (aiModel) {
+    aiModel.addEventListener('change', function() {
+      if (aiCustomModelGroup) {
+        aiCustomModelGroup.style.display = this.value === 'custom' ? '' : 'none';
+      }
+    });
+  }
+
+  // AI 添加密钥
+  if (aiAddKeyBtn) {
+    aiAddKeyBtn.addEventListener('click', function() {
+      var key = aiNewKey ? aiNewKey.value.trim() : '';
+      if (!key) { showNotification('请输入密钥', 'error'); return; }
+      var config = getFullConfig();
+      var keys = config.ai && config.ai.keys ? config.ai.keys : [];
+      if (keys.includes(key)) { showNotification('密钥已存在', 'error'); return; }
+      keys.push(key);
+      if (!config.ai) config.ai = {};
+      config.ai.keys = keys;
+      localStorage.setItem('editorConfig', JSON.stringify(config));
+      if (aiNewKey) aiNewKey.value = '';
+      renderAiKeys(keys);
+      showNotification('密钥已添加', 'success');
+    });
+    aiNewKey && aiNewKey.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && aiAddKeyBtn) aiAddKeyBtn.click();
+    });
   }
 
   // 反馈按钮
@@ -806,6 +872,18 @@ async function saveSettings() {
   }
   config.allowDifferentVersions = remoteAllowDifferentVersions ? remoteAllowDifferentVersions.checked : false;
 
+  // AI 设置
+  config.ai = {
+    endpoint: aiEndpoint ? aiEndpoint.value : defaultConfig.ai.endpoint,
+    model: aiModel ? aiModel.value : defaultConfig.ai.model,
+    customModel: aiCustomModel ? aiCustomModel.value : '',
+    keys: existing.ai && existing.ai.keys ? existing.ai.keys : [],
+    systemPrompt: aiSystemPrompt ? aiSystemPrompt.value : 'default',
+    customPrompt: aiCustomPrompt ? aiCustomPrompt.value : '',
+    maxTokens: aiMaxTokens ? parseInt(aiMaxTokens.value) || 4096 : 4096,
+    temperature: aiTemperature ? parseFloat(aiTemperature.value) || 0.7 : 0.7,
+  };
+
   // 保留背景设置
   const currentBg = getBackgroundConfig();
   if (currentBg) {
@@ -817,6 +895,43 @@ async function saveSettings() {
   console.log('[SETTINGS] 配置对象:', config);
   localStorage.setItem('editorConfig', JSON.stringify(config));
   showNotification('设置已经保存', 'success');
+}
+
+function getFullConfig() {
+  try {
+    var raw = localStorage.getItem('editorConfig');
+    return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(defaultConfig));
+  } catch(e) { return JSON.parse(JSON.stringify(defaultConfig)); }
+}
+
+function renderAiKeys(keys) {
+  if (!aiKeysList) return;
+  aiKeysList.innerHTML = '';
+  if (!keys || keys.length === 0) {
+    aiKeysList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">暂未添加密钥</div>';
+    return;
+  }
+  keys.forEach(function(key, i) {
+    var masked = key.length > 12 ? key.slice(0, 6) + '...' + key.slice(-4) : key.slice(0, 4) + '...';
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:4px;background:var(--color-bg-tertiary);border-radius:4px;font-size:12px;';
+    div.innerHTML = '<span style="color:var(--color-text-secondary);">' + escHtml(masked) + '</span><button class="ai-key-del" data-idx="' + i + '" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>';
+    div.querySelector('.ai-key-del').addEventListener('click', function() {
+      var idx = parseInt(this.dataset.idx);
+      var cfg = getFullConfig();
+      var keys = cfg.ai && cfg.ai.keys ? cfg.ai.keys : [];
+      keys.splice(idx, 1);
+      cfg.ai.keys = keys;
+      localStorage.setItem('editorConfig', JSON.stringify(cfg));
+      renderAiKeys(keys);
+      showNotification('密钥已删除', 'success');
+    });
+    aiKeysList.appendChild(div);
+  });
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function loadSettings() {
@@ -862,6 +977,22 @@ function loadSettings() {
   if (prewarmFiles) prewarmFiles.checked = pw.files !== false;
   if (prewarmFilesMax) prewarmFilesMax.value = pw.filesMaxMb || 50;
   if (prewarmKether) prewarmKether.checked = pw.kether !== false;
+
+  // AI 设置
+  var aiCfg = config.ai || defaultConfig.ai;
+  if (aiEndpoint) aiEndpoint.value = aiCfg.endpoint || defaultConfig.ai.endpoint;
+  if (aiModel) {
+    aiModel.value = aiCfg.model || defaultConfig.ai.model;
+    if (aiCustomModelGroup) {
+      aiCustomModelGroup.style.display = aiModel.value === 'custom' ? '' : 'none';
+    }
+  }
+  if (aiCustomModel) aiCustomModel.value = aiCfg.customModel || '';
+  if (aiSystemPrompt) aiSystemPrompt.value = aiCfg.systemPrompt || 'default';
+  if (aiCustomPrompt) aiCustomPrompt.value = aiCfg.customPrompt || '';
+  if (aiMaxTokens) aiMaxTokens.value = aiCfg.maxTokens || 4096;
+  if (aiTemperature) aiTemperature.value = aiCfg.temperature || 0.7;
+  renderAiKeys(aiCfg.keys || []);
 
   // 应用积木块显示设置
   if (blockFontSize) {

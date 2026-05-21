@@ -439,6 +439,63 @@
                     <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">启动时加载 Kether 动作定义文件，打开积木编辑器时无需等待</div>
                 </div>
                 <div class="setting-section-divider"></div>
+                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">AI 制作</h3>
+                <div class="setting-group">
+                    <label for="ai-endpoint">API 地址</label>
+                    <input type="text" id="ai-endpoint" class="shortcut-input" value="https://api.openai.com/v1/chat/completions" style="width:100%;box-sizing:border-box;font-size:12px;">
+                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">兼容 OpenAI 格式的 API 地址</div>
+                </div>
+                <div class="setting-group">
+                    <label for="ai-model">模型</label>
+                    <div class="select-wrapper">
+                        <select id="ai-model" style="width:100%;">
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="deepseek-chat">DeepSeek Chat</option>
+                            <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                            <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                            <option value="claude-opus-4-7">Claude Opus 4.7</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                        <span class="select-icon">▼</span>
+                    </div>
+                </div>
+                <div class="setting-group" id="ai-custom-model-group" style="display:none;">
+                    <label for="ai-custom-model">自定义模型名</label>
+                    <input type="text" id="ai-custom-model" class="shortcut-input" placeholder="输入模型名称" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div class="setting-group">
+                    <label>API 密钥</label>
+                    <div id="ai-keys-list" style="margin-bottom:6px;"></div>
+                    <div style="display:flex;gap:6px;">
+                        <input type="password" id="ai-new-key" class="shortcut-input" placeholder="输入新密钥" style="flex:1;font-size:12px;">
+                        <button id="ai-add-key" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">添加</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label for="ai-system-prompt">系统提示词</label>
+                    <div class="select-wrapper">
+                        <select id="ai-system-prompt" style="width:100%;">
+                            <option value="default">默认 (Minecraft 插件开发助手)</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                        <span class="select-icon">▼</span>
+                    </div>
+                </div>
+                <div class="setting-group" id="ai-custom-prompt-group">
+                    <label for="ai-custom-prompt">自定义提示词内容</label>
+                    <textarea id="ai-custom-prompt" class="shortcut-input" rows="4" placeholder="输入自定义系统提示词..." style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;font-family:inherit;"></textarea>
+                </div>
+                <div class="setting-group">
+                    <label for="ai-max-tokens">最大输出 Token</label>
+                    <input type="number" id="ai-max-tokens" class="shortcut-input" value="4096" min="256" max="65536" style="width:100px;">
+                </div>
+                <div class="setting-group">
+                    <label for="ai-temperature">温度 (Temperature)</label>
+                    <input type="number" id="ai-temperature" class="shortcut-input" value="0.7" min="0" max="2" step="0.1" style="width:80px;">
+                </div>
+                <div class="setting-section-divider"></div>
                 <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">远程模式</h3>
                 <div class="setting-group">
                     <label for="remote-password">远程连接密码</label>

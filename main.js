@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
 const appVersion = require('./package.json').version;
 
 let mainWindow;
@@ -177,6 +179,90 @@ ipcMain.handle('window:isMaximized', (event) => {
 
 ipcMain.handle('shell:openExternal', async (event, url) => {
   await shell.openExternal(url);
+});
+
+// ============================================
+// AI 制作
+// ============================================
+
+ipcMain.handle('ai:chat', async (event, { endpoint, model, apiKey, messages, maxTokens, temperature, systemPrompt }) => {
+  try {
+    var urlObj = new URL(endpoint);
+    var isHttps = urlObj.protocol === 'https:';
+    var postData = JSON.stringify({
+      model: model,
+      messages: messages,
+      max_tokens: maxTokens || 4096,
+      temperature: temperature !== undefined ? temperature : 0.7,
+      stream: true,
+    });
+
+    var options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (isHttps ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+
+    var sender = event.sender;
+
+    return new Promise(function(resolve, reject) {
+      var requester = isHttps ? https : http;
+      var req = requester.request(options, function(res) {
+        var fullContent = '';
+        var isDone = false;
+
+        if (res.statusCode !== 200) {
+          var errBody = '';
+          res.on('data', function(chunk) { errBody += chunk.toString(); });
+          res.on('end', function() {
+            reject(new Error('API 错误 ' + res.statusCode + ': ' + errBody));
+          });
+          return;
+        }
+
+        res.on('data', function(chunk) {
+          var text = chunk.toString();
+          var lines = text.split('\n');
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line || !line.startsWith('data: ')) continue;
+            var data = line.slice(6).trim();
+            if (data === '[DONE]') { isDone = true; continue; }
+            try {
+              var parsed = JSON.parse(data);
+              var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
+              if (delta && delta.content) {
+                fullContent += delta.content;
+                sender.send('ai:chunk', delta.content);
+              }
+            } catch (e) { /* skip parse errors */ }
+          }
+        });
+
+        res.on('end', function() {
+          sender.send('ai:done', fullContent);
+          resolve({ success: true, content: fullContent });
+        });
+      });
+
+      req.on('error', function(err) {
+        sender.send('ai:error', err.message);
+        reject(new Error('请求失败: ' + err.message));
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  } catch (err) {
+    event.sender.send('ai:error', err.message);
+    return { success: false, error: err.message };
+  }
 });
 
 // ============================================

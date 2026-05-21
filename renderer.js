@@ -371,6 +371,8 @@ function setupEventListeners() {
   if (settingsBtn) settingsBtn.addEventListener('click', () => { playSound('select'); openSettings(); });
   const remoteBtn = document.getElementById('remote-btn');
   if (remoteBtn) remoteBtn.addEventListener('click', () => { playSound('select'); openRemoteMode(); });
+  const aiBtn = document.getElementById('ai-btn');
+  if (aiBtn) aiBtn.addEventListener('click', () => { playSound('select'); openAIPanel(); });
 
   // 编辑器模式按钮
   if (sourceModeBtn) sourceModeBtn.addEventListener('click', async () => { playSound('click'); await switchEditorMode(false); });
@@ -1621,6 +1623,18 @@ function openSettings() {
   console.log('[RENDERER] 打开设置');
   window.__allowUnload = true;
   setTimeout(() => { window.location.href = 'settings.html'; }, 120);
+}
+
+function openAIPanel() {
+  console.log('[RENDERER] 打开 AI 面板');
+  if (typeof AIPanel !== 'undefined' && AIPanel.open) {
+    // 更新当前文件上下文
+    var ctx = currentFile || '';
+    AIPanel.setFileContext(ctx);
+    AIPanel.open();
+  } else {
+    console.warn('[RENDERER] AIPanel 未加载');
+  }
 }
 
 /**

@@ -2316,3 +2316,83 @@ button, .btn, .btn-secondary, .tb-btn, .ke-btn, .cv-btn,
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* ============================================
+   AI 面板
+   ============================================ */
+#ai-panel-overlay {
+  --ai-msg-max-width: 75%;
+}
+#ai-messages {
+  scroll-behavior: smooth;
+}
+#ai-messages::-webkit-scrollbar {
+  width: 6px;
+}
+#ai-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+#ai-messages::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+.ai-msg {
+  display: flex;
+  gap: 10px;
+  animation: ai-fade-in 0.2s ease;
+}
+.ai-msg.ai-msg-user {
+  flex-direction: row;
+}
+.ai-msg.ai-msg-ai {
+  flex-direction: row;
+}
+.ai-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 2px;
+}
+.ai-msg-bubble {
+  padding: 10px 14px;
+  border-radius: 8px;
+  max-width: var(--ai-msg-max-width);
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.ai-msg-content {
+  white-space: pre-wrap;
+}
+.ai-msg-content code {
+  background: var(--color-bg-secondary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+.ai-file-op {
+  transition: opacity 0.2s;
+}
+.ai-file-op:hover {
+  opacity: 0.9;
+}
+@keyframes ai-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#ai-btn-send:hover, .ai-op-accept:hover, .ai-op-reject:hover {
+  filter: brightness(1.15);
+}
+#ai-btn-stop:hover {
+  filter: brightness(1.15);
+}
+#ai-input:focus {
+  border-color: var(--color-primary) !important;
+}

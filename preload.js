@@ -79,6 +79,35 @@ try {
     },
   };
 
+  // AI 制作
+  api.ai = {
+    chat: function(config, messages) {
+      return ipcRenderer.invoke('ai:chat', {
+        endpoint: config.endpoint,
+        model: config.model,
+        apiKey: config.apiKey,
+        messages: messages,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature,
+        systemPrompt: config.systemPrompt,
+      });
+    },
+    onChunk: function(callback) {
+      ipcRenderer.on('ai:chunk', function(event, chunk) { callback(chunk); });
+    },
+    onDone: function(callback) {
+      ipcRenderer.on('ai:done', function(event, content) { callback(content); });
+    },
+    onError: function(callback) {
+      ipcRenderer.on('ai:error', function(event, errMsg) { callback(errMsg); });
+    },
+    removeListeners: function() {
+      ipcRenderer.removeAllListeners('ai:chunk');
+      ipcRenderer.removeAllListeners('ai:done');
+      ipcRenderer.removeAllListeners('ai:error');
+    },
+  };
+
   contextBridge.exposeInMainWorld('electronAPI', api);
 
   console.log('[PRELOAD] electronAPI exposed with methods:', Object.keys(api));
