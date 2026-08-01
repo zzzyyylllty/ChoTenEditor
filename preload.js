@@ -31,6 +31,11 @@ try {
     // 文件操作
     copyFile: (src, dest) => ipcRenderer.invoke('fs:copyFile', src, dest),
     deleteFile: (filePath) => ipcRenderer.invoke('fs:deleteFile', filePath),
+
+    // CraftEngine 工程根回溯
+    ce: {
+      resolveProjectRoot: (filePath) => ipcRenderer.invoke('ce:resolveProjectRoot', filePath),
+    },
   };
 
   // Window controls
@@ -38,6 +43,7 @@ try {
   api.maximize = () => ipcRenderer.send('window:maximize');
   api.close = () => ipcRenderer.send('window:close');
   api.openDevTools = () => ipcRenderer.send('window:openDevTools');
+  api.toggleDevTools = () => ipcRenderer.send('window:toggleDevTools');
   api.isMaximized = () => ipcRenderer.invoke('window:isMaximized');
   api.appVersion = ipcRenderer.sendSync('app:getVersionSync');
   api.openExternal = (url) => ipcRenderer.invoke('shell:openExternal', url);

@@ -3,10 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
+const ceProject = require('./ce-project.js');
 const appVersion = require('./package.json').version;
 
 let mainWindow;
-let settingsWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,6 +19,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      nodeIntegrationInSubFrames: true,
     },
   });
 
@@ -26,28 +27,6 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-  });
-}
-
-function createSettingsWindow() {
-  settingsWindow = new BrowserWindow({
-    width: 900,
-    height: 800,
-    frame: false,
-    parent: mainWindow,
-    modal: false,
-    backgroundColor: '#000000',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  settingsWindow.loadFile('settings.html');
-
-  settingsWindow.on('closed', () => {
-    settingsWindow = null;
   });
 }
 
@@ -149,10 +128,27 @@ ipcMain.handle('fs:copyFile', async (event, src, dest) => {
   }
 });
 
+ipcMain.handle('ce:resolveProjectRoot', async (event, filePath) => {
+  try {
+    return await ceProject.resolveProjectRoot(filePath);
+  } catch (error) {
+    return { found: false, error: error.message };
+  }
+});
+
 // Window controls
 ipcMain.on('window:openDevTools', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) win.webContents.openDevTools();
+});
+ipcMain.on('window:toggleDevTools', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  if (win.webContents.isDevToolsOpened()) {
+    win.webContents.closeDevTools();
+  } else {
+    win.webContents.openDevTools();
+  }
 });
 ipcMain.on('window:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -221,7 +217,9 @@ ipcMain.handle('ai:chat', async (event, { endpoint, model, apiKey, messages, max
           var errBody = '';
           res.on('data', function(chunk) { errBody += chunk.toString(); });
           res.on('end', function() {
-            reject(new Error('API 错误 ' + res.statusCode + ': ' + errBody));
+            var errObj = { key: 'ai.apiError', params: { status: res.statusCode, body: errBody }, fallback: 'API 错误 ' + res.statusCode + ': ' + errBody };
+            sender.send('ai:error', errObj);
+            resolve({ success: false, error: errObj });
           });
           return;
         }
@@ -253,7 +251,7 @@ ipcMain.handle('ai:chat', async (event, { endpoint, model, apiKey, messages, max
 
       req.on('error', function(err) {
         sender.send('ai:error', err.message);
-        reject(new Error('请求失败: ' + err.message));
+        resolve({ success: false, error: { key: 'ai.requestFailed', params: { msg: err.message }, fallback: '请求失败: ' + err.message } });
       });
 
       req.write(postData);
@@ -261,7 +259,7 @@ ipcMain.handle('ai:chat', async (event, { endpoint, model, apiKey, messages, max
     });
   } catch (err) {
     event.sender.send('ai:error', err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: { key: 'ai.requestFailed', params: { msg: err.message }, fallback: err.message } };
   }
 });
 
@@ -402,7 +400,7 @@ ipcMain.handle('remote:applyApprovedWrite', (event, { clientId, filePath, conten
 });
 
 ipcMain.handle('remote:notifyFileChangeRejected', (event, { clientId, filePath }) => {
-  remote.notifyFileChangeRejected(clientId, filePath, '管理员拒绝了更改');
+  remote.notifyFileChangeRejected(clientId, filePath, '管理员拒绝了更改', 'remote.changeRejectedByAdmin');
   return { success: true };
 });
 
@@ -412,7 +410,7 @@ ipcMain.handle('remote:applyApprovedDelete', (event, { clientId, filePath }) => 
 });
 
 ipcMain.handle('remote:notifyFileDeleteRejected', (event, { clientId, filePath }) => {
-  remote.notifyFileDeleteRejected(clientId, filePath, '管理员拒绝了删除请求');
+  remote.notifyFileDeleteRejected(clientId, filePath, '管理员拒绝了删除请求', 'remote.deleteRejectedByAdmin');
   return { success: true };
 });
 

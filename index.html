@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -97,6 +97,60 @@
       margin-top: 10px;
     }
 
+    /* ---- 语言选择弹窗 ---- */
+    .lang-picker-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 9999999;
+      display: flex; align-items: center; justify-content: center;
+      animation: ke-fade-in 0.2s ease;
+    }
+    .lang-picker-modal {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      max-width: 460px;
+      width: 90%;
+      padding: 32px 36px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: ke-slide-up 0.25s ease;
+    }
+    .lang-picker-title {
+      font-size: 22px; font-weight: 800;
+      margin: 0 0 6px;
+      background: linear-gradient(90deg, #ff69b4, #ff1493);
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent;
+    }
+    .lang-picker-sub {
+      font-size: 13px; color: var(--color-text-secondary);
+      margin: 0 0 24px;
+    }
+    .lang-picker-btns {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .lang-picker-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--color-border);
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .lang-picker-btn:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-1px);
+    }
+    .lang-picker-btn .lp-name {
+      font-size: 17px; font-weight: 700;
+    }
+    .lang-picker-btn .lp-desc {
+      font-size: 12px; color: var(--color-text-tertiary);
+    }
+
     /* ---- 加载页面 ---- */
     .splash-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -174,7 +228,7 @@
     <div class="splash-overlay" id="splash-overlay">
       <img class="splash-icon" src="icon.png" alt="icon">
       <div class="splash-title">Choten Editor</div>
-      <div class="splash-sub">正在加载...</div>
+      <div class="splash-sub" data-i18n="app.loading">正在加载...</div>
       <div class="splash-loader"><div class="splash-loader-bar"></div></div>
       <div class="splash-tip" id="splash-tip"></div>
     </div>
@@ -185,19 +239,22 @@
         <span class="title-bar-text">Choten Editor</span>
       </div>
       <div class="title-bar-controls">
-        <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化">─</button>
-        <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化">□</button>
-        <button class="tb-btn tb-btn-close" id="tb-close" title="关闭">✕</button>
+        <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化" data-i18n-title="titlebar.minimize">─</button>
+        <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化" data-i18n-title="titlebar.maximize">□</button>
+        <button class="tb-btn tb-btn-close" id="tb-close" title="关闭" data-i18n-title="titlebar.close">✕</button>
       </div>
     </div>
     <div class="header">
       <h1>Choten Editor</h1>
       <div class="header-controls">
-        <button id="open-project-btn" class="btn">📁 打开项目</button>
-        <button id="new-file-btn" class="btn">📄 新文件</button>
-        <button id="save-btn" class="btn">💾 保存</button>
-        <button id="settings-btn" class="btn btn-secondary">⚙️ 设置</button>
-        <button id="remote-btn" class="btn btn-secondary" style="margin-left:4px;">🌐 远程</button>
+        <button id="open-project-btn" class="btn" data-i18n="common.openProject">📁 打开项目</button>
+        <button id="new-file-btn" class="btn" data-i18n="common.newFile">📄 新文件</button>
+        <button id="save-btn" class="btn" data-i18n="common.save">💾 保存</button>
+        <button id="settings-btn" class="btn btn-secondary" data-i18n="common.settings">⚙️ 设置</button>
+        <button id="remote-btn" class="btn btn-secondary" style="margin-left:4px;" data-i18n="common.remote">🌐 远程</button>
+        <button id="source-mode-btn" class="mode-btn active" data-i18n="editor.sourceMode">源代码</button>
+        <button id="visual-mode-btn" class="mode-btn" data-i18n="editor.visualMode">可视化</button>
+        <button id="ai-btn" class="btn btn-accent" data-i18n="common.ai">✨ AI</button>
       </div>
     </div>
 
@@ -205,22 +262,22 @@
       <div class="sidebar">
         <div class="sidebar-header">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3>项目文件</h3>
+            <h3 data-i18n="sidebar.files">项目文件</h3>
             <div class="sidebar-nav">
-              <button id="nav-back-btn" class="nav-btn" title="返回"></button>
-              <button id="nav-up-btn" class="nav-btn" title="上个文件"></button>
+              <button id="nav-back-btn" class="nav-btn" title="返回" data-i18n-title="common.back"></button>
+              <button id="nav-up-btn" class="nav-btn" title="上个文件" data-i18n-title="sidebar.previousFile"></button>
             </div>
           </div>
           <div class="fm-tabs" id="fm-tabs" style="display:none;">
-            <button class="fm-tab active" data-fm="local">本地</button>
-            <button class="fm-tab" data-fm="remote">远程</button>
+            <button class="fm-tab active" data-fm="local" data-i18n="sidebar.tabLocal">本地</button>
+            <button class="fm-tab" data-fm="remote" data-i18n="sidebar.tabRemote">远程</button>
           </div>
           <div class="breadcrumbs" id="breadcrumbs">
             <!-- Breadcrumbs will be rendered here -->
           </div>
           <div class="fm-actions" id="fm-actions">
-            <button class="fm-btn" id="fm-reload" title="重新加载">↻</button>
-            <button class="fm-btn fm-btn-danger" id="fm-delete" title="删除" style="display:none;">✕</button>
+            <button class="fm-btn" id="fm-reload" title="重新加载" data-i18n-title="common.reload">↻</button>
+            <button class="fm-btn fm-btn-danger" id="fm-delete" title="删除" style="display:none;" data-i18n-title="common.delete">✕</button>
           </div>
         </div>
         <div class="sidebar-content">
@@ -235,16 +292,12 @@
           <div class="editor-tabs">
             <!-- 标签页将通过 JavaScript 动态生成 -->
           </div>
-          <div class="editor-mode-toggle">
-            <button id="source-mode-btn" class="mode-btn active">源代码</button>
-            <button id="visual-mode-btn" class="mode-btn">可视化</button>
-          </div>
-          <button id="ai-btn" class="btn btn-secondary" style="margin-left:8px;padding:4px 12px;font-size:12px;background:linear-gradient(135deg,#00c8ff,#7c3aed);border:none;color:#fff;font-weight:600;">✨ AI</button>
           <div class="editor-type-selector" id="editor-type-selector" style="display:none;">
             <select id="interpreter-type-select" class="type-select">
-              <option value="auto">自动检测</option>
-              <option value="conversation">对话</option>
-              <option value="quest">任务</option>
+              <option value="auto" data-i18n="editor.typeAuto">自动检测</option>
+              <option value="conversation" data-i18n="editor.typeConversation">对话</option>
+              <option value="quest" data-i18n="editor.typeQuest">任务</option>
+              <option value="craftengine" data-i18n="editor.typeCraftEngine">CraftEngine</option>
             </select>
           </div>
         </div>
@@ -255,8 +308,8 @@
           </div>
           <div id="visual-editor" class="visual-editor">
             <div class="empty-state">
-              <h2>可视化编辑</h2>
-              <p>打开 .yml / .yaml 文件后可切换到可视化编辑</p>
+              <h2 data-i18n="editor.visualEmptyTitle">可视化编辑</h2>
+              <p data-i18n="editor.visualEmptyHint">打开 .yml / .yaml 文件后可切换到可视化编辑</p>
             </div>
           </div>
         </div>
@@ -264,32 +317,57 @@
     </div>
 
     <div class="status-bar">
-      <span id="status-info">Ready</span>
+      <span id="status-info" data-i18n="status.ready">Ready</span>
       <span id="file-path"></span>
+    </div>
+  </div>
+
+  <!-- 首次启动语言选择 -->
+  <div class="lang-picker-overlay" id="lang-picker-overlay" style="display:none;">
+    <div class="lang-picker-modal">
+      <h2 class="lang-picker-title">Choten Editor</h2>
+      <p class="lang-picker-sub">Select your language / 选择语言</p>
+      <div class="lang-picker-btns">
+        <button class="lang-picker-btn" data-lang="zh_cn">
+          <span class="lp-name">简体中文</span>
+          <span class="lp-desc">中文界面</span>
+        </button>
+        <button class="lang-picker-btn" data-lang="en_us">
+          <span class="lp-name">English</span>
+          <span class="lp-desc">English UI</span>
+        </button>
+      </div>
     </div>
   </div>
 
   <div class="ke-welcome-overlay" id="welcome-overlay" style="display:none;">
     <div class="ke-welcome-modal">
-      <h2 class="ke-welcome-title">欢迎使用 ChoTenEditor!</h2>
+      <h2 class="ke-welcome-title" data-i18n="welcome.title">欢迎使用 ChoTenEditor!</h2>
       <div class="ke-welcome-version" id="welcome-version"></div>
       <div class="ke-welcome-body">
-        <p>本编辑器旨在提供通用的 Minecraft 插件编辑工具，目前只适配 <strong>Chemdah</strong> 一个插件，后续将添加 Sertraline、LithiumCarbon 等插件。</p>
+        <p><span data-i18n="welcome.descPre">本编辑器旨在提供通用的 Minecraft 插件编辑工具，目前只适配 </span><strong>Chemdah</strong><span data-i18n="welcome.descPost"> 一个插件，后续将添加 Sertraline、LithiumCarbon 等插件。</span></p>
         <div class="ke-welcome-channels">
-          <strong>如有任何问题、意见，欢迎通过以下渠道反馈：</strong><br>
-          📢 QQ群：<a href="https://qm.qq.com/q/f7l7qPlY60" target="_blank">858827523</a><br>
-          🌐 Discord：<a href="https://discord.com/invite/VHs958jJXj" target="_blank">discord.com/invite/VHs958jJXj</a><br>
-          💬 添加 QQ <strong>3631901756</strong> 备注来意
+          <strong data-i18n="welcome.channelsTitle">如有任何问题、意见，欢迎通过以下渠道反馈：</strong><br>
+          <span data-i18n="welcome.channelQq">📢 QQ群：</span><a href="https://qm.qq.com/q/f7l7qPlY60" target="_blank">858827523</a><br>
+          <span data-i18n="welcome.channelDiscord">🌐 Discord：</span><a href="https://discord.com/invite/VHs958jJXj" target="_blank">discord.com/invite/VHs958jJXj</a><br>
+          <span data-i18n="welcome.channelQqAddPre">💬 添加 QQ </span><strong>3631901756</strong><span data-i18n="welcome.channelQqAddPost"> 备注来意</span>
         </div>
-        <p style="font-size:12px;color:var(--color-text-tertiary);">您可在设置页面再次找到反馈渠道。</p>
+        <p style="font-size:12px;color:var(--color-text-tertiary);" data-i18n="welcome.settingsHint">您可在设置页面再次找到反馈渠道。</p>
       </div>
       <div class="ke-welcome-footer">
         <label class="ke-welcome-check">
-          <input type="checkbox" id="welcome-no-tip"> 不再提示
+          <input type="checkbox" id="welcome-no-tip"> <span data-i18n="welcome.noTip">不再提示</span>
         </label>
-        <button class="ke-welcome-btn" id="welcome-btn">确定</button>
+        <button class="ke-welcome-btn" id="welcome-btn" data-i18n="common.ok">确定</button>
       </div>
-      <div class="ke-welcome-settings-hint">勾选"不再提示"后，本弹窗只在版本更新时再次弹出。</div>
+      <div class="ke-welcome-settings-hint" data-i18n="welcome.dismissHint">勾选"不再提示"后，本弹窗只在版本更新时再次弹出。</div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="st-overlay" id="st-overlay" style="display:none;">
+    <div class="st-modal">
+      <iframe src="settings.html" id="st-frame" title="设置"></iframe>
     </div>
   </div>
 
@@ -297,37 +375,37 @@
   <div class="rm-overlay" id="rm-overlay" style="display:none;">
     <div class="rm-modal">
       <div class="rm-header">
-        <h2>🌐 远程模式</h2>
+        <h2 data-i18n="remote.title">🌐 远程模式</h2>
         <button class="rm-close-btn" id="rm-close-btn">&times;</button>
       </div>
 
       <!-- 标签切换 -->
       <div class="rm-tabs">
-        <button class="rm-tab active" data-rm-tab="server">作为服务器</button>
-        <button class="rm-tab" data-rm-tab="client">连接远程</button>
+        <button class="rm-tab active" data-rm-tab="server" data-i18n="remote.asServer">作为服务器</button>
+        <button class="rm-tab" data-rm-tab="client" data-i18n="remote.asClient">连接远程</button>
       </div>
 
       <!-- ===== 服务器面板 ===== -->
       <div class="rm-panel active" id="rm-panel-server">
         <div class="rm-form" id="rm-server-form">
           <div class="rm-field">
-            <label>端口</label>
+            <label data-i18n="remote.port">端口</label>
             <input type="number" class="rm-input" id="rm-server-port" value="12345" min="1024" max="65535">
           </div>
           <div class="rm-field">
-            <label>连接密码</label>
-            <input type="password" class="rm-input" id="rm-server-password" placeholder="设置连接密码">
+            <label data-i18n="remote.password">连接密码</label>
+            <input type="password" class="rm-input" id="rm-server-password" placeholder="设置连接密码" data-i18n-placeholder="remote.setPasswordPlaceholder">
           </div>
-          <button class="rm-btn rm-btn-primary" id="rm-server-start">启动服务器</button>
-          <button class="rm-btn rm-btn-danger" id="rm-server-stop" style="display:none;">停止服务器</button>
+          <button class="rm-btn rm-btn-primary" id="rm-server-start" data-i18n="remote.startServer">启动服务器</button>
+          <button class="rm-btn rm-btn-danger" id="rm-server-stop" style="display:none;" data-i18n="remote.stopServer">停止服务器</button>
         </div>
         <div class="rm-status" id="rm-server-status"></div>
 
         <!-- 客户端管理 -->
         <div class="rm-clients" id="rm-clients" style="display:none;">
           <div class="rm-clients-header">
-            <h3>已连接的客户端</h3>
-            <button class="rm-btn rm-btn-danger rm-btn-sm" id="rm-disconnect-all">断开全部</button>
+            <h3 data-i18n="remote.clients">已连接的客户端</h3>
+            <button class="rm-btn rm-btn-danger rm-btn-sm" id="rm-disconnect-all" data-i18n="remote.disconnectAll">断开全部</button>
           </div>
           <div class="rm-clients-list" id="rm-clients-list"></div>
         </div>
@@ -337,27 +415,27 @@
       <div class="rm-panel" id="rm-panel-client">
         <div class="rm-form" id="rm-client-form">
           <div class="rm-field">
-            <label>服务器地址</label>
-            <input type="text" class="rm-input" id="rm-client-host" value="127.0.0.1" placeholder="IP 地址">
+            <label data-i18n="remote.serverHost">服务器地址</label>
+            <input type="text" class="rm-input" id="rm-client-host" value="127.0.0.1" placeholder="IP 地址" data-i18n-placeholder="remote.ipPlaceholder">
           </div>
           <div class="rm-field">
-            <label>端口</label>
+            <label data-i18n="remote.port">端口</label>
             <input type="number" class="rm-input" id="rm-client-port" value="12345" min="1024" max="65535">
           </div>
           <div class="rm-field">
-            <label>连接密码</label>
-            <input type="password" class="rm-input" id="rm-client-password" placeholder="服务器设置的密码">
+            <label data-i18n="remote.password">连接密码</label>
+            <input type="password" class="rm-input" id="rm-client-password" placeholder="服务器设置的密码" data-i18n-placeholder="remote.serverPasswordPlaceholder">
           </div>
-          <button class="rm-btn rm-btn-primary" id="rm-client-connect">连接</button>
-          <button class="rm-btn rm-btn-danger" id="rm-client-disconnect" style="display:none;">断开连接</button>
+          <button class="rm-btn rm-btn-primary" id="rm-client-connect" data-i18n="remote.connect">连接</button>
+          <button class="rm-btn rm-btn-danger" id="rm-client-disconnect" style="display:none;" data-i18n="remote.disconnect">断开连接</button>
         </div>
         <div class="rm-status" id="rm-client-status"></div>
 
         <!-- 安全码区域 -->
         <div class="rm-security-code" id="rm-security-code-area" style="display:none;">
-          <div class="rm-security-label">安全码</div>
+          <div class="rm-security-label" data-i18n="remote.securityCode">安全码</div>
           <div class="rm-security-value" id="rm-security-code-display">------</div>
-          <div class="rm-security-hint">请将此安全码告知服务器管理员以完成连接确认</div>
+          <div class="rm-security-hint" data-i18n="remote.securityHint">请将此安全码告知服务器管理员以完成连接确认</div>
         </div>
       </div>
     </div>
@@ -366,18 +444,18 @@
   <!-- 连接请求确认对话框 -->
   <div class="rm-dialog-overlay" id="rm-confirm-dialog" style="display:none;">
     <div class="rm-dialog">
-      <h3>🔌 新的连接请求</h3>
+      <h3 data-i18n="remote.confirmTitle">🔌 新的连接请求</h3>
       <div class="rm-dialog-info">
-        <div class="rm-dialog-row"><span>客户端 IP：</span><strong id="rm-confirm-ip">--</strong></div>
-        <div class="rm-dialog-row"><span>安全码：</span><strong id="rm-confirm-code">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.clientIp">客户端 IP：</span><strong id="rm-confirm-ip">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.securityCodeLabel">安全码：</span><strong id="rm-confirm-code">--</strong></div>
       </div>
       <div class="rm-dialog-warning">
-        ⚠️ 请确保对方提供的安全码与上述安全码一致，否则对方可能无法正确连接。
-        随意确认连接可能导致数据泄露或损失，<strong>请仔细核对安全码</strong>，对此造成的损失本软件概不负责。
+        <span data-i18n="remote.confirmWarningPre">⚠️ 请确保对方提供的安全码与上述安全码一致，否则对方可能无法正确连接。
+        随意确认连接可能导致数据泄露或损失，</span><strong data-i18n="remote.confirmWarningStrong">请仔细核对安全码</strong><span data-i18n="remote.confirmWarningPost">，对此造成的损失本软件概不负责。</span>
       </div>
       <div class="rm-dialog-buttons">
-        <button class="rm-btn rm-btn-primary" id="rm-confirm-accept">确认连接</button>
-        <button class="rm-btn rm-btn-secondary" id="rm-confirm-reject">拒绝</button>
+        <button class="rm-btn rm-btn-primary" id="rm-confirm-accept" data-i18n="remote.confirmAccept">确认连接</button>
+        <button class="rm-btn rm-btn-secondary" id="rm-confirm-reject" data-i18n="common.reject">拒绝</button>
       </div>
     </div>
   </div>
@@ -385,14 +463,14 @@
   <!-- 文件更改确认对话框 -->
   <div class="rm-dialog-overlay" id="rm-filechange-dialog" style="display:none;">
     <div class="rm-dialog">
-      <h3>📝 文件更改请求</h3>
+      <h3 data-i18n="remote.fileChangeTitle">📝 文件更改请求</h3>
       <div class="rm-dialog-info">
-        <div class="rm-dialog-row"><span>客户端：</span><strong id="rm-fc-client">--</strong></div>
-        <div class="rm-dialog-row"><span>文件路径：</span><strong id="rm-fc-path">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.client">客户端：</span><strong id="rm-fc-client">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.filePath">文件路径：</span><strong id="rm-fc-path">--</strong></div>
       </div>
       <div class="rm-dialog-buttons">
-        <button class="rm-btn rm-btn-primary" id="rm-fc-approve">批准</button>
-        <button class="rm-btn rm-btn-danger" id="rm-fc-reject">拒绝</button>
+        <button class="rm-btn rm-btn-primary" id="rm-fc-approve" data-i18n="common.approve">批准</button>
+        <button class="rm-btn rm-btn-danger" id="rm-fc-reject" data-i18n="common.reject">拒绝</button>
       </div>
     </div>
   </div>
@@ -400,14 +478,14 @@
   <!-- 文件删除确认对话框 -->
   <div class="rm-dialog-overlay" id="rm-filedelete-dialog" style="display:none;">
     <div class="rm-dialog">
-      <h3>🗑️ 文件删除请求</h3>
+      <h3 data-i18n="remote.fileDeleteTitle">🗑️ 文件删除请求</h3>
       <div class="rm-dialog-info">
-        <div class="rm-dialog-row"><span>客户端：</span><strong id="rm-fd-client">--</strong></div>
-        <div class="rm-dialog-row"><span>文件路径：</span><strong id="rm-fd-path">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.client">客户端：</span><strong id="rm-fd-client">--</strong></div>
+        <div class="rm-dialog-row"><span data-i18n="remote.filePath">文件路径：</span><strong id="rm-fd-path">--</strong></div>
       </div>
       <div class="rm-dialog-buttons">
-        <button class="rm-btn rm-btn-primary" id="rm-fd-approve">批准删除</button>
-        <button class="rm-btn rm-btn-danger" id="rm-fd-reject">拒绝</button>
+        <button class="rm-btn rm-btn-primary" id="rm-fd-approve" data-i18n="remote.approveDelete">批准删除</button>
+        <button class="rm-btn rm-btn-danger" id="rm-fd-reject" data-i18n="common.reject">拒绝</button>
       </div>
     </div>
   </div>
@@ -415,6 +493,13 @@
   <script src="node_modules/prismjs/prism.js"></script>
   <script src="node_modules/prismjs/components/prism-yaml.js"></script>
   <script src="node_modules/prismjs/components/prism-json.js"></script>
+  <script src="node_modules/prismjs/components/prism-javascript.js"></script>
+  <script src="node_modules/prismjs/components/prism-typescript.js"></script>
+  <script src="node_modules/prismjs/components/prism-java.js"></script>
+  <script src="node_modules/prismjs/components/prism-python.js"></script>
+  <script src="node_modules/prismjs/components/prism-bash.js"></script>
+  <script src="node_modules/prismjs/components/prism-sql.js"></script>
+  <script src="node_modules/prismjs/components/prism-markdown.js"></script>
   <!-- 引入CodeMirror语法高亮编辑器 -->
   <script src="node_modules/codemirror/lib/codemirror.js"></script>
   <script src="node_modules/codemirror/mode/yaml/yaml.js"></script>
@@ -423,8 +508,12 @@
   <script src="node_modules/codemirror/mode/css/css.js"></script>
   <script src="node_modules/codemirror/mode/htmlmixed/htmlmixed.js"></script>
   <script src="node_modules/js-yaml/dist/js-yaml.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="sound.js"></script>
+  <script src="ui.js"></script>
   <script src="chemdah-interpreter.js"></script>
+  <script src="craftengine-schemas.js"></script>
+  <script src="craftengine-interpreter.js"></script>
   <script src="kether-editor.js"></script>
   <script src="ai-panel.js"></script>
   <script src="renderer.js"></script>
@@ -475,33 +564,15 @@
     }
   })();
 
-  // ---- 加载提示：随机显示 loadingtips.txt 中的内容，每秒切换 ----
+  // ---- 加载提示：随机显示本地化字典中的 tips，每秒切换 ----
   (function startLoadingTips() {
-    var defaultTips = [
-      "烹饪土豆烧牛肉的好菜...",
-      "正在飞八分钱...",
-      "准备《逃离块科夫》...",
-      "撰写任务...",
-      "✶ Thinking..."
-    ];
     var tipEl = document.getElementById('splash-tip');
     if (!tipEl) return;
-    var tips = [];
     var lastIndex = -1;
 
-    // 尝试从文件加载，失败则用默认列表
-    fetch('loadingtips.txt').then(function(r) {
-      if (!r.ok) throw new Error('load failed');
-      return r.text();
-    }).then(function(text) {
-      var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
-      if (lines.length) tips = lines;
-    }).catch(function() {
-      tips = defaultTips;
-    });
-
     function showRandomTip() {
-      var pool = tips.length ? tips : defaultTips;
+      var pool = I18N.tips();
+      if (!pool.length) return;
       var idx;
       do { idx = Math.floor(Math.random() * pool.length); } while (idx === lastIndex && pool.length > 1);
       lastIndex = idx;
@@ -510,6 +581,7 @@
     }
 
     showRandomTip();
+    I18N.ready.then(showRandomTip); // 字典加载完成后刷新（首次启动时）
     var tipTimer = setInterval(function() {
       var splash = document.getElementById('splash-overlay');
       if (!splash || splash.classList.contains('hidden') || splash.style.display === 'none') {
@@ -535,13 +607,32 @@
     if (window.electronAPI) window.electronAPI.close();
   });
 
+  // 首次启动语言选择
+  (function initLangPicker() {
+    var config = {};
+    try { config = JSON.parse(localStorage.getItem('editorConfig') || '{}'); } catch (e) {}
+    if (config.language) return; // 已选择过语言
+    var overlay = document.getElementById('lang-picker-overlay');
+    if (!overlay) return;
+    overlay.style.display = '';
+    var btns = overlay.querySelectorAll('[data-lang]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function() {
+        var lang = this.getAttribute('data-lang');
+        I18N.setLang(lang).then(function() {
+          overlay.style.display = 'none';
+        });
+      });
+    }
+  })();
+
   // 欢迎弹窗
   (function showWelcome() {
     var version = (window.electronAPI && window.electronAPI.appVersion) || '1.0.0';
     var overlay = document.getElementById('welcome-overlay');
     var versionEl = document.getElementById('welcome-version');
     if (!overlay) return;
-    versionEl.textContent = '当前版本为 ' + version;
+    versionEl.textContent = I18N.t('welcome.version', { version: version });
 
     // 本会话已弹过则跳过（设置页切换回来不重复弹）
     if (sessionStorage.getItem('welcomeShown') === version) return;

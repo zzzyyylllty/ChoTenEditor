@@ -102,17 +102,17 @@ async function restoreAppState() {
     // 检测项目类型
     if (typeof ChemdahInterpreter !== 'undefined') {
       const types = await ChemdahInterpreter.detectProjectTypes(state.currentProjectPath);
-      let typeMsg = `项目已打开: ${getFileName(state.currentProjectPath)}`;
+      let typeMsg = I18N.t('status.projectOpened', { name: getFileName(state.currentProjectPath) });
       if (types.hasConversation && types.hasQuest) {
-        typeMsg += ' [对话 + 任务]';
+        typeMsg += I18N.t('status.projectTypesConversationQuest');
       } else if (types.hasConversation) {
-        typeMsg += ' [对话文件]';
+        typeMsg += I18N.t('status.projectTypesConversation');
       } else if (types.hasQuest) {
-        typeMsg += ' [任务文件]';
+        typeMsg += I18N.t('status.projectTypesQuest');
       }
       updateStatus(typeMsg);
     } else {
-      updateStatus(`项目已打开: ${state.currentProjectPath}`);
+      updateStatus(I18N.t('status.projectOpened', { name: state.currentProjectPath }));
     }
 
     // 恢复标签页
@@ -143,10 +143,13 @@ async function restoreAppState() {
 // 初始化 - 等待DOM和API就绪
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('[RENDERER] DOMContentLoaded fired');
 
-  setTimeout(() => {
+  // 等待本地化字典就绪（首次启动时等待用户选择语言）
+  try { await I18N.ready; } catch (e) {}
+
+  setTimeout(async () => {
     console.log('[RENDERER] 检查API可用性');
     console.log('[RENDERER] window.testAPI:', window.testAPI);
     console.log('[RENDERER] window.electronAPI:', window.electronAPI);
@@ -162,8 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.electronAPI) {
       console.error('[RENDERER] electronAPI 不可用!');
       showErrorDialog(
-        'API 初始化失败',
-        'Electron API 未能正确初始化。请检查控制台错误。'
+        I18N.t('dialog.apiInitFailed'),
+        I18N.t('dialog.apiInitFailedMsg')
       );
       return;
     }
@@ -297,10 +300,13 @@ function init() {
   setupEventListeners();
   updateNavigationButtons();
 
+  // 应用已保存的配置（主题/字体/颜色/背景）
+  applyStoredConfig();
+
   // 加载自动同步设置
   loadAutoSyncSetting();
 
-  updateStatus('准备就绪');
+  updateStatus(I18N.t('status.ready'));
 
   // 从 desc/ 目录加载任务定义数据
   loadQuestDefinitions();
@@ -405,10 +411,10 @@ function setupEventListeners() {
 
       if (val === 'auto') {
         ChemdahInterpreter.removeTypeOverride(currentFile);
-        updateStatus('解释器类型: 自动检测');
+        updateStatus(I18N.t('status.interpreterTypeAuto'));
       } else {
         ChemdahInterpreter.setTypeOverride(currentFile, val);
-        updateStatus(`解释器类型: ${val}`);
+        updateStatus(I18N.t('status.interpreterType', { type: typeLabel(val) }));
       }
 
       // 如果当前在可视化模式，重新渲染
@@ -500,12 +506,12 @@ function setupEventListeners() {
       if (!selected) return;
       var path = selected.dataset.path;
       if (!path) return;
-      if (!confirm('确定要删除 "' + getFileName(path) + '" 吗？')) return;
+      if (!(await UI.confirm({ message: I18N.t('confirm.deleteFile', { name: getFileName(path) }) }))) return;
       playSound('click');
       if (_fmMode === 'remote') {
         if (window.electronAPI && window.electronAPI.remote) {
           window.electronAPI.remote.requestFileDelete({ filePath: path });
-          setRemoteStatus('rm-client-status', '正在请求删除文件...');
+          setRemoteStatus('rm-client-status', I18N.t('rm.requestingDelete'));
         }
       } else {
         // 本地删除
@@ -513,7 +519,7 @@ function setupEventListeners() {
           await _electronAPI.deleteFile(path);
           if (currentDirectoryPath) loadDirectory(currentDirectoryPath, true);
         } catch (e) {
-          showErrorDialog('删除失败', e.message);
+          showErrorDialog(I18N.t('dialog.deleteFailed'), e.message);
         }
       }
     });
@@ -548,7 +554,7 @@ async function openProject() {
   console.log('[RENDERER] 打开项目');
 
   if (!_electronAPI || !_electronAPI.openDirectory) {
-    showErrorDialog('API 错误', 'openDirectory API 不可用');
+    showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.openDirectoryApi'));
     return;
   }
 
@@ -563,7 +569,7 @@ async function openProject() {
     }
   } catch (error) {
     console.error('[RENDERER] 打开项目错误:', error);
-    showErrorDialog('打开项目失败', error.message || error);
+    showErrorDialog(I18N.t('dialog.openProjectFailed'), error.message || error);
   }
 }
 
@@ -577,17 +583,17 @@ async function openProjectPath(path) {
   // 检测项目中的类型
   if (typeof ChemdahInterpreter !== 'undefined') {
     const types = await ChemdahInterpreter.detectProjectTypes(path);
-    let typeMsg = `项目已打开: ${getFileName(path)}`;
+    let typeMsg = I18N.t('status.projectOpened', { name: getFileName(path) });
     if (types.hasConversation && types.hasQuest) {
-      typeMsg += ' [对话 + 任务]';
+      typeMsg += I18N.t('status.projectTypesConversationQuest');
     } else if (types.hasConversation) {
-      typeMsg += ' [对话文件]';
+      typeMsg += I18N.t('status.projectTypesConversation');
     } else if (types.hasQuest) {
-      typeMsg += ' [任务文件]';
+      typeMsg += I18N.t('status.projectTypesQuest');
     }
     updateStatus(typeMsg);
   } else {
-    updateStatus(`项目已打开: ${path}`);
+    updateStatus(I18N.t('status.projectOpened', { name: path }));
   }
 
   saveAppState();
@@ -601,7 +607,7 @@ async function loadDirectory(path, silent = false) {
   console.log('[RENDERER] 加载目录:', path);
 
   if (!_electronAPI || !_electronAPI.readdir) {
-    if (!silent) showErrorDialog('API 错误', 'readdir API 不可用');
+    if (!silent) showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.readdirApi'));
     return false;
   }
 
@@ -615,15 +621,15 @@ async function loadDirectory(path, silent = false) {
       currentDirectoryPath = path;
       updateBreadcrumbs();
       updateNavigationButtons();
-      updateStatus(`目录: ${path}`);
+      updateStatus(I18N.t('status.directory', { path: path }));
       return true;
     } else {
-      if (!silent) showErrorDialog('读取目录失败', result.error);
+      if (!silent) showErrorDialog(I18N.t('dialog.loadDirFailed'), result.error);
       return false;
     }
   } catch (error) {
     console.error('[RENDERER] 加载目录错误:', error);
-    if (!silent) showErrorDialog('加载目录失败', error.message || error);
+    if (!silent) showErrorDialog(I18N.t('dialog.loadDirError'), error.message || error);
     return false;
   }
 }
@@ -669,7 +675,7 @@ async function handleFileClick(file) {
       _remoteDirPath = file.path;
       if (window.electronAPI && window.electronAPI.remote) {
         window.electronAPI.remote.requestFileList({ dirPath: file.path });
-        setRemoteStatus('rm-client-status', '正在加载远程目录...');
+        setRemoteStatus('rm-client-status', I18N.t('rm.loadingRemoteDir'));
       }
     } else {
       await navigateToDirectory(file.path);
@@ -678,7 +684,7 @@ async function handleFileClick(file) {
     if (_fmMode === 'remote') {
       // 远程模式：向服务器请求文件内容
       if (window.electronAPI && window.electronAPI.remote) {
-        setRemoteStatus('rm-client-status', '正在读取远程文件...');
+        setRemoteStatus('rm-client-status', I18N.t('rm.readingRemoteFile'));
         window.electronAPI.remote.requestFileRead({ filePath: file.path });
       }
     } else {
@@ -747,7 +753,7 @@ async function openFile(filePath, content) {
   if (!content && _fmMode === 'remote') {
     if (window.electronAPI && window.electronAPI.remote) {
       window.electronAPI.remote.requestFileRead({ filePath: filePath });
-      setRemoteStatus('rm-client-status', '正在读取远程文件...');
+      setRemoteStatus('rm-client-status', I18N.t('rm.readingRemoteFile'));
       // 等待远程内容加载（最多等待 10 秒）
       for (var _w = 0; _w < 200; _w++) {
         await new Promise(function(r) { setTimeout(r, 50); });
@@ -762,19 +768,19 @@ async function openFile(filePath, content) {
         }
       }
       if (!content) {
-        showErrorDialog('读取失败', '无法从远程服务器读取文件');
+        showErrorDialog(I18N.t('dialog.readFailed'), I18N.t('error.cannotReadRemote'));
         _openingFile = null;
         return;
       }
     } else {
-      showErrorDialog('错误', '远程 API 不可用');
+      showErrorDialog(I18N.t('dialog.error'), I18N.t('error.remoteApiUnavailable'));
       _openingFile = null;
       return;
     }
   }
 
   if (!content && (!_electronAPI || !_electronAPI.readFile)) {
-    showErrorDialog('API 错误', 'readFile API 不可用');
+    showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.readFileApi'));
     _openingFile = null;
     return;
   }
@@ -795,7 +801,7 @@ async function openFile(filePath, content) {
     if (!content) {
       const result = await _electronAPI.readFile(filePath);
       if (!result.success) {
-        showErrorDialog('读取失败', result.error || '无法读取文件');
+        showErrorDialog(I18N.t('dialog.readFailed'), result.error || I18N.t('error.cannotReadFile'));
         _openingFile = null;
         return;
       }
@@ -835,14 +841,23 @@ async function openFile(filePath, content) {
 
     // 检测类型并显示在状态栏
     if (typeof ChemdahInterpreter !== 'undefined') {
-      const detectedType = ChemdahInterpreter.detectFileType(filePath, content);
+      const detectedType = detectCombinedType(filePath, content);
       if (detectedType !== 'unknown') {
-        updateStatus(`文件: ${getFileName(filePath)} [${detectedType}]`);
+        updateStatus(I18N.t('status.fileType', { name: getFileName(filePath), type: typeLabel(detectedType) }));
+        // CE 文件: 异步回溯定位工程根, 仅追加归属展示, 不阻塞不导航
+        if (detectedType === 'craftengine' && typeof CraftEngineInterpreter !== 'undefined') {
+          CraftEngineInterpreter.resolveProjectRoot(filePath).then(function (r) {
+            if (r && r.found && currentFile === filePath && !_closingTabs[filePath]) {
+              updateStatus(I18N.t('status.fileType', { name: getFileName(filePath), type: typeLabel('craftengine') }) +
+                I18N.t('status.ceOwner', { root: r.pluginRoot || r.packRoot || '', pack: r.namespace || '' }));
+            }
+          });
+        }
       } else {
-        updateStatus(`文件: ${getFileName(filePath)}`);
+        updateStatus(I18N.t('status.file', { name: getFileName(filePath) }));
       }
     } else {
-      updateStatus(`文件: ${getFileName(filePath)}`);
+      updateStatus(I18N.t('status.file', { name: getFileName(filePath) }));
     }
 
     // 如果是远程文件，通知服务器开始编辑
@@ -854,7 +869,7 @@ async function openFile(filePath, content) {
     _openingFile = null;
   } catch (error) {
     console.error('[RENDERER] 打开文件错误:', error);
-    showErrorDialog('打开文件失败', error.message || error);
+    showErrorDialog(I18N.t('dialog.openFileFailed'), error.message || error);
     _openingFile = null;
   }
 }
@@ -893,7 +908,7 @@ function addTab(filePath) {
   nameSpan.classList.add('editor-tab-name');
   const baseName = getFileName(filePath);
   nameSpan.textContent = dirtyTabs[filePath] ? '● ' + baseName : baseName;
-  nameSpan.title = dirtyTabs[filePath] ? baseName + ' (未保存)' : baseName;
+  nameSpan.title = dirtyTabs[filePath] ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName;
   tab.appendChild(nameSpan);
 
   tab.addEventListener('click', async () => {
@@ -962,14 +977,14 @@ async function showDirtyConfirmDialog(fileName) {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
     overlay.innerHTML =
       '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
-        '<h3 style="margin:0 0 12px;font-size:15px;">未保存的更改</h3>' +
+        '<h3 style="margin:0 0 12px;font-size:15px;">' + I18N.t('tabs.unsaved') + '</h3>' +
         '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">' +
-          (fileName ? '文件 <strong>' + escapeHtml(fileName) + '</strong> 有未保存的更改。<br>' : '') + '是否保存？' +
+          (fileName ? I18N.t('tabs.unsavedMsg', { name: escapeHtml(fileName) }) : I18N.t('tabs.unsavedMsgNoName')) +
         '</p>' +
         '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-          '<button class="cv-btn cv-btn-secondary" id="dirty-save" style="padding:6px 14px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-primary);cursor:pointer;">保存</button>' +
-          '<button class="cv-btn cv-btn-secondary" id="dirty-discard" style="padding:6px 14px;border:1px solid var(--color-border);background:var(--color-bg-tertiary);color:var(--color-text-secondary);cursor:pointer;">不保存</button>' +
-          '<button class="cv-btn cv-btn-primary" id="dirty-cancel" style="padding:6px 14px;border:none;background:var(--color-primary);color:#fff;cursor:pointer;">取消</button>' +
+          '<button class="cv-btn cv-btn-secondary" id="dirty-save">' + I18N.t('tabs.save') + '</button>' +
+          '<button class="cv-btn cv-btn-secondary" id="dirty-discard">' + I18N.t('tabs.discard') + '</button>' +
+          '<button class="cv-btn cv-btn-primary" id="dirty-cancel">' + I18N.t('tabs.cancel') + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -999,11 +1014,11 @@ async function showUnsupportedFormatDialog(ext) {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
     overlay.innerHTML =
       '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
-        '<h3 style="margin:0 0 12px;font-size:15px;">不支持的格式</h3>' +
-        '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">目前不支持 ' + escapeHtml(ext) + ' 格式，确定要加载吗？</p>' +
+        '<h3 style="margin:0 0 12px;font-size:15px;">' + I18N.t('unsupported.title') + '</h3>' +
+        '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">' + I18N.t('unsupported.msg', { ext: escapeHtml(ext) }) + '</p>' +
         '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-          '<button class="cv-btn cv-btn-danger" id="unsup-force" style="padding:6px 14px;border:none;background:#c0392b;color:#fff;cursor:pointer;">强制加载</button>' +
-          '<button class="cv-btn cv-btn-primary" id="unsup-cancel" style="padding:6px 14px;border:none;background:var(--color-primary);color:#fff;cursor:pointer;">取消</button>' +
+          '<button class="cv-btn cv-btn-danger" id="unsup-force">' + I18N.t('unsupported.forceLoad') + '</button>' +
+          '<button class="cv-btn cv-btn-primary" id="unsup-cancel">' + I18N.t('tabs.cancel') + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -1082,7 +1097,7 @@ async function closeTab(filePath, force = false) {
       if (filePathEl) {
         filePathEl.textContent = '';
       }
-      updateStatus('没有打开的文件');
+      updateStatus(I18N.t('status.noFileOpen'));
     }
   }
 
@@ -1108,13 +1123,13 @@ function showTabContextMenu(e, filePath) {
   menu.style.cssText = 'position:fixed;z-index:200000;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:8px;padding:4px 0;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,0.6);';
 
   const items = [
-    { label: '关闭当前', icon: '×', fn: function() { closeTab(filePath); } },
-    { label: '关闭已保存', icon: '✓', fn: function() { closeSavedTabs(); } },
+    { label: I18N.t('tabMenu.closeCurrent'), icon: '×', fn: function() { closeTab(filePath); } },
+    { label: I18N.t('tabMenu.closeSaved'), icon: '✓', fn: function() { closeSavedTabs(); } },
     { type: 'sep' },
-    { label: '关闭左侧', icon: '◀', fn: function() { closeTabsDirection(filePath, 'left'); } },
-    { label: '关闭右侧', icon: '▶', fn: function() { closeTabsDirection(filePath, 'right'); } },
+    { label: I18N.t('tabMenu.closeLeft'), icon: '◀', fn: function() { closeTabsDirection(filePath, 'left'); } },
+    { label: I18N.t('tabMenu.closeRight'), icon: '▶', fn: function() { closeTabsDirection(filePath, 'right'); } },
     { type: 'sep' },
-    { label: '关闭全部', icon: '■■', fn: function() { closeAllTabs(filePath); } },
+    { label: I18N.t('tabMenu.closeAll'), icon: '■■', fn: function() { closeAllTabs(filePath); } },
   ];
 
   for (var i = 0; i < items.length; i++) {
@@ -1232,7 +1247,7 @@ function updateBreadcrumbs() {
   const crumbs = [];
 
   // 添加根目录
-  crumbs.push({ name: '根目录', path: currentProjectPath });
+  crumbs.push({ name: I18N.t('breadcrumb.root'), path: currentProjectPath });
 
   // 计算相对于项目根的路径
   const relativePath = getRelativePath(currentProjectPath, currentDirectoryPath);
@@ -1295,11 +1310,11 @@ async function createNewFile() {
   console.log('[RENDERER] 创建新文件');
 
   if (!currentProjectPath) {
-    alert('请先打开一个项目');
+    await UI.alert({ message: I18N.t('alert.openProjectFirst') });
     return;
   }
 
-  const fileName = prompt('输入文件名 (例如: config.yml):');
+  const fileName = await UI.prompt({ message: I18N.t('prompt.newFileName') });
   if (!fileName) return;
 
   const basePath = currentDirectoryPath || currentProjectPath;
@@ -1310,12 +1325,12 @@ async function createNewFile() {
     if (result.success) {
       await loadDirectory(basePath);
       await openFile(filePath);
-      updateStatus(`文件已创建: ${filePath}`);
+      updateStatus(I18N.t('status.fileCreated', { path: filePath }));
     } else {
-      showErrorDialog('创建文件失败', result.error);
+      showErrorDialog(I18N.t('dialog.createFileFailed'), result.error);
     }
   } catch (error) {
-    showErrorDialog('创建文件失败', error.message || error);
+    showErrorDialog(I18N.t('dialog.createFileFailed'), error.message || error);
   }
 }
 
@@ -1323,12 +1338,12 @@ async function saveCurrentFile() {
   console.log('[RENDERER] 保存当前文件');
 
   if (!currentFile) {
-    alert('没有打开的文件');
+    await UI.alert({ message: I18N.t('alert.noFileOpen') });
     return;
   }
 
   if (!codeMirrorEditor) {
-    showErrorDialog('错误', 'codeMirrorEditor 不存在');
+    showErrorDialog(I18N.t('dialog.error'), I18N.t('error.codemirrorMissing'));
     return;
   }
 
@@ -1341,7 +1356,7 @@ async function saveCurrentFile() {
       dirtyTabs[currentFile] = false;
       _fileContents[currentFile] = content; // 更新缓存
       updateTabDirtyIndicator(currentFile);
-      setRemoteStatus('rm-client-status', '正在保存远程文件...');
+      setRemoteStatus('rm-client-status', I18N.t('rm.savingRemoteFile'));
       return;
     }
 
@@ -1351,12 +1366,12 @@ async function saveCurrentFile() {
       dirtyTabs[currentFile] = false;
       _fileContents[currentFile] = content; // 更新缓存
       updateTabDirtyIndicator(currentFile);
-      updateStatus(`文件已保存: ${currentFile}`);
+      updateStatus(I18N.t('status.fileSaved', { path: currentFile }));
     } else {
-      showErrorDialog('保存文件失败', result.error);
+      showErrorDialog(I18N.t('dialog.saveFileFailed'), result.error);
     }
   } catch (error) {
-    showErrorDialog('保存文件失败', error.message || error);
+    showErrorDialog(I18N.t('dialog.saveFileFailed'), error.message || error);
   }
 }
 
@@ -1429,7 +1444,7 @@ async function switchEditorMode(visual) {
     if (visualEditor) visualEditor.classList.add('active');
     if (sourceModeBtn) sourceModeBtn.classList.remove('active');
     if (visualModeBtn) visualModeBtn.classList.add('active');
-    updateStatus('可视化编辑器模式');
+    updateStatus(I18N.t('status.visualMode'));
 
     // 显示类型选择器（仅对 YAML 文件）
     const isYaml = currentFile && (currentFile.endsWith('.yml') || currentFile.endsWith('.yaml'));
@@ -1448,8 +1463,8 @@ async function switchEditorMode(visual) {
     } else if (visualEditor) {
       // 不支持可视化编辑的文件类型，显示提示
       visualEditor.innerHTML = currentFile
-        ? '<div class="empty-state"><h2>可视化编辑</h2><p>仅支持 .yml / .yaml 文件的可视化编辑。</p></div>'
-        : '<div class="empty-state"><h2>可视化编辑</h2><p>打开 .yml / .yaml 文件后可切换到可视化编辑</p></div>';
+        ? '<div class="empty-state"><h2>' + I18N.t('editor.visualEmptyTitle') + '</h2><p>' + I18N.t('visual.onlyYaml') + '</p></div>'
+        : '<div class="empty-state"><h2>' + I18N.t('editor.visualEmptyTitle') + '</h2><p>' + I18N.t('editor.visualEmptyHint') + '</p></div>';
     }
   } else {
     if (sourceEditor) sourceEditor.style.display = 'block';
@@ -1457,7 +1472,7 @@ async function switchEditorMode(visual) {
     if (sourceModeBtn) sourceModeBtn.classList.add('active');
     if (visualModeBtn) visualModeBtn.classList.remove('active');
     if (typeSelector) typeSelector.style.display = 'none';
-    updateStatus('源代码编辑器模式');
+    updateStatus(I18N.t('status.sourceMode'));
     // 在可视化模式下，CodeMirror 被隐藏，setValue 的 DOM 更新可能被延迟。
     // 恢复显示后强制刷新，确保显示正确的文件内容。
     if (codeMirrorEditor) {
@@ -1490,8 +1505,8 @@ function renderVisualEditor() {
   if (!currentFile.endsWith('.yml') && !currentFile.endsWith('.yaml')) {
     visualEditor.innerHTML = `
       <div class="empty-state">
-        <h2>可视化编辑器</h2>
-        <p>仅支持 .yml / .yaml 文件的可视化编辑。</p>
+        <h2>${I18N.t('editor.visualEmptyTitle')}</h2>
+        <p>${I18N.t('visual.onlyYaml')}</p>
       </div>
     `;
     return;
@@ -1505,8 +1520,8 @@ function renderVisualEditor() {
       <div class="cv-error-banner">
         <span class="cv-error-icon">⚠️</span>
         <div>
-          <strong>解释器未加载</strong>
-          <p>ChemdahInterpreter 模块未正确加载。请检查控制台错误。</p>
+          <strong>${I18N.t('visual.interpreterMissing')}</strong>
+          <p>${I18N.t('visual.interpreterMissingMsg')}</p>
         </div>
       </div>
     `;
@@ -1515,20 +1530,29 @@ function renderVisualEditor() {
 
   // 获取类型覆盖设置
   const overrideType = ChemdahInterpreter.getTypeOverride(currentFile);
+  const ceType = (!overrideType && typeof CraftEngineInterpreter !== 'undefined')
+    ? CraftEngineInterpreter.detectFileType(content, currentFile) : null;
 
   try {
-    ChemdahInterpreter.render(currentFile, content, visualEditor, {
-      forceType: overrideType || null,
-    });
+    if (overrideType === 'craftengine' || ceType) {
+      // CE 配置 → CraftEngine 可视化编辑器
+      CraftEngineInterpreter.render(currentFile, content, visualEditor, {
+        forceType: overrideType || null,
+      });
+    } else {
+      ChemdahInterpreter.render(currentFile, content, visualEditor, {
+        forceType: overrideType || null,
+      });
+    }
   } catch (error) {
     console.error('[RENDERER] 可视化渲染错误:', error);
     visualEditor.innerHTML = `
       <div class="cv-error-banner">
         <span class="cv-error-icon">⚠️</span>
         <div>
-          <strong>可视化渲染失败</strong>
+          <strong>${I18N.t('visual.renderFailed')}</strong>
           <p>${escapeHtml(error.message)}</p>
-          <p>请在源代码模式中编辑。</p>
+          <p>${I18N.t('visual.editInSource')}</p>
         </div>
       </div>
     `;
@@ -1541,7 +1565,7 @@ function renderVisualEditor() {
 function resetTypeOverride() {
   if (!currentFile) return;
   ChemdahInterpreter.removeTypeOverride(currentFile);
-  updateStatus('类型覆盖已清除');
+  updateStatus(I18N.t('status.typeOverrideCleared'));
 
   // 如果当前在可视化模式，重新渲染
   if (isVisualMode && visualEditor) {
@@ -1555,7 +1579,7 @@ function resetTypeOverride() {
 function setFileInterpreterType() {
   if (!currentFile) return;
 
-  const detectedType = ChemdahInterpreter.detectFileType(
+  const detectedType = detectCombinedType(
     currentFile,
     codeMirrorEditor ? codeMirrorEditor.getValue() : ''
   );
@@ -1573,7 +1597,7 @@ function setFileInterpreterType() {
     }
 
     ChemdahInterpreter.setTypeOverride(scopePath, type);
-    updateStatus(`解释器类型已设置为: ${type} (范围: ${scope})`);
+    updateStatus(I18N.t('status.typeOverrideSet', { type: typeLabel(type), scope: scopeLabel(scope) }));
 
     if (isVisualMode && visualEditor) {
       renderVisualEditor();
@@ -1591,7 +1615,7 @@ function handleEditorChange() {
       dirtyTabs[currentFile] = true;
       updateTabDirtyIndicator(currentFile);
     }
-    updateStatus('文件已修改');
+    updateStatus(I18N.t('status.fileModified'));
 
     // 自动同步（自动保存）
     if (autoSyncEnabled) {
@@ -1611,19 +1635,72 @@ function updateTabDirtyIndicator(filePath) {
   if (nameSpan) {
     const baseName = getFileName(filePath);
     nameSpan.textContent = isDirty ? '● ' + baseName : baseName;
-    nameSpan.title = isDirty ? baseName + ' (未保存)' : baseName;
+    nameSpan.title = isDirty ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName;
   }
 }
 
 // ============================================
-// 设置相关
+// 设置相关（弹窗模式）
 // ============================================
 
 function openSettings() {
-  console.log('[RENDERER] 打开设置');
-  window.__allowUnload = true;
-  setTimeout(() => { window.location.href = 'settings.html'; }, 120);
+  console.log('[RENDERER] 打开设置弹窗');
+  const overlay = document.getElementById('st-overlay');
+  const frame = document.getElementById('st-frame');
+  if (!overlay || !frame) {
+    // 回退：无弹窗结构时跳转独立页面
+    window.__allowUnload = true;
+    setTimeout(() => { window.location.href = 'settings.html'; }, 120);
+    return;
+  }
+  // 每次打开重新加载 iframe，确保展示最新配置
+  frame.src = 'settings.html';
+  overlay.style.display = 'flex';
 }
+
+// 请求 iframe 保存设置，等它保存完成（含异步操作如密码哈希）再关闭
+function requestCloseSettingsModal() {
+  const frame = document.getElementById('st-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'saveSettings' }, '*');
+  } else {
+    finishCloseSettingsModal();
+  }
+}
+
+function finishCloseSettingsModal() {
+  const overlay = document.getElementById('st-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'none';
+  applyStoredConfig();
+  updateCodeMirrorTheme();
+}
+
+// 设置页 iframe 内点击"返回编辑器"时关闭弹窗
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'closeSettings') {
+    requestCloseSettingsModal();
+  } else if (e.data && e.data.type === 'settingsSaved') {
+    finishCloseSettingsModal();
+  }
+});
+
+// Esc 关闭设置弹窗
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('st-overlay');
+    if (overlay && overlay.style.display !== 'none') requestCloseSettingsModal();
+  }
+});
+
+// F12 切换调试屏幕 (DevTools)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F12') {
+    if (window.electronAPI && window.electronAPI.toggleDevTools) {
+      window.electronAPI.toggleDevTools();
+    }
+  }
+});
 
 function openAIPanel() {
   console.log('[RENDERER] 打开 AI 面板');
@@ -1763,6 +1840,42 @@ function getFileName(path) {
   return path.split(/[\\/]/).pop();
 }
 
+// 解释器类型 id → 本地化标签
+function typeLabel(type) {
+  if (type === 'conversation') return I18N.t('editor.typeConversation');
+  if (type === 'quest') return I18N.t('editor.typeQuest');
+  if (type === 'craftengine') return I18N.t('editor.typeCraftEngine');
+  return type;
+}
+
+// 组合检测: 用户覆盖 → chemdah(路径/内容) → CE 内容启发式
+function detectCombinedType(filePath, content) {
+  if (typeof ChemdahInterpreter !== 'undefined') {
+    var chemdahType = ChemdahInterpreter.detectFileType(filePath, content);
+    if (chemdahType !== 'unknown') return chemdahType;
+  }
+  if (typeof CraftEngineInterpreter !== 'undefined') {
+    var ceType = CraftEngineInterpreter.detectFileType(content, filePath);
+    if (ceType !== 'unknown') return 'craftengine';
+  }
+  return 'unknown';
+}
+
+// 解释器类型覆盖范围 → 本地化标签
+function scopeLabel(scope) {
+  if (scope === 'directory') return I18N.t('typeScope.directory');
+  if (scope === 'project') return I18N.t('typeScope.project');
+  return I18N.t('typeScope.file');
+}
+
+// 远程消息：对象带 errorKey 时双语言显示，纯字符串原样显示（兼容旧端）
+function localizeRemoteMsg(msg) {
+  if (msg && typeof msg === 'object') {
+    return I18N.localizeRemote(msg.error || msg.message || '', msg.errorKey || msg.messageKey, msg.errorKeyParams || msg.messageKeyParams);
+  }
+  return msg || '';
+}
+
 function updateStatus(message) {
   if (statusInfo) {
     statusInfo.textContent = message;
@@ -1774,7 +1887,7 @@ function updateStatus(message) {
 function showErrorDialog(title, message) {
   playSound('error');
   console.error(`${title}: ${message}`);
-  alert(`${title}\n\n${message}`);
+  UI.alert({ title: title, message: message || '' });
 }
 
 function escapeHtml(text) {
@@ -1818,39 +1931,53 @@ window.appState = {
   },
 };
 console.log('[RENDERER] DOM ready, saveBtn:', !!saveBtn, 'settingsBtn:', !!settingsBtn);
+// 重新应用存储的主题/颜色/背景（窗口重新聚焦或设置弹窗关闭时调用）
+function applyStoredConfig() {
+  const stored = localStorage.getItem('editorConfig');
+  if (!stored) return;
+  try {
+    const config = JSON.parse(stored);
+    document.body.setAttribute('data-theme', config.theme || 'dark');
+
+    // 重新应用字体（界面字体 + 编辑器字体）
+    document.body.style.fontFamily = config.uiFont || '';
+    const edFont = (config.editor && config.editor.fontFamily) || '';
+    document.documentElement.style.setProperty('--editor-font', edFont || "'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace");
+
+    // 重新应用所有颜色变量
+    if (config.colors) {
+      Object.entries(config.colors).forEach(([key, value]) => {
+        const cssVarName = `--color-${camelToKebab(key)}`;
+        // 仅当颜色与当前主题默认值不同（用户显式自定义）时才覆盖，
+        // 与主题默认相同的值跳过，避免内联样式锁死主题变量导致浅色主题失效
+        const current = getComputedStyle(document.body).getPropertyValue(cssVarName).trim();
+        if (current && current !== value) {
+          document.documentElement.style.setProperty(cssVarName, value);
+        }
+      });
+    }
+
+    // 重新应用背景图片到 body
+    const body = document.body;
+    if (config.background && config.background.filename) {
+      const bg = config.background;
+      const theme = body.getAttribute('data-theme') || 'dark';
+      const opacity = bg.opacity ?? 0.3;
+      const alpha = (1 - opacity) * 0.6;
+      const bgColor = theme === 'light' ? 'rgba(255,255,255,' + alpha + ')' : 'rgba(0,0,0,' + alpha + ')';
+      body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
+    } else {
+      const theme = body.getAttribute('data-theme') || 'dark';
+      body.style.background = theme === 'light' ? '#ffffff' : '#000000';
+    }
+  } catch (e) {
+    console.error('[RENDERER] 应用存储设置失败:', e);
+  }
+}
+
 window.addEventListener('focus', () => {
   // 页面重新获得焦点时，重新应用存储的主题
-  const stored = localStorage.getItem('editorConfig');
-  if (stored) {
-    try {
-      const config = JSON.parse(stored);
-      document.body.setAttribute('data-theme', config.theme || 'dark');
-
-      // 重新应用所有颜色变量
-      if (config.colors) {
-        Object.entries(config.colors).forEach(([key, value]) => {
-          const cssVarName = `--color-${camelToKebab(key)}`;
-          document.documentElement.style.setProperty(cssVarName, value);
-        });
-      }
-
-      // 重新应用背景图片到 body
-      const body = document.body;
-      if (config.background && config.background.filename) {
-        const bg = config.background;
-        const theme = body.getAttribute('data-theme') || 'dark';
-        const opacity = bg.opacity ?? 0.3;
-        const alpha = (1 - opacity) * 0.6;
-        const bgColor = theme === 'light' ? 'rgba(255,255,255,' + alpha + ')' : 'rgba(0,0,0,' + alpha + ')';
-        body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
-      } else {
-        const theme = body.getAttribute('data-theme') || 'dark';
-        body.style.background = theme === 'light' ? '#ffffff' : '#000000';
-      }
-    } catch (e) {
-      console.error('[RENDERER] 应用存储设置失败:', e);
-    }
-  }
+  applyStoredConfig();
 });
 
 // 工具函数（添加到 renderer.js）
@@ -1986,7 +2113,7 @@ function attachRemoteListeners() {
         localStorage.setItem('editorConfig', JSON.stringify(config));
       } catch (e) {}
       if (!window.electronAPI || !window.electronAPI.remote) {
-        setRemoteStatus('rm-server-status', '错误: 远程 API 不可用', true);
+        setRemoteStatus('rm-server-status', I18N.t('rm.apiError'), true);
         return;
       }
       // 读取设置：是否允许不同版本
@@ -1998,22 +2125,22 @@ function attachRemoteListeners() {
           serverCfg.allowDifferentVersions = parsedCfg.allowDifferentVersions === true;
         }
       } catch (e) {}
-      setRemoteStatus('rm-server-status', '正在启动服务器...');
+      setRemoteStatus('rm-server-status', I18N.t('rm.startingServer'));
       try {
         var result = await window.electronAPI.remote.startServer({ port, password, allowDifferentVersions: serverCfg.allowDifferentVersions });
         if (result && result.stage !== undefined) {
-          setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + port);
+          setRemoteStatus('rm-server-status', I18N.t('rm.serverStarted', { port: port }));
           document.getElementById('rm-server-start').style.display = 'none';
           document.getElementById('rm-server-stop').style.display = '';
         } else if (result && result.success === false) {
-          setRemoteStatus('rm-server-status', '启动失败: ' + (result.error || '未知错误'), true);
+          setRemoteStatus('rm-server-status', I18N.t('rm.startFailed', { msg: localizeRemoteMsg(result.error) || I18N.t('error.unknown') }), true);
         } else {
-          setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + port);
+          setRemoteStatus('rm-server-status', I18N.t('rm.serverStarted', { port: port }));
           document.getElementById('rm-server-start').style.display = 'none';
           document.getElementById('rm-server-stop').style.display = '';
         }
       } catch (err) {
-        setRemoteStatus('rm-server-status', '启动失败: ' + err.message, true);
+        setRemoteStatus('rm-server-status', I18N.t('rm.startFailed', { msg: err.message }), true);
       }
     });
   }
@@ -2024,7 +2151,7 @@ function attachRemoteListeners() {
     stopBtn.addEventListener('click', async function() {
       if (!window.electronAPI || !window.electronAPI.remote) return;
       await window.electronAPI.remote.stopServer();
-      setRemoteStatus('rm-server-status', '服务器已停止');
+      setRemoteStatus('rm-server-status', I18N.t('rm.serverStopped'));
       document.getElementById('rm-server-start').style.display = '';
       document.getElementById('rm-server-stop').style.display = 'none';
       document.getElementById('rm-clients').style.display = 'none';
@@ -2048,15 +2175,15 @@ function attachRemoteListeners() {
         sessionStorage.setItem('remoteClientPassword', password);
       } catch (e) {}
       if (!window.electronAPI || !window.electronAPI.remote) {
-        setRemoteStatus('rm-client-status', '错误: 远程 API 不可用', true);
+        setRemoteStatus('rm-client-status', I18N.t('rm.apiError'), true);
         return;
       }
-      setRemoteStatus('rm-client-status', '正在连接...');
+      setRemoteStatus('rm-client-status', I18N.t('rm.connecting'));
       try {
         var appVer = window.electronAPI && window.electronAPI.appVersion ? window.electronAPI.appVersion : '';
         var result = await window.electronAPI.remote.connectToServer({ host, port, password, version: appVer });
         if (result && result.stage === 'challenge') {
-          setRemoteStatus('rm-client-status', '已连接，请将安全码告知管理员');
+          setRemoteStatus('rm-client-status', I18N.t('rm.sendCodeToAdmin'));
           document.getElementById('rm-client-connect').style.display = 'none';
           document.getElementById('rm-client-disconnect').style.display = '';
           // 显示安全码，等待管理员确认
@@ -2065,19 +2192,19 @@ function attachRemoteListeners() {
           if (codeArea) codeArea.style.display = '';
           if (codeDisplay) codeDisplay.textContent = result.securityCode || '------';
         } else if (result && result.stage === 'approved') {
-          setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+          setRemoteStatus('rm-client-status', I18N.t('rm.connected'));
           document.getElementById('rm-client-connect').style.display = 'none';
           document.getElementById('rm-client-disconnect').style.display = '';
           document.getElementById('rm-security-code-area').style.display = 'none';
         } else if (result && result.success === false) {
-          setRemoteStatus('rm-client-status', '连接失败: ' + (result.error || '未知错误'), true);
+          setRemoteStatus('rm-client-status', I18N.t('rm.connectFailed', { msg: localizeRemoteMsg(result.error) || I18N.t('error.unknown') }), true);
         } else {
-          setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+          setRemoteStatus('rm-client-status', I18N.t('rm.connected'));
           document.getElementById('rm-client-connect').style.display = 'none';
           document.getElementById('rm-client-disconnect').style.display = '';
         }
       } catch (err) {
-        setRemoteStatus('rm-client-status', '连接失败: ' + err.message, true);
+        setRemoteStatus('rm-client-status', I18N.t('rm.connectFailed', { msg: err.message }), true);
       }
     });
   }
@@ -2088,7 +2215,7 @@ function attachRemoteListeners() {
     disconnectBtn.addEventListener('click', async function() {
       if (!window.electronAPI || !window.electronAPI.remote) return;
       await window.electronAPI.remote.disconnectFromServer();
-      setRemoteStatus('rm-client-status', '已断开连接');
+      setRemoteStatus('rm-client-status', I18N.t('rm.disconnected'));
       document.getElementById('rm-client-connect').style.display = '';
       document.getElementById('rm-client-disconnect').style.display = 'none';
       document.getElementById('rm-security-code-area').style.display = 'none';
@@ -2252,21 +2379,21 @@ function renderClientList(clients) {
     html += '      <div class="rm-client-id">' + _escHtml(c.id) + (isPending ? ' ⏳' : '') + '</div>';
     html += '      <div class="rm-client-ip">' + _escHtml(c.ip || 'unknown') + '</div>';
     if (!isPending && c.securityCode) {
-      html += '      <div style="font-size:10px;color:var(--color-text-tertiary);">安全码: ' + _escHtml(c.securityCode) + '</div>';
+      html += '      <div style="font-size:10px;color:var(--color-text-tertiary);">' + I18N.t('rm.securityCode', { code: _escHtml(c.securityCode) }) + '</div>';
     }
     html += '    </div>';
     if (isPending) {
-      html += '    <button class="rm-btn rm-btn-primary rm-btn-sm rm-confirm-btn" data-client-id="' + _escHtml(c.id) + '">确认连接</button>';
+      html += '    <button class="rm-btn rm-btn-primary rm-btn-sm rm-confirm-btn" data-client-id="' + _escHtml(c.id) + '">' + I18N.t('remote.confirmAccept') + '</button>';
     } else {
-      html += '    <button class="rm-btn rm-btn-danger rm-btn-sm rm-disconnect-btn" data-client-id="' + _escHtml(c.id) + '">断开</button>';
+      html += '    <button class="rm-btn rm-btn-danger rm-btn-sm rm-disconnect-btn" data-client-id="' + _escHtml(c.id) + '">' + I18N.t('rm.disconnect') + '</button>';
     }
     html += '  </div>';
     if (!isPending) {
       html += '  <div class="rm-client-perm">';
       var levels = [
-        { id: 'guest', label: '访客' },
-        { id: 'confirm', label: '更改需确认' },
-        { id: 'full', label: '完全控制' },
+        { id: 'guest', label: I18N.t('perm.guest') },
+        { id: 'confirm', label: I18N.t('perm.confirm') },
+        { id: 'full', label: I18N.t('perm.full') },
       ];
       for (var p = 0; p < levels.length; p++) {
         var active = perm === levels[p].id ? ' active' : '';
@@ -2334,24 +2461,24 @@ function initRemoteEvents() {
 
       // 服务器事件
       case 'server:started':
-        setRemoteStatus('rm-server-status', '服务器已启动，端口: ' + (data.port || ''));
+        setRemoteStatus('rm-server-status', I18N.t('rm.serverStarted', { port: data.port || '' }));
         document.getElementById('rm-server-start').style.display = 'none';
         document.getElementById('rm-server-stop').style.display = '';
         break;
 
       case 'server:stopped':
-        setRemoteStatus('rm-server-status', '服务器已停止');
+        setRemoteStatus('rm-server-status', I18N.t('rm.serverStopped'));
         document.getElementById('rm-server-start').style.display = '';
         document.getElementById('rm-server-stop').style.display = 'none';
         document.getElementById('rm-clients').style.display = 'none';
         break;
 
       case 'server:error':
-        setRemoteStatus('rm-server-status', '错误: ' + data.message, true);
+        setRemoteStatus('rm-server-status', I18N.t('rm.errorPrefix', { msg: localizeRemoteMsg(data) || '' }), true);
         break;
 
       case 'client:joined':
-        setRemoteStatus('rm-server-status', '新客户端连接: ' + (data.ip || ''));
+        setRemoteStatus('rm-server-status', I18N.t('rm.newClient', { ip: data.ip || '' }));
         refreshRemoteUI();
         // 自动弹出确认对话框
         if (data.clientId) {
@@ -2392,7 +2519,7 @@ function initRemoteEvents() {
         break;
 
       case 'file:change:applied':
-        setRemoteStatus('rm-server-status', '文件已更新: ' + data.path);
+        setRemoteStatus('rm-server-status', I18N.t('rm.fileUpdated', { path: data.path }));
         break;
 
       case 'file:delete:request':
@@ -2408,7 +2535,7 @@ function initRemoteEvents() {
         break;
 
       case 'file:delete:applied':
-        setRemoteStatus('rm-server-status', '文件已删除: ' + data.path);
+        setRemoteStatus('rm-server-status', I18N.t('rm.fileDeleted', { path: data.path }));
         if (currentFile === data.path) {
           closeTab(data.path);
         }
@@ -2430,11 +2557,11 @@ function initRemoteEvents() {
 
       // 客户端事件
       case 'client:connecting':
-        setRemoteStatus('rm-client-status', '正在连接...');
+        setRemoteStatus('rm-client-status', I18N.t('rm.connecting'));
         break;
 
       case 'client:auth:challenge':
-        setRemoteStatus('rm-client-status', '已连接，请将安全码告知管理员');
+        setRemoteStatus('rm-client-status', I18N.t('rm.sendCodeToAdmin'));
         document.getElementById('rm-client-connect').style.display = 'none';
         document.getElementById('rm-client-disconnect').style.display = '';
         var codeArea = document.getElementById('rm-security-code-area');
@@ -2444,7 +2571,7 @@ function initRemoteEvents() {
         break;
 
       case 'client:auth:approved':
-        setRemoteStatus('rm-client-status', '✅ 已连接到服务器');
+        setRemoteStatus('rm-client-status', I18N.t('rm.connected'));
         document.getElementById('rm-client-connect').style.display = 'none';
         document.getElementById('rm-client-disconnect').style.display = '';
         document.getElementById('rm-security-code-area').style.display = 'none';
@@ -2454,7 +2581,7 @@ function initRemoteEvents() {
         break;
 
       case 'client:disconnected':
-        setRemoteStatus('rm-client-status', '已断开连接');
+        setRemoteStatus('rm-client-status', I18N.t('rm.disconnected'));
         document.getElementById('rm-client-connect').style.display = '';
         document.getElementById('rm-client-disconnect').style.display = 'none';
         document.getElementById('rm-security-code-area').style.display = 'none';
@@ -2473,31 +2600,31 @@ function initRemoteEvents() {
         break;
 
       case 'client:error':
-        setRemoteStatus('rm-client-status', '错误: ' + data.message, true);
+        setRemoteStatus('rm-client-status', I18N.t('rm.errorPrefix', { msg: localizeRemoteMsg(data) || '' }), true);
         break;
 
       case 'client:permission:updated':
-        setRemoteStatus('rm-client-status', '权限已更新: ' + (data.permissions ? data.permissions.level : ''));
+        setRemoteStatus('rm-client-status', I18N.t('rm.permUpdated', { level: data.permissions ? data.permissions.level : '' }));
         break;
 
       case 'client:file:write:result':
         if (data.success) {
-          setRemoteStatus('rm-client-status', '文件保存成功: ' + data.path);
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileSavedOk', { path: data.path }));
         } else {
-          setRemoteStatus('rm-client-status', '文件保存失败: ' + (data.error || ''), true);
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileSaveFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
 
       case 'client:file:write:pending':
-        setRemoteStatus('rm-client-status', '等待管理员批准文件更改...');
+        setRemoteStatus('rm-client-status', I18N.t('rm.waitingApproveWrite'));
         break;
 
       case 'client:file:read':
         if (data.success) {
-          setRemoteStatus('rm-client-status', '已读取远程文件');
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileReadOk'));
           openFile(data.path, data.content);
         } else {
-          setRemoteStatus('rm-client-status', '读取远程文件失败: ' + (data.error || ''), true);
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileReadFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
 
@@ -2506,15 +2633,15 @@ function initRemoteEvents() {
           _remoteFiles = data.files;
           _remoteDirPath = data.path;
           renderFileTree(_remoteFiles);
-          setRemoteStatus('rm-client-status', '已加载远程文件列表');
+          setRemoteStatus('rm-client-status', I18N.t('rm.listLoaded'));
         } else {
-          setRemoteStatus('rm-client-status', '加载远程文件列表失败: ' + (data.error || ''), true);
+          setRemoteStatus('rm-client-status', I18N.t('rm.listLoadFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
 
       case 'client:file:delete:result':
         if (data.success) {
-          setRemoteStatus('rm-client-status', '文件已删除: ' + data.path);
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileDeleted', { path: data.path }));
           if (currentFile === data.path) {
             closeTab(data.path);
           }
@@ -2523,16 +2650,16 @@ function initRemoteEvents() {
             window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath });
           }
         } else {
-          setRemoteStatus('rm-client-status', '删除失败: ' + (data.error || ''), true);
+          setRemoteStatus('rm-client-status', I18N.t('rm.deleteFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
 
       case 'client:file:delete:pending':
-        setRemoteStatus('rm-client-status', '等待管理员批准删除...');
+        setRemoteStatus('rm-client-status', I18N.t('rm.waitingApproveDelete'));
         break;
 
       case 'client:server:stopped':
-        setRemoteStatus('rm-client-status', '服务器已关闭');
+        setRemoteStatus('rm-client-status', I18N.t('rm.serverClosed'));
         document.getElementById('rm-client-connect').style.display = '';
         document.getElementById('rm-client-disconnect').style.display = 'none';
         document.getElementById('rm-security-code-area').style.display = 'none';

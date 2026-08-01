@@ -307,9 +307,9 @@ window.ChemdahInterpreter = (() => {
         <div class="cv-error-banner">
           <span class="cv-error-icon">⚠️</span>
           <div>
-            <strong>YAML 解析错误</strong>
+            <strong>${I18N.t('chemdah.yamlError')}</strong>
             <p>${_escHtml(parsed.error)}</p>
-            <p>请在源代码模式中修复语法错误后重试。</p>
+            <p>${I18N.t('chemdah.yamlErrorHint')}</p>
           </div>
         </div>
       `;
@@ -317,6 +317,7 @@ window.ChemdahInterpreter = (() => {
     }
 
     const { options, dialogues } = parsed;
+    const viewMode = containerEl._cvViewMode || 'card';
 
     let html = '<div class="cv-container">';
 
@@ -326,50 +327,64 @@ window.ChemdahInterpreter = (() => {
     // === 文件选项面板 ===
     html += _renderOptionsPanel(options);
 
-    // === 对话列表 ===
-    html += '<div class="cv-dialogue-list">';
-    html += `<div class="cv-section-header">
-      <h3>对话条目 <span class="cv-count">${dialogues.length}</span></h3>
-      <button class="cv-btn cv-btn-sm cv-btn-primary" data-action="add-dialogue">+ 添加对话</button>
-    </div>`;
-
-    if (dialogues.length === 0) {
-      html += '<div class="cv-empty">暂无对话条目</div>';
+    // === 对话列表 / 思维导图 ===
+    if (viewMode === 'mindmap') {
+      html += '<div class="cv-mindmap-wrapper"><svg class="cv-mindmap-svg"></svg></div>';
     } else {
-      for (const d of dialogues) {
-        html += _renderDialogueCard(d);
+      html += '<div class="cv-dialogue-list">';
+      html += `<div class="cv-section-header">
+        <h3>${I18N.t('chemdah.dialoguesHeader')} <span class="cv-count">${dialogues.length}</span></h3>
+        <button class="cv-btn cv-btn-sm cv-btn-primary" data-action="add-dialogue">${I18N.t('chemdah.addDialogue')}</button>
+      </div>`;
+
+      if (dialogues.length === 0) {
+        html += '<div class="cv-empty">' + I18N.t('chemdah.noDialogues') + '</div>';
+      } else {
+        for (const d of dialogues) {
+          html += _renderDialogueCard(d);
+        }
       }
+      html += '</div>'; // cv-dialogue-list
     }
 
-    html += '</div>'; // cv-dialogue-list
-
-    // === 底部操作栏（左侧底部） ===
+    // === 底部操作栏 ===
+    const toggleLabel = viewMode === 'mindmap' ? I18N.t('chemdah.cardView') : I18N.t('chemdah.mindmapView');
+    const toggleCls = viewMode === 'mindmap' ? 'cv-btn-primary' : 'cv-btn-secondary';
     html += `<div class="cv-toolbar">
-      <button class="cv-btn cv-btn-primary" data-action="sync-to-source">同步到源码</button>
-      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> 自动同步</label>
-      <span class="cv-toolbar-hint">修改将在点击"同步到源码"后应用到编辑器</span>
+      <button class="cv-btn cv-btn-primary" data-action="sync-to-source">${I18N.t('chemdah.syncToSource')}</button>
+      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> ${I18N.t('chemdah.autoSync')}</label>
+      <span class="cv-toolbar-hint">${I18N.t('chemdah.syncHint')}</span>
+      <button class="cv-btn cv-btn-sm ${toggleCls}" data-action="toggle-view" style="margin-left:auto">${toggleLabel}</button>
     </div>`;
 
     html += '</div>'; // cv-main-content
 
-    // === 右侧对话导航栏 ===
-    html += '<div class="cv-sidebar">';
-    html += '<div class="cv-sidebar-header">对话导航</div>';
-    html += '<div class="cv-sidebar-list">';
-    for (const d of dialogues) {
-      const typeClass = d.type === 'switch' ? 'switch' : 'dialogue';
-      const typeLabel = d.type === 'switch' ? 'S' : 'D';
-      html += `<div class="cv-sidebar-item" data-action="sidebar-nav" data-sidebar-dialogue="${_escHtml(d.name)}" title="${_escHtml(d.name)}">
-        <span class="cv-sidebar-type ${typeClass}">${typeLabel}</span>
-        <span class="cv-sidebar-name">${_escHtml(d.name)}</span>
-      </div>`;
+    // === 右侧对话导航栏（思维导图模式下隐藏） ===
+    if (viewMode !== 'mindmap') {
+      html += '<div class="cv-sidebar">';
+      html += '<div class="cv-sidebar-header">' + I18N.t('chemdah.dialogueNav') + '</div>';
+      html += '<div class="cv-sidebar-list">';
+      for (const d of dialogues) {
+        const typeClass = d.type === 'switch' ? 'switch' : 'dialogue';
+        const typeLabel = d.type === 'switch' ? 'S' : 'D';
+        html += `<div class="cv-sidebar-item" data-action="sidebar-nav" data-sidebar-dialogue="${_escHtml(d.name)}" title="${_escHtml(d.name)}">
+          <span class="cv-sidebar-type ${typeClass}">${typeLabel}</span>
+          <span class="cv-sidebar-name">${_escHtml(d.name)}</span>
+        </div>`;
+      }
+      html += '</div>'; // cv-sidebar-list
+      html += '</div>'; // cv-sidebar
     }
-    html += '</div>'; // cv-sidebar-list
-    html += '</div>'; // cv-sidebar
 
     html += '</div>'; // cv-container
 
     containerEl.innerHTML = html;
+
+    // 如果是思维导图模式，初始化导图
+    if (viewMode === 'mindmap') {
+      const svgEl = containerEl.querySelector('.cv-mindmap-svg');
+      if (svgEl) _renderMindMapSVG(parsed, svgEl, containerEl);
+    }
 
     // 绑定事件
     _bindConversationEvents(containerEl, parsed);
@@ -377,36 +392,36 @@ window.ChemdahInterpreter = (() => {
 
   function _renderOptionsPanel(options) {
     let html = '<div class="cv-options-panel">';
-    html += '<div class="cv-section-header"><h3>文件选项</h3></div>';
+    html += '<div class="cv-section-header"><h3>' + I18N.t('chemdah.fileOptions') + '</h3></div>';
     html += '<div class="cv-options-grid">';
 
     // Theme
     html += '<div class="cv-field">';
-    html += '<label>主题</label>';
+    html += '<label>' + I18N.t('chemdah.theme') + '</label>';
     const themeVal = _escHtml(options.theme || 'chat');
     const isPreset = PRESET_THEMES.includes(themeVal);
     html += `<div class="cv-select-wrapper">
       <select class="cv-select" data-field="options.theme">
-        <option value="">自定义...</option>
+        <option value="">${I18N.t('chemdah.customTheme')}</option>
         ${PRESET_THEMES.map(t =>
           `<option value="${t}"${t === themeVal ? ' selected' : ''}>${t}</option>`
         ).join('')}
       </select>
       <input class="cv-input cv-theme-custom${isPreset ? ' hidden' : ''}"
         data-field="options.theme.custom" value="${isPreset ? '' : themeVal}"
-        placeholder="输入自定义主题名">
+        placeholder="${I18N.t('chemdah.customThemePlaceholder')}">
     </div>`;
     html += '</div>';
 
     // Title
     html += '<div class="cv-field">';
-    html += '<label>标题</label>';
-    html += `<input class="cv-input" data-field="options.title" value="${_escHtml(options.title || '')}" placeholder="可选标题">`;
+    html += '<label>' + I18N.t('chemdah.title') + '</label>';
+    html += `<input class="cv-input" data-field="options.title" value="${_escHtml(options.title || '')}" placeholder="${I18N.t('chemdah.optionalTitle')}">`;
     html += '</div>';
 
     // Flags
     html += '<div class="cv-field cv-field-wide">';
-    html += '<label>标签 (Flags)</label>';
+    html += '<label>' + I18N.t('chemdah.flags') + '</label>';
     html += '<div class="cv-flags-container">';
     // 已有 flags
     if (options.flags && options.flags.length > 0) {
@@ -418,11 +433,11 @@ window.ChemdahInterpreter = (() => {
       }
     }
     html += `<select class="cv-flag-add" data-action="add-flag">
-      <option value="">+ 添加标签</option>
+      <option value="">${I18N.t('chemdah.addFlag')}</option>
       ${PRESET_FLAGS.map(f =>
         `<option value="${f}">${f}</option>`
       ).join('')}
-      <option value="__custom__">自定义...</option>
+      <option value="__custom__">${I18N.t('chemdah.custom')}</option>
     </select>`;
     html += '</div></div>';
 
@@ -432,17 +447,17 @@ window.ChemdahInterpreter = (() => {
 
   function _renderDialogueCard(d) {
     const isSwitch = d.type === 'switch';
-    const typeLabel = isSwitch ? 'SWITCH' : '对话';
+    const typeLabel = isSwitch ? I18N.t('chemdah.switch') : I18N.t('chemdah.dialogue');
     const typeClass = isSwitch ? 'cv-type-switch' : 'cv-type-dialogue';
     // 预览：显示简短信息
     let preview = '';
     if (isSwitch) {
       const target = d.conditions.length > 0 ? d.conditions[0].open : '';
-      preview = target ? `→ ${target}` : '无条件';
+      preview = target ? `→ ${target}` : I18N.t('chemdah.noCondition');
     } else {
       const optCount = d.options.length;
       const npcFirst = d.npcText ? d.npcText.split('\n')[0].substring(0, 30) : '';
-      preview = npcFirst || `${optCount} 个选项`;
+      preview = npcFirst || I18N.t('chemdah.optionCount', {count: optCount});
     }
 
     let html = `<div class="cv-dialogue-card collapsed" data-dialogue="${_escHtml(d.name)}">`;
@@ -458,30 +473,30 @@ window.ChemdahInterpreter = (() => {
       <span class="cv-type-badge ${typeClass}">${typeLabel}</span>
       <div class="cv-dialogue-actions">
         <button class="cv-btn-icon" data-action="delete-dialogue" data-dialogue="${_escHtml(d.name)}"
-          title="删除此对话">&times;</button>
+          title="${I18N.t('chemdah.deleteDialogue')}">&times;</button>
       </div>
     </div>`;
 
     if (isSwitch) {
       // SWITCH 类型：NPC ID + 条件分支
       html += '<div class="cv-dialogue-body">';
-      html += `<div class="cv-body-dialogue-id">对话ID: ${_escHtml(d.name)}</div>`;
+      html += `<div class="cv-body-dialogue-id">${I18N.t('chemdah.dialogueIdPrefix', {id: _escHtml(d.name)})}</div>`;
       html += '<div class="cv-field">';
-      html += '<label>NPC ID</label>';
+      html += '<label>' + I18N.t('chemdah.npcId') + '</label>';
       html += `<input class="cv-input cv-input-mono" data-field="dialogue.npcId"
-        data-dialogue="${_escHtml(d.name)}" value="${_escHtml(d.npcId)}" placeholder="例如: adyeshach BoFeng">`;
+        data-dialogue="${_escHtml(d.name)}" value="${_escHtml(d.npcId)}" placeholder="${I18N.t('chemdah.npcIdPlaceholder')}">`;
       html += '</div>';
 
       // 条件分支
       html += `<div class="cv-conditions" data-dialogue="${_escHtml(d.name)}">`;
       html += '<div class="cv-sub-header">';
-      html += '<label>条件分支 (When)</label>';
+      html += '<label>' + I18N.t('chemdah.whenBranches') + '</label>';
       html += `<button class="cv-btn cv-btn-xs cv-btn-secondary" data-action="add-condition"
-        data-dialogue="${_escHtml(d.name)}">+ 添加分支</button>`;
+        data-dialogue="${_escHtml(d.name)}">${I18N.t('chemdah.addBranch')}</button>`;
       html += '</div>';
 
       if (d.conditions.length === 0) {
-        html += '<div class="cv-empty cv-empty-sm">无条件分支（将使用默认跳转）</div>';
+        html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noWhenBranches') + '</div>';
       } else {
         for (let i = 0; i < d.conditions.length; i++) {
           html += _renderConditionBranch(d.name, i, d.conditions[i]);
@@ -500,20 +515,20 @@ window.ChemdahInterpreter = (() => {
     } else {
       // 普通对话类型
       html += '<div class="cv-dialogue-body">';
-      html += `<div class="cv-body-dialogue-id">对话ID: ${_escHtml(d.name)}</div>`;
+      html += `<div class="cv-body-dialogue-id">${I18N.t('chemdah.dialogueIdPrefix', {id: _escHtml(d.name)})}</div>`;
 
       // NPC 对话文本
       html += '<div class="cv-field cv-field-wide">';
-      html += '<label>NPC 对话文本</label>';
+      html += '<label>' + I18N.t('chemdah.npcText') + '</label>';
       const npcLines = _textToLines(d.npcText);
       html += `<textarea class="cv-textarea" data-field="dialogue.npcText"
         data-dialogue="${_escHtml(d.name)}" rows="${Math.max(3, npcLines.length)}"
-        placeholder="NPC 对话内容...">${_escHtml(d.npcText)}</textarea>`;
+        placeholder="${I18N.t('chemdah.npcTextPlaceholder')}">${_escHtml(d.npcText)}</textarea>`;
       html += '</div>';
 
       // Format
       html += '<div class="cv-field">';
-      html += '<label>格式</label>';
+      html += '<label>' + I18N.t('chemdah.format') + '</label>';
       html += `<input class="cv-input" data-field="dialogue.format"
         data-dialogue="${_escHtml(d.name)}" value="${_escHtml(d.format)}" placeholder="generic">`;
       html += '</div>';
@@ -521,7 +536,7 @@ window.ChemdahInterpreter = (() => {
       // Flags per dialogue
       if (d.flags && d.flags.length > 0) {
         html += '<div class="cv-field">';
-        html += '<label>标签</label>';
+        html += '<label>' + I18N.t('chemdah.tags') + '</label>';
         html += `<span class="cv-tag-list">${d.flags.map(f =>
           `<span class="cv-flag cv-flag-sm">${_escHtml(f)}</span>`
         ).join('')}</span>`;
@@ -543,18 +558,18 @@ window.ChemdahInterpreter = (() => {
   function _renderConditionBranch(dialogueName, index, cond) {
     let html = `<div class="cv-condition" data-dialogue="${_escHtml(dialogueName)}" data-index="${index}">`;
     html += '<div class="cv-condition-row">';
-    html += '<span class="cv-condition-label">如果 (if)</span>';
+    html += '<span class="cv-condition-label">' + I18N.t('chemdah.ifCondition') + '</span>';
     html += `<input class="cv-input cv-input-mono" data-field="condition.if"
       data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
-      value="${_escHtml(cond.if)}" placeholder="条件表达式或 true">`;
+      value="${_escHtml(cond.if)}" placeholder="${I18N.t('chemdah.conditionPlaceholder')}">`;
     html += '</div>';
     html += '<div class="cv-condition-row">';
-    html += '<span class="cv-condition-label">跳转 (open)</span>';
+    html += '<span class="cv-condition-label">' + I18N.t('chemdah.openJump') + '</span>';
     html += `<input class="cv-input" data-field="condition.open"
       data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
-      value="${_escHtml(cond.open)}" placeholder="目标对话名称">`;
+      value="${_escHtml(cond.open)}" placeholder="${I18N.t('chemdah.targetDialoguePlaceholder')}">`;
     html += `<button class="cv-btn-icon cv-btn-icon-danger" data-action="delete-condition"
-      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="删除分支">&times;</button>`;
+      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="${I18N.t('chemdah.deleteBranch')}">&times;</button>`;
     html += '</div>';
     html += '</div>';
     return html;
@@ -564,13 +579,13 @@ window.ChemdahInterpreter = (() => {
     let html = '<div class="cv-player-options"';
     html += ` data-dialogue="${_escHtml(dialogueName)}">`;
     html += '<div class="cv-sub-header">';
-    html += '<label>玩家选项</label>';
+    html += '<label>' + I18N.t('chemdah.playerOptions') + '</label>';
     html += `<button class="cv-btn cv-btn-xs cv-btn-secondary" data-action="add-option"
-      data-dialogue="${_escHtml(dialogueName)}">+ 添加选项</button>`;
+      data-dialogue="${_escHtml(dialogueName)}">${I18N.t('chemdah.addOption')}</button>`;
     html += '</div>';
 
     if (!options || options.length === 0) {
-      html += '<div class="cv-empty cv-empty-sm">暂无玩家选项</div>';
+      html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noOptions') + '</div>';
     } else {
       for (let i = 0; i < options.length; i++) {
         html += _renderPlayerOption(dialogueName, i, options[i]);
@@ -588,7 +603,7 @@ window.ChemdahInterpreter = (() => {
     html += '<div class="cv-option-header">';
     if (opt.if) {
       html += `<div class="cv-option-if-row">
-        <span class="cv-condition-label">条件</span>
+        <span class="cv-condition-label">${I18N.t('chemdah.condition')}</span>
         <input class="cv-input cv-input-mono cv-input-sm" data-field="option.if"
           data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
           value="${_escHtml(opt.if)}">
@@ -598,7 +613,7 @@ window.ChemdahInterpreter = (() => {
       <span class="cv-option-reply-icon">💬</span>
       <input class="cv-input cv-option-reply-input" data-field="option.reply"
         data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
-        value="${_escHtml(opt.reply)}" placeholder="选项文字">
+        value="${_escHtml(opt.reply)}" placeholder="${I18N.t('chemdah.optionTextPlaceholder')}">
     </div>`;
     html += '</div>';
 
@@ -608,17 +623,17 @@ window.ChemdahInterpreter = (() => {
       <label class="cv-label-sm">
         <span class="cv-toggle-btn" data-action="toggle-then-vis"
           data-dialogue="${_escHtml(dialogueName)}" data-index="${index}">▶</span>
-        执行脚本 (KETHER)
+        ${I18N.t('chemdah.thenScript')}
       </label>
       <textarea class="cv-textarea cv-textarea-code" data-field="option.then"
         data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
-        rows="${Math.max(2, thenLines.length)}" placeholder="KETHER 脚本内容...">${_escHtml(opt.then)}</textarea>
+        rows="${Math.max(2, thenLines.length)}" placeholder="${I18N.t('chemdah.ketherScriptPlaceholder')}">${_escHtml(opt.then)}</textarea>
     </div>`;
 
     // 删除按钮
     html += `<button class="cv-btn-icon cv-btn-icon-danger cv-option-delete"
       data-action="delete-option"
-      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="删除选项">&times;</button>`;
+      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="${I18N.t('chemdah.deleteOption')}">&times;</button>`;
 
     html += '</div>';
     return html;
@@ -727,14 +742,14 @@ window.ChemdahInterpreter = (() => {
         // ===== 添加对话 =====
         case 'add-dialogue':
           parsed.dialogues.push({
-            name: '新对话_' + (parsed.dialogues.length + 1),
+            name: I18N.t('chemdah.newDialoguePrefix', {count: parsed.dialogues.length + 1}),
             type: 'dialogue',
             npcText: '',
             npcId: '',
             format: 'generic',
             flags: [],
             conditions: [{ if: 'true', open: '' }],
-            options: [{ if: null, reply: '好的', then: 'close' }],
+            options: [{ if: null, reply: I18N.t('chemdah.defaultReply'), then: 'close' }],
           });
           if (window._cvRenderFn) window._cvRenderFn();
           break;
@@ -780,6 +795,12 @@ window.ChemdahInterpreter = (() => {
               localStorage.setItem('editorConfig', JSON.stringify(config));
             } catch (e) {}
           })(window.__keAutoSync);
+          break;
+
+        // ===== 切换视图模式（卡片/思维导图） =====
+        case 'toggle-view':
+          container._cvViewMode = container._cvViewMode === 'mindmap' ? 'card' : 'mindmap';
+          if (window._cvRenderFn) window._cvRenderFn();
           break;
 
         // ===== 删除 flag =====
@@ -847,11 +868,11 @@ window.ChemdahInterpreter = (() => {
 
     // 添加 flag
     container.querySelectorAll('select[data-action="add-flag"]').forEach(el => {
-      el.addEventListener('change', function () {
+      el.addEventListener('change', async function () {
         let val = this.value;
         if (!val) return;
         if (val === '__custom__') {
-          val = prompt('输入自定义标签名:');
+          val = await UI.prompt({ message: I18N.t('chemdah.customTagPrompt') });
           if (!val) { this.value = ''; return; }
         }
         if (!parsed.options.flags.includes(val)) {
@@ -1073,8 +1094,654 @@ window.ChemdahInterpreter = (() => {
     const yaml = _genConversationYAML(parsed);
     if (window.codeMirrorEditor) {
       window.codeMirrorEditor.setValue(yaml);
-      window.updateStatus('已从可视化编辑器同步到源码');
+      window.updateStatus(I18N.t('chemdah.syncedToSource'));
     }
+  }
+
+  // ============================================
+  // 思维导图 — 对话连接视图
+  // ============================================
+
+  /**
+   * 从对话解析数据构建图结构
+   * 分析 SWITCH 条件的 open 跳转 + 玩家选项中的 "open/goto" 指令
+   */
+  function _buildConversationGraph(dialogues) {
+    const nodes = [];
+    const edges = [];
+    const nodeNames = new Set(dialogues.map(d => d.name));
+
+    for (const d of dialogues) {
+      var previewText = '';
+      if (d.npcText) {
+        previewText = d.npcText.replace(/\s+/g, ' ').trim();
+        if (previewText.length > 12) previewText = previewText.substring(0, 11) + '…';
+      }
+      nodes.push({ id: d.name, type: d.type, preview: previewText });
+
+      // SWITCH 类型: conditions[].open → 目标对话
+      if (d.type === 'switch') {
+        for (const c of d.conditions) {
+          if (c.open) {
+            const target = c.open.replace(/^@/, ''); // 去掉 @ 前缀
+            if (nodeNames.has(target)) {
+              edges.push({
+                from: d.name, to: target,
+                label: c.if !== 'true' ? c.if : '',
+                type: 'condition',
+              });
+            }
+          }
+        }
+      }
+
+      // 玩家选项: 解析 then 中的 "open <名称>" 模式
+      for (const opt of d.options) {
+        if (opt.then) {
+          const re = /\b(?:open|goto)\s+@?(\S+)/gi;
+          let match;
+          while ((match = re.exec(opt.then)) !== null) {
+            const target = match[1];
+            if (nodeNames.has(target)) {
+              edges.push({
+                from: d.name, to: target,
+                label: opt.reply || '',
+                type: 'option',
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return { nodes, edges };
+  }
+
+  /**
+   * 树形布局计算 — 入口在左上，逐层向右展开
+   */
+  function _computeTreeLayout(nodes, edges, width, height) {
+    if (nodes.length === 0) return;
+    if (nodes.length === 1) {
+      nodes[0].x = 80;
+      nodes[0].y = height / 2;
+      return;
+    }
+
+    // 1. 构建邻接表
+    var children = {}, parents = {};
+    for (var ni = 0; ni < nodes.length; ni++) {
+      children[nodes[ni].id] = [];
+      parents[nodes[ni].id] = [];
+    }
+    for (var ei = 0; ei < edges.length; ei++) {
+      if (children[edges[ei].from]) children[edges[ei].from].push(edges[ei].to);
+      if (parents[edges[ei].to]) parents[edges[ei].to].push(edges[ei].from);
+    }
+
+    // 2. 找根节点（没有入边的节点）
+    var roots = [];
+    for (ni = 0; ni < nodes.length; ni++) {
+      if (parents[nodes[ni].id].length === 0) roots.push(nodes[ni].id);
+    }
+    if (roots.length === 0 && nodes.length > 0) roots.push(nodes[0].id);
+
+    // 3. BFS 分配层级
+    var layer = {}, visited = {};
+    var queue = [];
+    for (var ri = 0; ri < roots.length; ri++) {
+      layer[roots[ri]] = 0;
+      queue.push(roots[ri]);
+    }
+    while (queue.length > 0) {
+      var cur = queue.shift();
+      if (visited[cur]) continue;
+      visited[cur] = true;
+      var curLayer = layer[cur] || 0;
+      var childList = children[cur] || [];
+      for (var ci = 0; ci < childList.length; ci++) {
+        var child = childList[ci];
+        var newLayer = curLayer + 1;
+        if (layer[child] === undefined || newLayer > layer[child]) {
+          layer[child] = newLayer;
+        }
+        queue.push(child);
+      }
+    }
+
+    // 处理未被 BFS 访问的节点（孤立/环路节点）
+    var maxLayer = 0;
+    for (ni = 0; ni < nodes.length; ni++) {
+      if (layer[nodes[ni].id] !== undefined) {
+        maxLayer = Math.max(maxLayer, layer[nodes[ni].id]);
+      }
+    }
+    for (ni = 0; ni < nodes.length; ni++) {
+      if (layer[nodes[ni].id] === undefined) {
+        maxLayer++;
+        layer[nodes[ni].id] = maxLayer;
+      }
+    }
+
+    // 4. 按层分组
+    var groups = {};
+    var layerKeys = [];
+    for (ni = 0; ni < nodes.length; ni++) {
+      var l = layer[nodes[ni].id];
+      if (!groups[l]) { groups[l] = []; layerKeys.push(l); }
+      groups[l].push(nodes[ni]);
+    }
+    layerKeys.sort(function (a, b) { return a - b; });
+
+    // 5. 定位：从左到右逐层，层内上下居中排列
+    var layerCount = layerKeys.length;
+    var marginX = 80, marginY = 40;
+    var hSpacing = Math.min(200, (width - marginX * 2) / Math.max(layerCount - 1 || 1, 1));
+
+    for (var li = 0; li < layerKeys.length; li++) {
+      var lk = layerKeys[li];
+      var layerNodes = groups[lk];
+      // 层内按父节点顺序排序（尽量保持兄弟节点连续）
+      layerNodes.sort(function (a, b) {
+        var pa = parents[a.id] && parents[a.id][0] ? parents[a.id][0] : '';
+        var pb = parents[b.id] && parents[b.id][0] ? parents[b.id][0] : '';
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        return a.id < b.id ? -1 : 1;
+      });
+      var vSpacing = Math.max(70, Math.min(90, (height - marginY * 2) / Math.max(layerNodes.length, 1)));
+      var totalH = (layerNodes.length - 1) * vSpacing;
+      var startY = (height - totalH) / 2;
+
+      for (var li2 = 0; li2 < layerNodes.length; li2++) {
+        layerNodes[li2].x = marginX + lk * hSpacing;
+        layerNodes[li2].y = startY + li2 * vSpacing;
+      }
+    }
+  }
+
+  /**
+   * 将缓存的节点位置覆盖到当前布局
+   */
+  function _applyCachedPositions(nodes, cachedPos) {
+    for (var ci = 0; ci < nodes.length; ci++) {
+      var cn = nodes[ci];
+      if (cachedPos[cn.id]) {
+        cn.x = cachedPos[cn.id].x;
+        cn.y = cachedPos[cn.id].y;
+      }
+    }
+  }
+
+  /**
+   * 渲染思维导图 SVG
+   */
+  function _renderMindMapSVG(parsed, svgEl, containerEl) {
+    const { dialogues } = parsed;
+
+    // 构建图
+    const graph = _buildConversationGraph(dialogues);
+
+    // 获取容器尺寸（containerEl 一直存在于 DOM 中，尺寸可靠）
+    const containerRect = containerEl.getBoundingClientRect();
+    const width = Math.max(containerRect.width - 40, 400);
+    const height = Math.max(containerRect.height - 180, 300);
+
+    // 清除旧内容
+    svgEl.innerHTML = '';
+    svgEl.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+
+    // 计算树形布局
+    _computeTreeLayout(graph.nodes, graph.edges, width, height);
+
+    // 加载内存中的缓存位置（同步），覆盖力导向结果
+    var cacheKey = _hashPath(containerEl._cvFilePath);
+    var cachedPos = (window._mmCache && window._mmCache[cacheKey]) ? window._mmCache[cacheKey] : null;
+    if (cachedPos) {
+      _applyCachedPositions(graph.nodes, cachedPos);
+    } else {
+      // 首次加载：异步从磁盘读取缓存，加载后重新应用位置
+      _loadMindMapCache(containerEl).then(function (loadedPos) {
+        if (!loadedPos) return;
+        _applyCachedPositions(graph.nodes, loadedPos);
+        // 直接在 SVG 上更新所有节点位置
+        for (var ni2 = 0; ni2 < graph.nodes.length; ni2++) {
+          var n2 = graph.nodes[ni2];
+          var el = mainG.querySelector('g[data-node-id="' + n2.id + '"]');
+          if (!el) continue;
+          var halfW2 = nodeW / 2, halfH2 = nodeH / 2;
+          var rx2 = n2.x - halfW2, ry2 = n2.y - halfH2;
+          var r = el.querySelector('rect');
+          if (r) { r.setAttribute('x', rx2); r.setAttribute('y', ry2); }
+          var d = el.querySelector('line');
+          if (d) { d.setAttribute('x1', rx2); d.setAttribute('y1', ry2 + 20); d.setAttribute('x2', rx2 + nodeW); d.setAttribute('y2', ry2 + 20); }
+          var t = el.querySelectorAll('text');
+          if (t[0]) { t[0].setAttribute('x', n2.x - halfW2 + 8); t[0].setAttribute('y', ry2 + 14); }
+          if (t[1]) { t[1].setAttribute('x', n2.x + 6); t[1].setAttribute('y', ry2 + 14); }
+          if (t[2]) { t[2].setAttribute('x', n2.x); t[2].setAttribute('y', ry2 + 38); }
+        }
+        // 更新所有边
+        for (var ei2 = 0; ei2 < graph.edges.length; ei2++) {
+          var edge2 = graph.edges[ei2];
+          var fn = graph.nodes.find(function (n) { return n.id === edge2.from; });
+          var tn = graph.nodes.find(function (n) { return n.id === edge2.to; });
+          if (!fn || !tn) continue;
+          var p1 = _rectEdgePoint(fn.x, fn.y, tn.x, tn.y, nodeW, nodeH);
+          var p2 = _rectEdgePoint(tn.x, tn.y, fn.x, fn.y, nodeW, nodeH);
+          var ln = mainG.querySelector('line[data-from="' + edge2.from + '"][data-to="' + edge2.to + '"]');
+          if (ln) { ln.setAttribute('x1', p1.x); ln.setAttribute('y1', p1.y); ln.setAttribute('x2', p2.x); ln.setAttribute('y2', p2.y); }
+          var lb = mainG.querySelector('text[data-from="' + edge2.from + '"][data-to="' + edge2.to + '"]');
+          if (lb) { lb.setAttribute('x', (p1.x + p2.x) / 2); lb.setAttribute('y', (p1.y + p2.y) / 2 - 5); }
+        }
+      });
+    }
+
+    // 确定入口节点（没有入边的节点）
+    const hasIncoming = new Set();
+    for (const e of graph.edges) hasIncoming.add(e.to);
+    const rootNodes = graph.nodes.filter(n => !hasIncoming.has(n.id));
+
+    // 确定孤立节点
+    const connected = new Set();
+    for (const e of graph.edges) { connected.add(e.from); connected.add(e.to); }
+
+    const nodeW = 130, nodeH = 52, nodeRx = 6;
+
+    // 箭头标记
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = '<marker id="mm-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#667"><polygon points="0 0,10 3.5,0 7"/></marker>';
+    svgEl.appendChild(defs);
+
+    // 主变换组
+    const mainG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    svgEl.appendChild(mainG);
+
+    /** 计算矩形边框与连线的交点 */
+    function _rectEdgePoint(rx, ry, tx, ty, w, h) {
+      var dx = tx - rx, dy = ty - ry;
+      if (dx === 0 && dy === 0) return { x: rx, y: ry };
+      var absDx = Math.abs(dx), absDy = Math.abs(dy);
+      var hw = w / 2, hh = h / 2;
+      var t = Math.min(hw / (absDx || 1e-10), hh / (absDy || 1e-10));
+      return { x: rx + dx * t, y: ry + dy * t };
+    }
+
+    // --- 绘制边 ---
+    for (const e of graph.edges) {
+      const from = graph.nodes.find(n => n.id === e.from);
+      const to = graph.nodes.find(n => n.id === e.to);
+      if (!from || !to) continue;
+
+      var p1 = _rectEdgePoint(from.x, from.y, to.x, to.y, nodeW, nodeH);
+      var p2 = _rectEdgePoint(to.x, to.y, from.x, from.y, nodeW, nodeH);
+      const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', e.type === 'option' ? '#5a7' : '#667');
+      line.setAttribute('stroke-width', e.type === 'option' ? 1.2 : 1.5);
+      line.setAttribute('stroke-dasharray', e.type === 'option' ? '4,3' : '');
+      line.setAttribute('marker-end', 'url(#mm-arrow)');
+      line.setAttribute('data-from', e.from);
+      line.setAttribute('data-to', e.to);
+      if (e.type === 'option') line.setAttribute('opacity', '0.6');
+      mainG.appendChild(line);
+
+      // 边标签
+      if (e.label) {
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        lbl.setAttribute('x', mx); lbl.setAttribute('y', my - 5);
+        lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('font-size', '9');
+        lbl.setAttribute('fill', e.type === 'option' ? '#5a7' : '#889');
+        lbl.setAttribute('data-type', 'edge-label');
+        lbl.setAttribute('data-from', e.from);
+        lbl.setAttribute('data-to', e.to);
+        lbl.textContent = e.label.length > 18 ? e.label.substring(0, 17) + '…' : e.label;
+        mainG.appendChild(lbl);
+      }
+    }
+
+    // --- 绘制节点 ---
+    for (const n of graph.nodes) {
+      const isRoot = rootNodes.includes(n);
+      const isOrphan = !connected.has(n.id) && graph.nodes.length > 1;
+      let fill, stroke, labelColor;
+      if (isRoot)      { fill = '#1a3a5c'; stroke = '#3498db'; labelColor = '#64b5f6'; }
+      else if (isOrphan) { fill = '#3a3a3a'; stroke = '#888'; labelColor = '#999'; }
+      else if (n.type === 'switch') { fill = '#5a4a00'; stroke = '#f1c40f'; labelColor = '#f1c40f'; }
+      else              { fill = '#1a5a2a'; stroke = '#2ecc71'; labelColor = '#2ecc71'; }
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('data-node-id', n.id);
+      g.style.cursor = 'pointer';
+
+      const halfW = nodeW / 2, halfH = nodeH / 2;
+      const rx = n.x - halfW, ry = n.y - halfH;
+
+      // 矩形背景
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', rx); rect.setAttribute('y', ry);
+      rect.setAttribute('width', nodeW); rect.setAttribute('height', nodeH);
+      rect.setAttribute('rx', nodeRx); rect.setAttribute('ry', nodeRx);
+      rect.setAttribute('fill', fill); rect.setAttribute('stroke', stroke);
+      rect.setAttribute('stroke-width', '1.5');
+      g.appendChild(rect);
+
+      // 顶部分隔线（ID 区与内容区）
+      const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      divider.setAttribute('x1', rx); divider.setAttribute('y1', ry + 20);
+      divider.setAttribute('x2', rx + nodeW); divider.setAttribute('y2', ry + 20);
+      divider.setAttribute('stroke', stroke);
+      divider.setAttribute('stroke-width', '0.5');
+      divider.setAttribute('opacity', '0.5');
+      g.appendChild(divider);
+
+      // 类型标记 + ID（左上区域）
+      const iconText = n.type === 'switch' ? 'S' : 'T';
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      icon.setAttribute('x', n.x - halfW + 8); icon.setAttribute('y', ry + 14);
+      icon.setAttribute('font-size', '10');
+      icon.setAttribute('font-family', 'Consolas, monospace');
+      icon.setAttribute('font-weight', 'bold');
+      icon.setAttribute('fill', labelColor);
+      icon.textContent = iconText;
+      g.appendChild(icon);
+
+      // 对话 ID（顶栏）
+      const idLbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      idLbl.setAttribute('x', n.x + 6); idLbl.setAttribute('y', ry + 14);
+      idLbl.setAttribute('font-size', '10');
+      idLbl.setAttribute('font-family', 'Consolas, monospace');
+      idLbl.setAttribute('fill', '#ddd');
+      var displayId = n.id.length > 14 ? n.id.substring(0, 13) + '…' : n.id;
+      idLbl.textContent = displayId;
+      g.appendChild(idLbl);
+
+      // 内容预览（下方区域）
+      const preview = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      preview.setAttribute('x', n.x); preview.setAttribute('y', ry + 38);
+      preview.setAttribute('text-anchor', 'middle');
+      preview.setAttribute('font-size', '9');
+      preview.setAttribute('fill', '#aaa');
+      preview.setAttribute('font-family', 'Consolas, monospace');
+      preview.textContent = n.preview || I18N.t('chemdah.empty');
+      g.appendChild(preview);
+
+      // 悬浮提示
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      const extras = [];
+      if (isRoot) extras.push(I18N.t('chemdah.entryNode'));
+      if (isOrphan) extras.push(I18N.t('chemdah.orphanNode'));
+      title.textContent = n.id + ' (' + (n.type === 'switch' ? I18N.t('chemdah.switch') : I18N.t('chemdah.dialogue')) + ')' + (extras.length ? '\n' + extras.join(', ') : '');
+      g.appendChild(title);
+
+      mainG.appendChild(g);
+    }
+
+    // --- 交互: 平移/缩放 ---
+    let panX = 0, panY = 0, scale = 1;
+
+    function updateTransform() {
+      mainG.setAttribute('transform', 'translate(' + panX + ',' + panY + ') scale(' + scale + ')');
+    }
+
+    // 鼠标拖拽平移
+    let isPan = false, startPX, startPY;
+    svgEl.addEventListener('mousedown', function (e) {
+      if (e.target === svgEl || e.target.tagName === 'svg') {
+        isPan = true;
+        startPX = e.clientX - panX;
+        startPY = e.clientY - panY;
+        svgEl.style.cursor = 'grabbing';
+      }
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (isPan) {
+        panX = e.clientX - startPX;
+        panY = e.clientY - startPY;
+        updateTransform();
+      }
+    });
+    window.addEventListener('mouseup', function () {
+      if (isPan) {
+        isPan = false;
+        svgEl.style.cursor = '';
+      }
+    });
+
+    // 滚轮缩放
+    svgEl.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const ns = Math.max(0.2, Math.min(3, scale * delta));
+      const r = svgEl.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      panX = mx - (mx - panX) * (ns / scale);
+      panY = my - (my - panY) * (ns / scale);
+      scale = ns;
+      updateTransform();
+    }, { passive: false });
+
+    // 双击重置视图
+    svgEl.addEventListener('dblclick', function (e) {
+      if (e.target === svgEl || e.target.tagName === 'svg') {
+        scale = 1; panX = 0; panY = 0;
+        updateTransform();
+      }
+    });
+
+    // 节点交互：区分点击（跳转）和拖拽（移动位置）
+    (function enableNodeInteraction() {
+      var dragNode = null, dragOffX = 0, dragOffY = 0;
+      var isClick = false;
+
+      function navigateToDialogue(nid) {
+        containerEl._cvViewMode = 'card';
+        if (window._cvRenderFn) window._cvRenderFn();
+        requestAnimationFrame(function () {
+          var card = containerEl.querySelector('.cv-dialogue-card[data-dialogue="' + _escHtml(nid) + '"]');
+          if (card) {
+            card.classList.remove('collapsed');
+            card.classList.add('expanded');
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            card.style.transition = 'box-shadow 0.3s';
+            card.style.boxShadow = '0 0 0 3px var(--color-primary)';
+            setTimeout(function () { card.style.boxShadow = ''; }, 1500);
+          }
+        });
+      }
+
+      function updateNodeVisual(node) {
+        var el = mainG.querySelector('g[data-node-id="' + node.id + '"]');
+        if (!el) return;
+        var halfW = nodeW / 2, halfH = nodeH / 2;
+        var rx = node.x - halfW, ry = node.y - halfH;
+
+        // 更新矩形位置
+        var rect = el.querySelector('rect');
+        if (rect) {
+          rect.setAttribute('x', rx);
+          rect.setAttribute('y', ry);
+        }
+        // 更新分隔线
+        var div = el.querySelector('line');
+        if (div) {
+          div.setAttribute('x1', rx);
+          div.setAttribute('y1', ry + 20);
+          div.setAttribute('x2', rx + nodeW);
+          div.setAttribute('y2', ry + 20);
+        }
+        // 更新文本元素（按顺序: 0=类型标记, 1=ID, 2=预览）
+        var textNodes = el.querySelectorAll('text');
+        if (textNodes[0]) { textNodes[0].setAttribute('x', node.x - halfW + 8); textNodes[0].setAttribute('y', ry + 14); }
+        if (textNodes[1]) { textNodes[1].setAttribute('x', node.x + 6); textNodes[1].setAttribute('y', ry + 14); }
+        if (textNodes[2]) { textNodes[2].setAttribute('x', node.x); textNodes[2].setAttribute('y', ry + 38); }
+
+        // 更新与该节点相连的所有边
+        for (var ei = 0; ei < graph.edges.length; ei++) {
+          var edge = graph.edges[ei];
+          if (edge.from !== node.id && edge.to !== node.id) continue;
+          var fromNode = graph.nodes.find(function (n) { return n.id === edge.from; });
+          var toNode = graph.nodes.find(function (n) { return n.id === edge.to; });
+          if (!fromNode || !toNode) continue;
+          var p1 = _rectEdgePoint(fromNode.x, fromNode.y, toNode.x, toNode.y, nodeW, nodeH);
+          var p2 = _rectEdgePoint(toNode.x, toNode.y, fromNode.x, fromNode.y, nodeW, nodeH);
+          var x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+
+          var line = mainG.querySelector('line[data-from="' + edge.from + '"][data-to="' + edge.to + '"]');
+          if (line) {
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+          }
+          var lbl = mainG.querySelector('text[data-from="' + edge.from + '"][data-to="' + edge.to + '"]');
+          if (lbl) {
+            lbl.setAttribute('x', (x1 + x2) / 2);
+            lbl.setAttribute('y', (y1 + y2) / 2 - 5);
+          }
+        }
+      }
+
+      mainG.addEventListener('mousedown', function (e) {
+        var g = e.target.closest ? e.target.closest('g[data-node-id]') : null;
+        if (!g) return;
+        var nid = g.getAttribute('data-node-id');
+        dragNode = graph.nodes.find(function (n) { return n.id === nid; });
+        if (!dragNode) return;
+        e.stopPropagation();
+        isClick = true;
+        var svgRect = svgEl.getBoundingClientRect();
+        var mouseSvgX = (e.clientX - svgRect.left - panX) / scale;
+        var mouseSvgY = (e.clientY - svgRect.top - panY) / scale;
+        dragOffX = mouseSvgX - dragNode.x;
+        dragOffY = mouseSvgY - dragNode.y;
+        svgEl.style.cursor = 'grabbing';
+      });
+
+      window.addEventListener('mousemove', function (e) {
+        if (!dragNode) return;
+        var svgRect = svgEl.getBoundingClientRect();
+        var mouseSvgX = (e.clientX - svgRect.left - panX) / scale;
+        var mouseSvgY = (e.clientY - svgRect.top - panY) / scale;
+        // 移动超过阈值则视为拖拽，不是点击
+        if (Math.abs(mouseSvgX - (dragNode.x + dragOffX)) > 3 ||
+            Math.abs(mouseSvgY - (dragNode.y + dragOffY)) > 3) {
+          isClick = false;
+        }
+        dragNode.x = mouseSvgX - dragOffX;
+        dragNode.y = mouseSvgY - dragOffY;
+        updateNodeVisual(dragNode);
+      });
+
+      window.addEventListener('mouseup', function () {
+        if (dragNode) {
+          if (isClick) {
+            // 没有移动 → 点击跳转
+            navigateToDialogue(dragNode.id);
+          } else {
+            // 有移动 → 拖拽，保存位置
+            _saveMindMapCache(containerEl, graph.nodes);
+          }
+          dragNode = null;
+          svgEl.style.cursor = '';
+        }
+      });
+    })();
+
+    // 信息浮层
+    var infoDiv = document.createElement('div');
+    infoDiv.className = 'cv-mindmap-info';
+    var countsHtml = I18N.t('chemdah.nodeCount', {count: graph.nodes.length}) + ' · ' + I18N.t('chemdah.edgeCount', {count: graph.edges.length});
+    if (rootNodes.length > 0) countsHtml += ' · ' + I18N.t('chemdah.entryCount', {count: rootNodes.length});
+    infoDiv.innerHTML = '<span>' + I18N.t('chemdah.mindmapHint') + '</span><span class="cv-mindmap-counts">' + countsHtml + '</span>';
+    // 移除旧的 info 浮层
+    var oldInfo = wrapper.querySelector('.cv-mindmap-info');
+    if (oldInfo) oldInfo.remove();
+    wrapper.appendChild(infoDiv);
+  }
+
+  // ============================================
+  // 思维导图节点位置缓存
+  // ============================================
+
+  /** 简单字符串哈希，生成文件路径对应的缓存 key */
+  function _hashPath(str) {
+    var hash = 0, i, chr, len;
+    if (!str) return '0';
+    for (i = 0, len = str.length; i < len; i++) {
+      chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  /** 从用户数据目录加载思维导图节点位置缓存 */
+  function _loadMindMapCache(containerEl) {
+    var filePath = containerEl._cvFilePath;
+    if (!filePath || !window.electronAPI) return Promise.resolve(null);
+    var key = _hashPath(filePath);
+
+    // 尝试从内存缓存读取
+    if (window._mmCache && window._mmCache[key]) {
+      return Promise.resolve(window._mmCache[key]);
+    }
+
+    // 异步加载（返回 Promise）
+    return window.electronAPI.ai.getUserDataPath().then(function (userDataPath) {
+      var cachePath = userDataPath + '/mindmap-cache/' + key + '.json';
+      return window.electronAPI.readFile(cachePath).then(function (result) {
+        if (result && result.success && result.content) {
+          try {
+            var data = JSON.parse(result.content);
+            if (data && data.positions) {
+              if (!window._mmCache) window._mmCache = {};
+              window._mmCache[key] = data.positions;
+              return data.positions;
+            }
+          } catch (e) {}
+        }
+        return null;
+      }).catch(function () { return null; });
+    }).catch(function () { return null; });
+  }
+
+  /** 保存思维导图节点位置到用户数据目录缓存 */
+  function _saveMindMapCache(containerEl, nodes) {
+    var filePath = containerEl._cvFilePath;
+    if (!filePath || !nodes || !window.electronAPI) return;
+    var key = _hashPath(filePath);
+
+    // 保存到内存缓存
+    if (!window._mmCache) window._mmCache = {};
+    var positions = {};
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      positions[n.id] = { x: Math.round(n.x), y: Math.round(n.y) };
+    }
+    window._mmCache[key] = positions;
+
+    // 异步写入文件
+    window.electronAPI.ai.getUserDataPath().then(function (userDataPath) {
+      var cacheDir = userDataPath + '/mindmap-cache';
+      var cachePath = cacheDir + '/' + key + '.json';
+      // 确保目录存在
+      window.electronAPI.mkdir(cacheDir).then(function () {
+        window.electronAPI.writeFile(cachePath, JSON.stringify({
+          version: 1,
+          positions: positions,
+        }));
+      }).catch(function () {
+        // mkdir 可能已存在，尝试直接写
+        window.electronAPI.writeFile(cachePath, JSON.stringify({
+          version: 1,
+          positions: positions,
+        }));
+      });
+    });
   }
 
   // ============================================
@@ -1139,6 +1806,9 @@ window.ChemdahInterpreter = (() => {
         { id: 'continued', label: 'continued', desc: '任务条目继续后执行', group: '条目' },
       ],
     };
+    _definitions.objectiveDefs.forEach(d => d._sec = 'objective');
+    _definitions.addonDefs.forEach(d => d._sec = 'addon');
+    _definitions.agentHookDefs.forEach(d => d._sec = 'hook');
     return _definitions;
   }
 
@@ -1207,6 +1877,8 @@ window.ChemdahInterpreter = (() => {
     const agentHookDefs = _ensureDefs().agentHookDefs;
 
     _definitions = { objectiveDefs: objectives, addonDefs: addons, agentHookDefs };
+    objectives.forEach(d => d._sec = 'objective');
+    addons.forEach(d => d._sec = 'addon');
 
     // 更新向后兼容变量
     QUEST_OBJECTIVE_TYPES = objectives.map(d => d.id);
@@ -1442,7 +2114,7 @@ window.ChemdahInterpreter = (() => {
   /** Look up Chinese label for addon ID from defs */
   function _getAddonLabel(id) {
     const def = _ensureDefs().addonDefs.find(d => d.id === id);
-    return def ? def.label : id;
+    return def ? I18N.desc('addonLabel', def.id, def.label) : id;
   }
 
   /** Look up field description for an addon parameter */
@@ -1474,7 +2146,7 @@ window.ChemdahInterpreter = (() => {
       var html = '<div class="qv-subsection"><div class="qv-subsection-title">' + label + '</div>';
       var entries = Object.entries(v);
       if (entries.length === 0) {
-        html += '<div class="cv-empty cv-empty-sm">空对象</div>';
+        html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.emptyObject') + '</div>';
       } else {
         for (var ei = 0; ei < entries.length; ei++) {
           var sk = entries[ei][0];
@@ -1505,9 +2177,9 @@ window.ChemdahInterpreter = (() => {
         <div class="cv-error-banner">
           <span class="cv-error-icon">⚠️</span>
           <div>
-            <strong>YAML 解析错误</strong>
+            <strong>${I18N.t('chemdah.yamlError')}</strong>
             <p>${_escHtml(parsed.error)}</p>
-            <p>请在源代码模式中修复语法错误后重试。</p>
+            <p>${I18N.t('chemdah.yamlErrorHint')}</p>
           </div>
         </div>
       `;
@@ -1519,12 +2191,12 @@ window.ChemdahInterpreter = (() => {
     // === 左侧主内容区 ===
     html += '<div class="cv-main-content">';
     html += `<div class="cv-section-header">
-      <h3>任务列表 <span class="cv-count">${parsed.quests.length}</span></h3>
-      <button class="cv-btn cv-btn-sm cv-btn-primary" data-action="q-add-quest">+ 添加任务</button>
+      <h3>${I18N.t('chemdah.questList')} <span class="cv-count">${parsed.quests.length}</span></h3>
+      <button class="cv-btn cv-btn-sm cv-btn-primary" data-action="q-add-quest">${I18N.t('chemdah.addQuest')}</button>
     </div>`;
 
     if (parsed.quests.length === 0) {
-      html += '<div class="cv-empty">暂无任务数据</div>';
+      html += '<div class="cv-empty">' + I18N.t('chemdah.noQuests') + '</div>';
     } else {
       for (let qi = 0; qi < parsed.quests.length; qi++) {
         html += _renderQuestCard(parsed.quests[qi], qi);
@@ -1533,16 +2205,16 @@ window.ChemdahInterpreter = (() => {
 
     // 底部操作栏
     html += `<div class="cv-toolbar">
-      <button class="cv-btn cv-btn-primary" data-action="q-sync-to-source">同步到源码</button>
-      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> 自动同步</label>
-      <span class="cv-toolbar-hint">修改将在点击"同步到源码"后应用到编辑器</span>
+      <button class="cv-btn cv-btn-primary" data-action="q-sync-to-source">${I18N.t('chemdah.syncToSource')}</button>
+      <label class="ke-auto-sync-toggle" style="font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;user-select:none;"><input type="checkbox" data-action="toggle-visual-autosync" ${window.__keAutoSync ? 'checked' : ''}> ${I18N.t('chemdah.autoSync')}</label>
+      <span class="cv-toolbar-hint">${I18N.t('chemdah.syncHint')}</span>
     </div>`;
 
     html += '</div>'; // cv-main-content
 
     // === 右侧导航 ===
     html += '<div class="cv-sidebar">';
-    html += '<div class="cv-sidebar-header">任务导航</div>';
+    html += '<div class="cv-sidebar-header">' + I18N.t('chemdah.questNav') + '</div>';
     html += '<div class="cv-sidebar-list">';
     for (let qi = 0; qi < parsed.quests.length; qi++) {
       const q = parsed.quests[qi];
@@ -1575,8 +2247,8 @@ window.ChemdahInterpreter = (() => {
         <span class="cv-card-preview">${_escHtml(label)}</span>
       </span>
       <span class="qv-type-badge qv-type-${typeLabel}">${_escHtml(typeLabel)}</span>
-      <span class="qv-task-count">${quest.tasks.length} 个子任务</span>
-      <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" title="删除此任务">&times;</button>
+      <span class="qv-task-count">${I18N.t('chemdah.subtaskCount', {count: quest.tasks.length})}</span>
+      <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" title="${I18N.t('chemdah.deleteQuest')}">&times;</button>
     </div>`;
 
     // === 体部（折叠后隐藏） ===
@@ -1584,41 +2256,41 @@ window.ChemdahInterpreter = (() => {
 
     // ---- 基本信息 ----
     html += '<div class="qv-section">';
-    html += '<div class="qv-section-title">基本信息</div>';
+    html += '<div class="qv-section-title">' + I18N.t('chemdah.basicInfo') + '</div>';
     html += '<div class="qv-grid-2">';
-    html += `<div class="cv-field"><label>任务ID</label>
+    html += `<div class="cv-field"><label>${I18N.t('chemdah.questId')}</label>
       <input class="cv-input cv-input-mono" data-field="q.id" data-q-index="${qi}"
-        value="${_escHtml(quest.id)}" placeholder="任务唯一ID"></div>`;
-    html += `<div class="cv-field"><label>显示名称</label>
+        value="${_escHtml(quest.id)}" placeholder="${I18N.t('chemdah.questIdPlaceholder')}"></div>`;
+    html += `<div class="cv-field"><label>${I18N.t('chemdah.displayName')}</label>
       <input class="cv-input" data-field="q.meta.name" data-q-index="${qi}"
-        value="${_escHtml(quest.meta.name || '')}" placeholder="任务显示名称"></div>`;
-    html += `<div class="cv-field"><label>类型</label>
+        value="${_escHtml(quest.meta.name || '')}" placeholder="${I18N.t('chemdah.questNamePlaceholder')}"></div>`;
+    html += `<div class="cv-field"><label>${I18N.t('chemdah.type')}</label>
       <input class="cv-input cv-input-mono" data-field="q.meta.type" data-q-index="${qi}"
         value="${_escHtml(quest.meta.type || 'L1')}" placeholder="L1"></div>`;
     html += '</div>'; // qv-grid-2
 
-    html += `<div class="cv-field cv-field-wide"><label>描述</label>
+    html += `<div class="cv-field cv-field-wide"><label>${I18N.t('chemdah.description')}</label>
       <textarea class="cv-textarea" data-field="q.meta.description" data-q-index="${qi}"
-        rows="2" placeholder="任务描述...">${_escHtml(quest.meta.description || '')}</textarea></div>`;
+        rows="2" placeholder="${I18N.t('chemdah.questDescPlaceholder')}">${_escHtml(quest.meta.description || '')}</textarea></div>`;
 
     // 前置任务
-    html += `<div class="cv-field cv-field-wide"><label>前置任务 (depend)</label>
+    html += `<div class="cv-field cv-field-wide"><label>${I18N.t('chemdah.depend')}</label>
       <input class="cv-input" data-field="q.meta.depend" data-q-index="${qi}"
-        value="${_escHtml(quest.meta.depend ? quest.meta.depend.join(', ') : '')}" placeholder="逗号分隔的任务ID"></div>`;
+        value="${_escHtml(quest.meta.depend ? quest.meta.depend.join(', ') : '')}" placeholder="${I18N.t('chemdah.dependPlaceholder')}"></div>`;
 
     // meta 附加字段
     if (quest.meta.stats) {
-      html += `<div class="cv-field"><label>Stats 进度可见</label>
+      html += `<div class="cv-field"><label>${I18N.t('chemdah.statsVisible')}</label>
         <select class="cv-select" data-field="q.meta.stats.visible" data-q-index="${qi}">
-          <option value="true" ${quest.meta.stats.visible !== false ? 'selected' : ''}>显示</option>
-          <option value="false" ${quest.meta.stats.visible === false ? 'selected' : ''}>隐藏</option>
+          <option value="true" ${quest.meta.stats.visible !== false ? 'selected' : ''}>${I18N.t('chemdah.show')}</option>
+          <option value="false" ${quest.meta.stats.visible === false ? 'selected' : ''}>${I18N.t('chemdah.hide')}</option>
         </select></div>`;
     }
     if (quest.meta.optional !== undefined) {
-      html += `<div class="cv-field"><label>可选条目</label>
+      html += `<div class="cv-field"><label>${I18N.t('chemdah.optional')}</label>
         <select class="cv-select" data-field="q.meta.optional" data-q-index="${qi}">
-          <option value="true" ${quest.meta.optional === true ? 'selected' : ''}>是</option>
-          <option value="false" ${quest.meta.optional !== true ? 'selected' : ''}>否</option>
+          <option value="true" ${quest.meta.optional === true ? 'selected' : ''}>${I18N.t('chemdah.yes')}</option>
+          <option value="false" ${quest.meta.optional !== true ? 'selected' : ''}>${I18N.t('chemdah.no')}</option>
         </select></div>`;
     }
 
@@ -1626,16 +2298,17 @@ window.ChemdahInterpreter = (() => {
 
     // ---- 子任务列表 ----
     html += `<div class="qv-section" data-action="q-open-task-manager" data-q-index="${qi}" style="cursor:pointer;">`;
-    html += `<div class="qv-section-title">子任务 <span class="cv-count">${quest.tasks.length}</span></div>`;
+    html += `<div class="qv-section-title">${I18N.t('chemdah.subtasks')} <span class="cv-count">${quest.tasks.length}</span></div>`;
 
     if (quest.tasks.length === 0) {
-      html += '<div class="cv-empty cv-empty-sm">暂无子任务</div>';
+      html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noSubtasks') + '</div>';
     } else {
       html += '<div class="qv-task-list-preview">';
       const previews = [];
       for (let ti = 0; ti < quest.tasks.length; ti++) {
         const t = quest.tasks[ti];
-        const objLabel = (_ensureDefs().objectiveDefs.find(d => d.id === t.objective)?.label || t.objective || '?');
+        const objDef = _ensureDefs().objectiveDefs.find(d => d.id === t.objective);
+        const objLabel = objDef ? I18N.desc('objectiveLabel', objDef.id, objDef.label) : (t.objective || '?');
         previews.push(`<span class="qv-task-chip">${_escHtml(t.id)} <span class="qv-task-chip-obj">${_escHtml(t.meta?.name || objLabel)}</span></span>`);
       }
       html += previews.join('') + '</div>';
@@ -1644,22 +2317,22 @@ window.ChemdahInterpreter = (() => {
 
     // ---- Agent (任务级) ----
     html += '<div class="qv-section">';
-    html += `<div class="qv-section-title">任务生命周期脚本 (Agent)
+    html += `<div class="qv-section-title">${I18N.t('chemdah.agentScripts')}
       <button class="cv-btn cv-btn-xs cv-btn-secondary" data-action="q-add-agent-hook"
-        data-q-index="${qi}">+ 添加钩子</button>
+        data-q-index="${qi}">${I18N.t('chemdah.addHook')}</button>
     </div>`;
     const agentEntries = Object.entries(quest.agent);
     if (agentEntries.length === 0) {
-      html += '<div class="cv-empty cv-empty-sm">暂未设置 Agent 钩子</div>';
+      html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noHooks') + '</div>';
     } else {
       for (const [hook, script] of agentEntries) {
         html += `<div class="cv-field cv-field-wide" style="position:relative;">
           <label>${_escHtml(hook)}</label>
           <textarea class="cv-textarea cv-textarea-code" data-field="q.agent.${_escHtml(hook)}"
-            data-q-index="${qi}" rows="2" placeholder="KETHER 脚本...">${_escHtml(script)}</textarea>
+            data-q-index="${qi}" rows="2" placeholder="${I18N.t('chemdah.ketherScript')}">${_escHtml(script)}</textarea>
           <button class="cv-btn-icon cv-btn-icon-danger" style="position:absolute;top:0;right:0;"
             data-action="q-delete-agent-hook"
-            data-q-index="${qi}" data-hook="${_escHtml(hook)}" title="删除此钩子">&times;</button>
+            data-q-index="${qi}" data-hook="${_escHtml(hook)}" title="${I18N.t('chemdah.deleteHook')}">&times;</button>
         </div>`;
       }
     }
@@ -1668,9 +2341,9 @@ window.ChemdahInterpreter = (() => {
     // ---- Addon (管理弹窗) ----
     var addonKeys = Object.keys(quest.addon);
     html += '<div class="qv-section" data-action="q-open-addon-manager" data-q-index="' + qi + '" style="cursor:pointer;">';
-    html += '<div class="qv-section-title">组件 (Addon) <span class="cv-count">' + addonKeys.length + '</span></div>';
+    html += '<div class="qv-section-title">' + I18N.t('chemdah.addons') + ' <span class="cv-count">' + addonKeys.length + '</span></div>';
     if (addonKeys.length === 0) {
-      html += '<div class="cv-empty cv-empty-sm">暂未设置 Addon 组件</div>';
+      html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noAddons') + '</div>';
     } else {
       html += '<div class="qv-task-list-preview">';
       for (var ai = 0; ai < addonKeys.length; ai++) {
@@ -1708,23 +2381,26 @@ window.ChemdahInterpreter = (() => {
     overlay.id = 'qv-modal-overlay';
     overlay.className = 'cv-modal'; // reuse existing modal style
 
-    const itemsHtml = options.items.map(item =>
-      `<div class="qv-sel-item" data-id="${_escHtml(item.id)}" data-group="${_escHtml(item.group || '')}">
-        <span class="qv-sel-item-label">${_escHtml(item.label)}</span>
-        <span class="qv-sel-item-desc">${_escHtml(item.desc || '')}</span>
-      </div>`
-    ).join('');
+    const itemsHtml = options.items.map(item => {
+      const sec = item._sec || '';
+      const label = sec ? I18N.desc(sec + 'Label', item.id, item.label) : item.label;
+      const desc = sec ? I18N.desc(sec, item.id, item.desc) : item.desc;
+      return `<div class="qv-sel-item" data-id="${_escHtml(item.id)}" data-group="${_escHtml(item.group || '')}">
+        <span class="qv-sel-item-label">${_escHtml(label)}</span>
+        <span class="qv-sel-item-desc">${_escHtml(desc || '')}</span>
+      </div>`;
+    }).join('');
 
     overlay.innerHTML = `
       <div class="cv-modal-content qv-modal-content">
         <h3>${_escHtml(options.title)}</h3>
-        <input class="cv-input qv-sel-search" type="text" placeholder="${_escHtml(options.placeholder || '搜索...')}" autofocus>
+        <input class="cv-input qv-sel-search" type="text" placeholder="${_escHtml(options.placeholder || I18N.t('chemdah.search'))}" autofocus>
         <div class="qv-sel-list${options.mode === 'multi' ? ' qv-sel-multi' : ''}">
           ${itemsHtml}
         </div>
         <div class="cv-modal-actions">
-          <button class="cv-btn cv-btn-secondary qv-sel-cancel">取消</button>
-          <button class="cv-btn cv-btn-primary qv-sel-confirm">${options.mode === 'multi' ? '添加选中' : '选择'}</button>
+          <button class="cv-btn cv-btn-secondary qv-sel-cancel">${I18N.t('chemdah.cancel')}</button>
+          <button class="cv-btn cv-btn-primary qv-sel-confirm">${options.mode === 'multi' ? I18N.t('chemdah.addSelected') : I18N.t('chemdah.select')}</button>
         </div>
       </div>
     `;
@@ -1758,7 +2434,7 @@ window.ChemdahInterpreter = (() => {
         const id = item.dataset.id;
         if (selected.has(id)) selected.delete(id);
         else selected.add(id);
-        confirmBtn.textContent = selected.size > 0 ? `添加选中 (${selected.size})` : '添加选中';
+        confirmBtn.textContent = selected.size > 0 ? I18N.t('chemdah.addSelectedCount', {count: selected.size}) : I18N.t('chemdah.addSelected');
       } else {
         // 单选：高亮后自动确认
         list.querySelectorAll('.qv-sel-item').forEach(el => el.classList.remove('qv-sel-selected'));
@@ -1835,12 +2511,12 @@ window.ChemdahInterpreter = (() => {
     const parsed = _parseItemString(initialValue || '');
 
     // 构建命名空间选项
-    const nsHtml = ['<option value="">minecraft (原版)</option>'];
-    nsHtml.push('<optgroup label="原生支持">');
+    const nsHtml = ['<option value="">' + I18N.t('chemdah.minecraftVanilla') + '</option>'];
+    nsHtml.push('<optgroup label="' + I18N.t('chemdah.nativeSupport') + '">');
     for (const ns of ITEM_NAMESPACES_NATIVE) {
       nsHtml.push(`<option value="${_escHtml(ns.id)}" ${parsed.namespace === ns.id ? 'selected' : ''}>${_escHtml(ns.label)}</option>`);
     }
-    nsHtml.push('</optgroup><optgroup label="附属支持（使用时显示警告）">');
+    nsHtml.push('</optgroup><optgroup label="' + I18N.t('chemdah.addonSupport') + '">');
     for (const ns of ITEM_NAMESPACES_ADDON) {
       nsHtml.push(`<option value="${_escHtml(ns.id)}" ${parsed.namespace === ns.id ? 'selected' : ''}>${_escHtml(ns.label)}</option>`);
     }
@@ -1853,8 +2529,8 @@ window.ChemdahInterpreter = (() => {
     let enchHtml = '';
     for (const [i, ench] of (parsed.enchants || []).entries()) {
       enchHtml += `<div class="qie-ench-row" data-idx="${i}">
-        <input class="cv-input cv-input-mono qie-ench-id" value="${_escHtml(ench.id)}" placeholder="附魔ID (如 damage_all)" style="flex:2;">
-        <input class="cv-input qie-ench-lvl" value="${_escHtml(ench.level)}" placeholder="等级" style="width:70px;">
+        <input class="cv-input cv-input-mono qie-ench-id" value="${_escHtml(ench.id)}" placeholder="${I18N.t('chemdah.enchantIdPlaceholder')}" style="flex:2;">
+        <input class="cv-input qie-ench-lvl" value="${_escHtml(ench.level)}" placeholder="${I18N.t('chemdah.level')}" style="width:70px;">
         <button class="cv-btn-icon cv-btn-icon-danger qie-ench-del">&times;</button>
       </div>`;
     }
@@ -1863,8 +2539,8 @@ window.ChemdahInterpreter = (() => {
     let nbtHtml = '';
     for (const [i, nbt] of (parsed.nbtList || []).entries()) {
       nbtHtml += `<div class="qie-nbt-row" data-idx="${i}">
-        <input class="cv-input cv-input-mono qie-nbt-key" value="${_escHtml(nbt.key)}" placeholder="NBT路径 (如 craftengine:id)" style="flex:2;">
-        <input class="cv-input cv-input-mono qie-nbt-val" value="${_escHtml(nbt.value)}" placeholder="值" style="flex:2;">
+        <input class="cv-input cv-input-mono qie-nbt-key" value="${_escHtml(nbt.key)}" placeholder="${I18N.t('chemdah.nbtPathPlaceholder')}" style="flex:2;">
+        <input class="cv-input cv-input-mono qie-nbt-val" value="${_escHtml(nbt.value)}" placeholder="${I18N.t('chemdah.value')}" style="flex:2;">
         <span class="qie-nbt-op">
           <select class="cv-select qie-nbt-operator"><option value="=" ${nbt.op === '=' ? 'selected' : ''}>=</option><option value="!=" ${nbt.op === '!=' ? 'selected' : ''}>!=</option></select>
         </span>
@@ -1874,41 +2550,41 @@ window.ChemdahInterpreter = (() => {
 
     overlay.innerHTML = `
       <div class="cv-modal-content qv-task-editor-content" style="max-width:620px!important;">
-        <h3>可视化物品编辑器</h3>
+        <h3>${I18N.t('chemdah.itemEditor')}</h3>
         <div class="qv-task-editor-form">
           <div class="qie-notice" style="display:none;padding:8px 10px;margin-bottom:10px;background:rgba(255,214,0,0.1);border:1px solid rgba(255,214,0,0.3);border-radius:4px;font-size:12px;color:var(--color-warning);">
-            ⚠ 该命名空间为附属支持，部分服务器可能不支持
+            ${I18N.t('chemdah.namespaceNotice')}
           </div>
           <div class="qv-grid-2">
-            <div class="cv-field"><label>命名空间</label>
+            <div class="cv-field"><label>${I18N.t('chemdah.namespace')}</label>
               <select class="cv-select" id="qie-namespace">${nsHtml.join('')}</select></div>
-            <div class="cv-field"><label>物品 ID</label>
+            <div class="cv-field"><label>${I18N.t('chemdah.itemId')}</label>
               <div style="display:flex;gap:6px;align-items:center;">
-                <input class="cv-input cv-input-mono" id="qie-item-id" value="${_escHtml(parsed.itemId)}" placeholder="如 diamond、diamond_sword 或 *" style="flex:1;">
+                <input class="cv-input cv-input-mono" id="qie-item-id" value="${_escHtml(parsed.itemId)}" placeholder="${I18N.t('chemdah.itemIdPlaceholder')}" style="flex:1;">
                 <label style="font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:4px;cursor:pointer;">
-                  <input type="checkbox" id="qie-wildcard" ${parsed.itemId === '*' ? 'checked' : ''}> 通配符
+                  <input type="checkbox" id="qie-wildcard" ${parsed.itemId === '*' ? 'checked' : ''}> ${I18N.t('chemdah.wildcard')}
                 </label>
               </div></div>
           </div>
 
           <div class="qv-subsection">
-            <div class="qv-subsection-title">显示</div>
-            <div class="cv-field"><label>名称 (name)</label>
+            <div class="qv-subsection-title">${I18N.t('chemdah.display')}</div>
+            <div class="cv-field"><label>${I18N.t('chemdah.nameField')}</label>
               <div style="display:flex;gap:6px;">
                 <select class="cv-select" id="qie-name-op" style="width:auto;flex-shrink:0;">
-                  <option value="=" ${parsed.nameOp === '=' ? 'selected' : ''}>= (精确)</option>
-                  <option value="!=" ${parsed.nameOp === '!=' ? 'selected' : ''}>!= (不等)</option>
-                  <option value="#" ${parsed.nameOp === '#' ? 'selected' : ''}># (忽略颜色)</option>
-                  <option value="()" ${parsed.nameOp === '()' ? 'selected' : ''}>( ) (包含)</option>
+                  <option value="=" ${parsed.nameOp === '=' ? 'selected' : ''}>= ${I18N.t('chemdah.exact')}</option>
+                  <option value="!=" ${parsed.nameOp === '!=' ? 'selected' : ''}>!= ${I18N.t('chemdah.notEqual')}</option>
+                  <option value="#" ${parsed.nameOp === '#' ? 'selected' : ''}># ${I18N.t('chemdah.ignoreColor')}</option>
+                  <option value="()" ${parsed.nameOp === '()' ? 'selected' : ''}>( ) ${I18N.t('chemdah.contains')}</option>
                 </select>
-                <input class="cv-input" id="qie-name" value="${_escHtml(parsed.name || '')}" placeholder="名称文本" style="flex:1;">
+                <input class="cv-input" id="qie-name" value="${_escHtml(parsed.name || '')}" placeholder="${I18N.t('chemdah.namePlaceholder')}" style="flex:1;">
               </div></div>
-            <div class="cv-field"><label>Lore（每行一条）</label>
+            <div class="cv-field"><label>${I18N.t('chemdah.lore')}</label>
               <textarea class="cv-textarea" id="qie-lore" rows="3" placeholder="lore">${_escHtml(loreText)}</textarea></div>
           </div>
 
           <div class="qv-subsection">
-            <div class="qv-subsection-title">属性</div>
+            <div class="qv-subsection-title">${I18N.t('chemdah.attributes')}</div>
             <div class="qv-grid-2">
               <div class="cv-field"><label>Amount</label>
                 <div style="display:flex;gap:6px;">
@@ -1921,7 +2597,7 @@ window.ChemdahInterpreter = (() => {
                     <option value=">=" ${parsed.amountOp === '>=' ? 'selected' : ''}>>=</option>
                     <option value="()" ${parsed.amountOp === '()' ? 'selected' : ''}>( )</option>
                   </select>
-                  <input class="cv-input" id="qie-amount" value="${_escHtml(parsed.amount || '')}" placeholder="数量" style="flex:1;">
+                  <input class="cv-input" id="qie-amount" value="${_escHtml(parsed.amount || '')}" placeholder="${I18N.t('chemdah.amountPlaceholder')}" style="flex:1;">
                 </div></div>
               <div class="cv-field"><label>Damage</label>
                 <div style="display:flex;gap:6px;">
@@ -1934,7 +2610,7 @@ window.ChemdahInterpreter = (() => {
                     <option value=">=" ${parsed.damageOp === '>=' ? 'selected' : ''}>>=</option>
                     <option value="()" ${parsed.damageOp === '()' ? 'selected' : ''}>( )</option>
                   </select>
-                  <input class="cv-input" id="qie-damage" value="${_escHtml(parsed.damage || '')}" placeholder="耐久/伤害值" style="flex:1;">
+                  <input class="cv-input" id="qie-damage" value="${_escHtml(parsed.damage || '')}" placeholder="${I18N.t('chemdah.damagePlaceholder')}" style="flex:1;">
                 </div></div>
             </div>
             <div class="cv-field"><label>Custom Model Data</label>
@@ -1948,32 +2624,32 @@ window.ChemdahInterpreter = (() => {
                   <option value=">=" ${parsed.cmdOp === '>=' ? 'selected' : ''}>>=</option>
                   <option value="()" ${parsed.cmdOp === '()' ? 'selected' : ''}>( )</option>
                 </select>
-                <input class="cv-input" id="qie-cmd" value="${_escHtml(parsed.customModelData || '')}" placeholder="数值" style="flex:1;">
+                <input class="cv-input" id="qie-cmd" value="${_escHtml(parsed.customModelData || '')}" placeholder="${I18N.t('chemdah.valuePlaceholder')}" style="flex:1;">
               </div></div>
           </div>
 
           <div class="qv-subsection">
-            <div class="qv-subsection-title">附魔
-              <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qie-ench-add" style="margin-left:auto;">+ 添加</button>
+            <div class="qv-subsection-title">${I18N.t('chemdah.enchants')}
+              <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qie-ench-add" style="margin-left:auto;">${I18N.t('chemdah.add')}</button>
             </div>
-            <div id="qie-ench-list">${enchHtml || '<div class="cv-empty cv-empty-sm">暂未添加附魔</div>'}</div>
+            <div id="qie-ench-list">${enchHtml || '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noEnchants') + '</div>'}</div>
           </div>
 
           <div class="qv-subsection">
-            <div class="qv-subsection-title">NBT
-              <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qie-nbt-add" style="margin-left:auto;">+ 添加</button>
+            <div class="qv-subsection-title">${I18N.t('chemdah.nbt')}
+              <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qie-nbt-add" style="margin-left:auto;">${I18N.t('chemdah.add')}</button>
             </div>
-            <div id="qie-nbt-list">${nbtHtml || '<div class="cv-empty cv-empty-sm">暂未添加 NBT</div>'}</div>
+            <div id="qie-nbt-list">${nbtHtml || '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noNbt') + '</div>'}</div>
           </div>
 
           <div class="qv-subsection">
-            <div class="qv-subsection-title">预览</div>
+            <div class="qv-subsection-title">${I18N.t('chemdah.preview')}</div>
             <div class="qie-preview" id="qie-preview">${_escHtml(initialValue || '—')}</div>
           </div>
         </div>
         <div class="cv-modal-actions">
-          <button class="cv-btn cv-btn-secondary" id="qie-cancel">取消</button>
-          <button class="cv-btn cv-btn-primary" id="qie-confirm">确认</button>
+          <button class="cv-btn cv-btn-secondary" id="qie-cancel">${I18N.t('chemdah.cancel')}</button>
+          <button class="cv-btn cv-btn-primary" id="qie-confirm">${I18N.t('chemdah.confirm')}</button>
         </div>
       </div>`;
 
@@ -2018,8 +2694,8 @@ window.ChemdahInterpreter = (() => {
       const row = document.createElement('div');
       row.className = 'qie-ench-row';
       row.innerHTML = `
-        <input class="cv-input cv-input-mono qie-ench-id" placeholder="附魔ID (如 damage_all)" style="flex:2;">
-        <input class="cv-input qie-ench-lvl" placeholder="等级" style="width:70px;">
+        <input class="cv-input cv-input-mono qie-ench-id" placeholder="${I18N.t('chemdah.enchantIdPlaceholder')}" style="flex:2;">
+        <input class="cv-input qie-ench-lvl" placeholder="${I18N.t('chemdah.level')}" style="width:70px;">
         <button class="cv-btn-icon cv-btn-icon-danger qie-ench-del">&times;</button>`;
       list.appendChild(row);
       _updatePreview(overlay);
@@ -2043,8 +2719,8 @@ window.ChemdahInterpreter = (() => {
       const row = document.createElement('div');
       row.className = 'qie-nbt-row';
       row.innerHTML = `
-        <input class="cv-input cv-input-mono qie-nbt-key" placeholder="NBT路径 (如 craftengine:id)" style="flex:2;">
-        <input class="cv-input cv-input-mono qie-nbt-val" placeholder="值" style="flex:2;">
+        <input class="cv-input cv-input-mono qie-nbt-key" placeholder="${I18N.t('chemdah.nbtPathPlaceholder')}" style="flex:2;">
+        <input class="cv-input cv-input-mono qie-nbt-val" placeholder="${I18N.t('chemdah.value')}" style="flex:2;">
         <span class="qie-nbt-op">
           <select class="cv-select qie-nbt-operator"><option value="=">=</option><option value="!=">!=</option></select>
         </span>
@@ -2275,25 +2951,25 @@ window.ChemdahInterpreter = (() => {
     const questLabel = quest.meta.name || quest.id;
     var html = `
       <div class="cv-modal-content qv-task-editor-content" style="width:960px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;background:var(--color-bg-primary);">
-        <h3>子任务管理 — ${_escHtml(questLabel)}</h3>
+        <h3>${I18N.t('chemdah.taskManager', {name: _escHtml(questLabel)})}</h3>
         <div style="font-size:12px;color:var(--color-text-secondary);flex-shrink:0;margin-bottom:8px;">
-          共 ${quest.tasks.length} 个子任务
+          ${I18N.t('chemdah.totalSubtasks', {count: quest.tasks.length})}
         </div>
         <div class="qv-task-editor-layout" style="display:flex;gap:12px;flex:1;min-height:0;overflow:hidden;">
           <div class="qv-task-editor-tabs" style="width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
-            ${quest.tasks.length === 0 ? '<div class="cv-empty cv-empty-sm">暂无子任务</div>' : ''}
+            ${quest.tasks.length === 0 ? '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noSubtasks') + '</div>' : ''}
             ${quest.tasks.map(function(t, idx) {
-              var tLabel = t.meta?.name || t.id || ('子任务 ' + (idx + 1));
-              return '<button class="cv-btn qte-tab' + (idx === ti ? ' active' : '') + '" data-ti="' + idx + '">第' + (idx + 1) + '个子任务 <span class="qte-tab-id">' + _escHtml(tLabel) + '</span></button>';
+              var tLabel = t.meta?.name || t.id || I18N.t('chemdah.subtaskPrefix', {count: idx + 1});
+              return '<button class="cv-btn qte-tab' + (idx === ti ? ' active' : '') + '" data-ti="' + idx + '">' + I18N.t('chemdah.subtaskTab', {index: idx + 1}) + ' <span class="qte-tab-id">' + _escHtml(tLabel) + '</span></button>';
             }).join('')}
-            <button class="cv-btn cv-btn-xs cv-btn-secondary qte-add-btn" style="margin-top:8px;">+ 添加子任务</button>
+            <button class="cv-btn cv-btn-xs cv-btn-secondary qte-add-btn" style="margin-top:8px;">${I18N.t('chemdah.addSubtask')}</button>
           </div>
           <div class="qv-task-editor-panel" style="flex:1;overflow-y:auto;padding:0 4px;min-height:0;">
-            ${quest.tasks.length === 0 ? '<div class="cv-empty" style="margin-top:60px;">点击左侧"添加子任务"按钮添加</div>' : ''}
+            ${quest.tasks.length === 0 ? '<div class="cv-empty" style="margin-top:60px;">' + I18N.t('chemdah.addSubtaskHint') + '</div>' : ''}
           </div>
         </div>
         <div class="cv-modal-actions" style="margin-top:12px;flex-shrink:0;">
-          <button class="cv-btn cv-btn-secondary" id="qte-close">关闭</button>
+          <button class="cv-btn cv-btn-secondary" id="qte-close">${I18N.t('chemdah.close')}</button>
         </div>
       </div>`;
 
@@ -2320,8 +2996,8 @@ window.ChemdahInterpreter = (() => {
     overlay.querySelector('.qte-add-btn').addEventListener('click', function() {
       playSound('click');
       _showQuestSelectorModal({
-        title: '选择子任务目标类型',
-        placeholder: '搜索 objective 类型...',
+        title: I18N.t('chemdah.selectObjectiveType'),
+        placeholder: I18N.t('chemdah.searchObjectivePlaceholder'),
         items: defs.objectiveDefs,
         mode: 'single',
         onConfirm: function(ids) {
@@ -2358,33 +3034,33 @@ window.ChemdahInterpreter = (() => {
     if (!panel) return;
 
     const task = quest.tasks[ti];
-    if (!task) { panel.innerHTML = '<div class="cv-empty" style="margin-top:60px;">未选择子任务</div>'; return; }
+    if (!task) { panel.innerHTML = '<div class="cv-empty" style="margin-top:60px;">' + I18N.t('chemdah.noSubtaskSelected') + '</div>'; return; }
 
     const defs = _ensureDefs();
     const currentObjDef = defs.objectiveDefs.find(function(d) { return d.id === task.objective; });
-    const objLabel = currentObjDef ? currentObjDef.label : (task.objective || '选择类型...');
+    const objLabel = currentObjDef ? I18N.desc('objectiveLabel', currentObjDef.id, currentObjDef.label) : (task.objective || I18N.t('chemdah.selectType'));
 
     var html = '';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
-    html += '<h4 style="margin:0;">第' + (ti + 1) + '个子任务 ' + _escHtml(task.id) + ' <span style="font-weight:400;font-size:12px;color:var(--color-text-secondary);">' + _escHtml(currentObjDef?.label || '') + '</span></h4>';
-    html += '<button class="cv-btn cv-btn-xs cv-btn-danger qte-delete-btn" data-ti="' + ti + '">删除</button>';
+    html += '<h4 style="margin:0;">' + I18N.t('chemdah.subtaskTab', {index: ti + 1}) + ' ' + _escHtml(task.id) + ' <span style="font-weight:400;font-size:12px;color:var(--color-text-secondary);">' + _escHtml(currentObjDef ? I18N.desc('objectiveLabel', currentObjDef.id, currentObjDef.label) : '') + '</span></h4>';
+    html += '<button class="cv-btn cv-btn-xs cv-btn-danger qte-delete-btn" data-ti="' + ti + '">' + I18N.t('chemdah.delete') + '</button>';
     html += '</div>';
 
     html += '<div class="qv-task-editor-form">';
     html += '<div class="qv-grid-2">';
-    html += '<div class="cv-field"><label>子任务 ID</label><input class="cv-input cv-input-mono qte-field" data-qte-field="id" value="' + _escHtml(task.id) + '"></div>';
-    html += '<div class="cv-field"><label>名称</label><input class="cv-input qte-field" data-qte-field="meta.name" value="' + _escHtml(task.meta?.name || '') + '"></div>';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.subtaskId') + '</label><input class="cv-input cv-input-mono qte-field" data-qte-field="id" value="' + _escHtml(task.id) + '"></div>';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.name') + '</label><input class="cv-input qte-field" data-qte-field="meta.name" value="' + _escHtml(task.meta?.name || '') + '"></div>';
     html += '</div>';
-    html += '<div class="cv-field"><label>任务目标类型 (objective)</label><div style="display:flex;gap:8px;">';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.objectiveType') + '</label><div style="display:flex;gap:8px;">';
     html += '<button class="cv-btn cv-btn-secondary qte-obj-btn" data-ti="' + ti + '">' + _escHtml(objLabel) + '</button>';
-    html += '<input class="cv-input cv-input-mono qte-obj-custom" placeholder="自定义 objective type" style="flex:1"></div></div>';
-    html += '<div class="qv-subsection"><div class="qv-subsection-title">条件 (condition)</div><div class="qv-grid-2">';
+    html += '<input class="cv-input cv-input-mono qte-obj-custom" placeholder="' + I18N.t('chemdah.customObjectivePlaceholder') + '" style="flex:1"></div></div>';
+    html += '<div class="qv-subsection"><div class="qv-subsection-title">' + I18N.t('chemdah.objectiveCondition') + '</div><div class="qv-grid-2">';
     html += '<div class="cv-field"><label>Value</label><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.value" value="' + _escHtml(task.condition?.value || '') + '"></div>';
-    html += '<div class="cv-field"><label>坐标 (position)</label><div style="display:flex;gap:6px;">';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.position') + '</label><div style="display:flex;gap:6px;">';
     html += '<input class="cv-input cv-input-mono qte-field" data-qte-field="condition.position" value="' + _escHtml(task.condition?.position || '') + '" style="flex:1;">';
-    html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.position" title="可视化坐标编辑">📍</button>';
+    html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.position" title="' + I18N.t('chemdah.posEdit') + '">📍</button>';
     html += '</div></div></div>';
-    html += '<div class="cv-field"><label>KETHER 脚本 ($)</label><textarea class="cv-textarea cv-textarea-code qte-field" data-qte-field="condition.kether" rows="2">' + _escHtml(task.condition?.kether || '') + '</textarea></div>';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.ketherScriptField') + '</label><textarea class="cv-textarea cv-textarea-code qte-field" data-qte-field="condition.kether" rows="2">' + _escHtml(task.condition?.kether || '') + '</textarea></div>';
 
     // Objective-specific condition params
     var _objDef = defs.objectiveDefs.find(function(d) { return d.id === task.objective; });
@@ -2397,17 +3073,17 @@ window.ChemdahInterpreter = (() => {
         var _isItem = (_p.type || '').toLowerCase().indexOf('item') >= 0 || _p.type === 'ItemStack';
         var _isPosition = (_p.type || '').toLowerCase().indexOf('position') >= 0 || (_p.type || '').toLowerCase().indexOf('location') >= 0 || _p.name === 'position';
         if (_isItem) {
-          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qie-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="可视化物品编辑">📦</button></div></div>';
+          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qie-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="' + I18N.t('chemdah.itemEdit') + '">📦</button></div></div>';
         } else if (_isPosition) {
-          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="可视化坐标编辑">📍</button></div></div>';
+          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="' + I18N.t('chemdah.posEdit') + '">📍</button></div></div>';
         } else {
           html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '"></div>';
         }
       }
     }
 
-    html += '</div><div class="qv-subsection"><div class="qv-subsection-title">目标 (goal)</div>';
-    html += '<div class="cv-field"><label>数量 (amount)</label><input class="cv-input cv-input-mono qte-field" data-qte-field="goal.amount" value="' + _escHtml(task.goal?.amount || '') + '"></div>';
+    html += '</div><div class="qv-subsection"><div class="qv-subsection-title">' + I18N.t('chemdah.goal') + '</div>';
+    html += '<div class="cv-field"><label>' + I18N.t('chemdah.amountField') + '</label><input class="cv-input cv-input-mono qte-field" data-qte-field="goal.amount" value="' + _escHtml(task.goal?.amount || '') + '"></div>';
 
     // Extra goal fields
     var goalKeys = task.goal ? Object.keys(task.goal) : [];
@@ -2419,7 +3095,7 @@ window.ChemdahInterpreter = (() => {
     // Task agent
     var agentKeys = task.agent ? Object.keys(task.agent) : [];
     if (agentKeys.length > 0) {
-      html += '</div><div class="qv-subsection"><div class="qv-subsection-title">子任务 Agent 脚本</div>';
+      html += '</div><div class="qv-subsection"><div class="qv-subsection-title">' + I18N.t('chemdah.subtaskAgentScripts') + '</div>';
       for (var hi = 0; hi < agentKeys.length; hi++) {
         html += '<div class="cv-field"><label>' + _escHtml(agentKeys[hi]) + '</label><textarea class="cv-textarea cv-textarea-code qte-field" data-qte-field="agent.' + _escHtml(agentKeys[hi]) + '" rows="2">' + _escHtml(task.agent[agentKeys[hi]]) + '</textarea></div>';
       }
@@ -2444,13 +3120,13 @@ window.ChemdahInterpreter = (() => {
     if (objBtn) {
       objBtn.addEventListener('click', function() {
         _showQuestSelectorModal({
-          title: '选择任务目标类型',
-          placeholder: '搜索 objective 类型...',
+          title: I18N.t('chemdah.selectTaskObjectiveType'),
+          placeholder: I18N.t('chemdah.searchObjectivePlaceholder'),
           items: defs.objectiveDefs,
           mode: 'single',
           onConfirm: function(ids) {
             var selected = defs.objectiveDefs.find(function(d) { return d.id === ids[0]; });
-            objBtn.textContent = selected ? selected.label : ids[0];
+            objBtn.textContent = selected ? I18N.desc('objectiveLabel', selected.id, selected.label) : ids[0];
             objBtn.dataset.selected = ids[0];
             task.objective = ids[0];
             var customInput = panel.querySelector('.qte-obj-custom');
@@ -2529,25 +3205,25 @@ window.ChemdahInterpreter = (() => {
 
     let html = `
       <div class="cv-modal-content qv-addon-mgr-content" style="width:720px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;">
-        <h3>组件管理 — ${_escHtml(questLabel)}</h3>
+        <h3>${I18N.t('chemdah.addonManager', {name: _escHtml(questLabel)})}</h3>
         <div style="margin-bottom:8px;font-size:12px;color:var(--color-text-secondary);flex-shrink:0;">
-          共 ${addonKeys.length} 个组件
+          ${I18N.t('chemdah.totalAddons', {count: addonKeys.length})}
         </div>
         <div class="qv-addon-mgr-layout" style="display:flex;gap:12px;flex:1;min-height:0;overflow:hidden;">
           <div class="qv-addon-mgr-tabs" style="width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;overflow-y:auto;">
-            ${addonKeys.length === 0 ? '<div class="cv-empty cv-empty-sm">暂无组件</div>' : ''}
+            ${addonKeys.length === 0 ? '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noAddonComponents') + '</div>' : ''}
             ${addonKeys.map(function(ak, ai) {
               var aLabel = _getAddonLabel(ak);
               return '<button class="cv-btn qam-tab' + (ai === 0 ? ' active' : '') + '" data-addon-id="' + _escHtml(ak) + '">' + _escHtml(aLabel) + '<span class="qam-tab-id">' + _escHtml(ak) + '</span></button>';
             }).join('')}
-            <button class="cv-btn cv-btn-xs cv-btn-secondary qam-add-btn" style="margin-top:8px;">+ 添加组件</button>
+            <button class="cv-btn cv-btn-xs cv-btn-secondary qam-add-btn" style="margin-top:8px;">${I18N.t('chemdah.addAddon')}</button>
           </div>
           <div class="qv-addon-mgr-panel" style="flex:1;overflow-y:auto;padding:0 4px;min-height:0;">
-            ${addonKeys.length === 0 ? '<div class="cv-empty" style="margin-top:60px;">点击左侧"添加组件"按钮添加</div>' : ''}
+            ${addonKeys.length === 0 ? '<div class="cv-empty" style="margin-top:60px;">' + I18N.t('chemdah.addAddonHint') + '</div>' : ''}
           </div>
         </div>
         <div class="cv-modal-actions" style="margin-top:12px;flex-shrink:0;">
-          <button class="cv-btn cv-btn-secondary" id="qam-close">关闭</button>
+          <button class="cv-btn cv-btn-secondary" id="qam-close">${I18N.t('chemdah.close')}</button>
         </div>
       </div>`;
 
@@ -2573,8 +3249,8 @@ window.ChemdahInterpreter = (() => {
     overlay.querySelector('.qam-add-btn').addEventListener('click', function() {
       playSound('click');
       _showQuestSelectorModal({
-        title: '选择 Addon 组件',
-        placeholder: '搜索组件名称...',
+        title: I18N.t('chemdah.selectAddon'),
+        placeholder: I18N.t('chemdah.searchAddonPlaceholder'),
         items: defs.addonDefs,
         mode: 'multi',
         onConfirm: function(ids) {
@@ -2627,22 +3303,22 @@ window.ChemdahInterpreter = (() => {
     var html = '';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
     html += '<h4 style="margin:0;">' + _escHtml(aLabel) + ' <span style="font-weight:400;font-size:12px;color:var(--color-text-secondary);">' + _escHtml(addonId) + '</span></h4>';
-    html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-delete-btn" data-addon-id="' + _escHtml(addonId) + '">删除</button>';
+    html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-delete-btn" data-addon-id="' + _escHtml(addonId) + '">' + I18N.t('chemdah.delete') + '</button>';
     html += '</div>';
 
     if (!def) {
       // No definition — map editor for arbitrary key-value pairs
       var mapKeys = typeof actual === 'object' && actual !== null ? Object.keys(actual) : [];
-      html += '<div class="qv-subsection"><div class="qv-subsection-title">自定义键值对</div>';
+      html += '<div class="qv-subsection"><div class="qv-subsection-title">' + I18N.t('chemdah.customKeyValues') + '</div>';
       if (mapKeys.length === 0 && (typeof actual !== 'object' || actual === null)) {
         if (typeof actual === 'boolean') {
-          html += '<div class="cv-field"><label>启用</label>';
+          html += '<div class="cv-field"><label>' + I18N.t('chemdah.enabled') + '</label>';
           html += '<select class="cv-select qam-field" data-addon-id="' + _escHtml(addonId) + '" data-field="' + _escHtml(addonId) + '">';
           html += '<option value="true"' + (actual === true ? ' selected' : '') + '>true</option>';
           html += '<option value="false"' + (actual === false ? ' selected' : '') + '>false</option>';
           html += '</select></div>';
         } else {
-          html += '<div class="cv-field cv-field-wide"><label>值</label>';
+          html += '<div class="cv-field cv-field-wide"><label>' + I18N.t('chemdah.value') + '</label>';
           html += '<input class="cv-input qam-field" data-addon-id="' + _escHtml(addonId) + '" data-field="' + _escHtml(addonId) + '" value="' + _escHtml(actual != null ? String(actual) : '') + '"></div>';
         }
       } else {
@@ -2654,10 +3330,10 @@ window.ChemdahInterpreter = (() => {
           html += '<input class="cv-input qam-map-key" style="width:120px;flex-shrink:0;font-family:monospace;" value="' + _escHtml(mk) + '" placeholder="key">';
           html += '<span style="color:var(--color-text-tertiary);">:</span>';
           html += '<input class="cv-input qam-map-val" style="flex:1;" value="' + _escHtml(mv != null ? String(mv) : '') + '" placeholder="value">';
-          html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-map-del" data-addon-id="' + _escHtml(addonId) + '" data-map-key="' + _escHtml(mk) + '" title="删除此项">&times;</button>';
+          html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-map-del" data-addon-id="' + _escHtml(addonId) + '" data-map-key="' + _escHtml(mk) + '" title="' + I18N.t('chemdah.deleteItem') + '">&times;</button>';
           html += '</div></div>';
         }
-        html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qam-map-add" data-addon-id="' + _escHtml(addonId) + '" style="margin-top:4px;">+ 添加节点</button>';
+        html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qam-map-add" data-addon-id="' + _escHtml(addonId) + '" style="margin-top:4px;">' + I18N.t('chemdah.addNode') + '</button>';
       }
       html += '</div>';
     } else {
@@ -2704,7 +3380,7 @@ window.ChemdahInterpreter = (() => {
 
         var fieldKeys = Object.keys(merged);
         if (fieldKeys.length === 0) {
-          html += '<div class="cv-empty cv-empty-sm">该组件无可配置字段</div>';
+          html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.noConfigurableFields') + '</div>';
         } else {
           html += '<div class="qv-addon-fields">';
           for (var fi = 0; fi < fieldKeys.length; fi++) {
@@ -2736,13 +3412,13 @@ window.ChemdahInterpreter = (() => {
         // Non-section with definition — simple field
         var boolVal = actual !== undefined ? actual : defaults;
         if (typeof boolVal === 'boolean') {
-          html += '<div class="cv-field"><label>启用</label>';
+          html += '<div class="cv-field"><label>' + I18N.t('chemdah.enabled') + '</label>';
           html += '<select class="cv-select qam-field" data-addon-id="' + _escHtml(addonId) + '" data-field="' + _escHtml(addonId) + '">';
           html += '<option value="true"' + (boolVal === true ? ' selected' : '') + '>true</option>';
           html += '<option value="false"' + (boolVal === false ? ' selected' : '') + '>false</option>';
           html += '</select></div>';
         } else {
-          html += '<div class="cv-field cv-field-wide"><label>值</label>';
+          html += '<div class="cv-field cv-field-wide"><label>' + I18N.t('chemdah.value') + '</label>';
           html += '<input class="cv-input qam-field" data-addon-id="' + _escHtml(addonId) + '" data-field="' + _escHtml(addonId) + '" value="' + _escHtml(boolVal != null ? String(boolVal) : '') + '"></div>';
         }
       }
@@ -2876,7 +3552,7 @@ window.ChemdahInterpreter = (() => {
     var html = '<div class="qv-subsection"><div class="qv-subsection-title">' + _escHtml(key) + '</div>';
     var keys = Object.keys(obj);
     if (keys.length === 0) {
-      html += '<div class="cv-empty cv-empty-sm">空对象</div>';
+      html += '<div class="cv-empty cv-empty-sm">' + I18N.t('chemdah.emptyObject') + '</div>';
     } else {
       for (var i = 0; i < keys.length; i++) {
         var k = keys[i];
@@ -2962,7 +3638,7 @@ window.ChemdahInterpreter = (() => {
 
         case 'q-add-quest': {
           parsed.quests.push({
-            id: '新任务_' + (parsed.quests.length + 1),
+            id: I18N.t('chemdah.newQuestPrefix', {count: parsed.quests.length + 1}),
             meta: { name: '', type: 'L1' },
             start: { npc: '', script: '' },
             accept: { script: '' },
@@ -2998,8 +3674,8 @@ window.ChemdahInterpreter = (() => {
           const quest = parsed.quests[qi];
           if (!quest) break;
           _showQuestSelectorModal({
-            title: '选择子任务目标类型',
-            placeholder: '搜索 objective 类型...',
+            title: I18N.t('chemdah.selectObjectiveType'),
+            placeholder: I18N.t('chemdah.searchObjectivePlaceholder'),
             items: _ensureDefs().objectiveDefs,
             mode: 'single',
             onConfirm: (ids) => {
@@ -3060,22 +3736,22 @@ window.ChemdahInterpreter = (() => {
           if (!quest) break;
           // 用弹窗选择钩子
           const scopeItems = [
-            { id: '@ all', label: '@ all', desc: '所有作用域类型' },
-            { id: '@ party', label: '@ party', desc: '队伍作用域' },
-            { id: '@ custom', label: '@ 自定义', desc: '自定义作用域' },
+            { id: '@ all', label: '@ all', desc: I18N.desc('scope', '@ all', '所有作用域类型') },
+            { id: '@ party', label: '@ party', desc: I18N.desc('scope', '@ party', '队伍作用域') },
+            { id: '@ custom', label: I18N.t('chemdah.customScopeLabel'), desc: I18N.desc('scope', '@ custom', '自定义作用域') },
           ];
           const defs = _ensureDefs();
           const allAgentItems = defs.agentHookDefs.map(h => ({ ...h }));
-          allAgentItems.push(...scopeItems.map(s => ({ ...s, group: '作用域' })));
+          allAgentItems.push(...scopeItems.map(s => ({ ...s, group: I18N.t('chemdah.scopeGroup') })));
           _showQuestSelectorModal({
-            title: '选择 Agent 钩子',
-            placeholder: '搜索钩子名称...',
+            title: I18N.t('chemdah.selectAgentHook'),
+            placeholder: I18N.t('chemdah.searchHookPlaceholder'),
             items: allAgentItems,
             mode: 'single',
-            onConfirm: (ids) => {
+            onConfirm: async (ids) => {
               const hookName = ids[0];
               if (hookName === '@ custom') {
-                const custom = prompt('输入自定义作用域：', 'all');
+                const custom = await UI.prompt({ message: I18N.t('chemdah.customScopePrompt'), defaultValue: 'all' });
                 if (custom) {
                   quest.agent['@ ' + custom.trim()] = '';
                   if (window._cvRenderFn) window._cvRenderFn();
@@ -3085,14 +3761,14 @@ window.ChemdahInterpreter = (() => {
               // 如果是钩子（无@开头），打开第二个选择器选作用域
               if (!hookName.startsWith('@')) {
                 _showQuestSelectorModal({
-                  title: `选择 ${hookName} 的作用域`,
-                  placeholder: '搜索作用域...',
+                  title: I18N.t('chemdah.selectScopeForHook', {hook: hookName}),
+                  placeholder: I18N.t('chemdah.searchScopePlaceholder'),
                   items: scopeItems,
                   mode: 'single',
-                  onConfirm: (scopeIds) => {
+                  onConfirm: async (scopeIds) => {
                     let scope = scopeIds[0];
                     if (scope === '@ custom') {
-                      scope = prompt('输入自定义作用域：', 'all');
+                      scope = await UI.prompt({ message: I18N.t('chemdah.customScopePrompt'), defaultValue: 'all' });
                       if (!scope) return;
                     }
                     const fullHook = `${hookName} ${scope}`;
@@ -3102,7 +3778,7 @@ window.ChemdahInterpreter = (() => {
                 });
               } else {
                 // 纯作用域选择——添加一个空的钩子名+作用域占位
-                const hook = prompt('输入钩子名称 + 作用域（如: completed @ all）:', 'completed @ all');
+                const hook = await UI.prompt({ message: I18N.t('chemdah.customHookPrompt'), defaultValue: 'completed @ all' });
                 if (hook) {
                   quest.agent[hook.trim()] = '';
                   if (window._cvRenderFn) window._cvRenderFn();
@@ -3384,46 +4060,46 @@ window.ChemdahInterpreter = (() => {
 
     overlay.innerHTML = `
       <div class="cv-modal-content" style="background:var(--color-bg-secondary);border-radius:10px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-        <h3 style="margin:0 0 16px;font-size:15px;">坐标表达式编辑器</h3>
-        <div class="cv-field"><label>世界</label>
-          <input class="cv-input cv-input-mono" id="qpe-world" value="${_escHtml(parsed.world)}" placeholder="必填">
+        <h3 style="margin:0 0 16px;font-size:15px;">${I18N.t('chemdah.posEditor')}</h3>
+        <div class="cv-field"><label>${I18N.t('chemdah.world')}</label>
+          <input class="cv-input cv-input-mono" id="qpe-world" value="${_escHtml(parsed.world)}" placeholder="${I18N.t('chemdah.required')}">
         </div>
-        <div class="cv-field"><label>坐标 X Y Z</label>
+        <div class="cv-field"><label>${I18N.t('chemdah.xyz')}</label>
           <div style="display:flex;gap:6px;">
             <input class="cv-input cv-input-mono" id="qpe-x" value="${_escHtml(parsed.x)}" placeholder="X" style="flex:1;">
             <input class="cv-input cv-input-mono" id="qpe-y" value="${_escHtml(parsed.y)}" placeholder="Y" style="flex:1;">
             <input class="cv-input cv-input-mono" id="qpe-z" value="${_escHtml(parsed.z)}" placeholder="Z" style="flex:1;">
           </div>
         </div>
-        <div class="cv-field"><label>模式</label>
+        <div class="cv-field"><label>${I18N.t('chemdah.mode')}</label>
           <select class="cv-input" id="qpe-mode">
-            <option value="exact"${parsed.mode === 'exact' ? ' selected' : ''}>精确坐标</option>
-            <option value="radius"${parsed.mode === 'radius' ? ' selected' : ''}>范围内 (~ 半径)</option>
-            <option value="area"${parsed.mode === 'area' ? ' selected' : ''}>区域内 (> 坐标)</option>
-            <option value="multi"${parsed.mode === 'multi' ? ' selected' : ''}>多个坐标 (&)</option>
+            <option value="exact"${parsed.mode === 'exact' ? ' selected' : ''}>${I18N.t('chemdah.exactPos')}</option>
+            <option value="radius"${parsed.mode === 'radius' ? ' selected' : ''}>${I18N.t('chemdah.radiusPos')}</option>
+            <option value="area"${parsed.mode === 'area' ? ' selected' : ''}>${I18N.t('chemdah.areaPos')}</option>
+            <option value="multi"${parsed.mode === 'multi' ? ' selected' : ''}>${I18N.t('chemdah.multiPos')}</option>
           </select>
         </div>
-        <div id="qpe-radius-field" class="cv-field" style="display:${parsed.mode === 'radius' ? '' : 'none'};"><label>半径</label>
-          <input class="cv-input cv-input-mono" id="qpe-radius" value="${_escHtml(parsed.radius)}" placeholder="例: 10">
+        <div id="qpe-radius-field" class="cv-field" style="display:${parsed.mode === 'radius' ? '' : 'none'};"><label>${I18N.t('chemdah.radius')}</label>
+          <input class="cv-input cv-input-mono" id="qpe-radius" value="${_escHtml(parsed.radius)}" placeholder="${I18N.t('chemdah.radiusPlaceholder')}">
         </div>
-        <div id="qpe-area-field" class="cv-field" style="display:${parsed.mode === 'area' ? '' : 'none'};"><label>区域到 X Y Z</label>
+        <div id="qpe-area-field" class="cv-field" style="display:${parsed.mode === 'area' ? '' : 'none'};"><label>${I18N.t('chemdah.areaTo')}</label>
           <div style="display:flex;gap:6px;">
-            <input class="cv-input cv-input-mono" id="qpe-to-x" value="${_escHtml(parsed.toX)}" placeholder="到 X" style="flex:1;">
-            <input class="cv-input cv-input-mono" id="qpe-to-y" value="${_escHtml(parsed.toY)}" placeholder="到 Y" style="flex:1;">
-            <input class="cv-input cv-input-mono" id="qpe-to-z" value="${_escHtml(parsed.toZ)}" placeholder="到 Z" style="flex:1;">
+            <input class="cv-input cv-input-mono" id="qpe-to-x" value="${_escHtml(parsed.toX)}" placeholder="${I18N.t('chemdah.toX')}" style="flex:1;">
+            <input class="cv-input cv-input-mono" id="qpe-to-y" value="${_escHtml(parsed.toY)}" placeholder="${I18N.t('chemdah.toY')}" style="flex:1;">
+            <input class="cv-input cv-input-mono" id="qpe-to-z" value="${_escHtml(parsed.toZ)}" placeholder="${I18N.t('chemdah.toZ')}" style="flex:1;">
           </div>
         </div>
         <div id="qpe-multi-field" class="cv-field" style="display:${parsed.mode === 'multi' ? '' : 'none'};">
-          <label>多个坐标</label>
+          <label>${I18N.t('chemdah.multiCoords')}</label>
           <div id="qpe-multi-list"></div>
-          <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qpe-multi-add" style="margin-top:4px;">+ 添加坐标</button>
+          <button class="cv-btn cv-btn-xs cv-btn-secondary" id="qpe-multi-add" style="margin-top:4px;">${I18N.t('chemdah.addCoord')}</button>
         </div>
-        <div class="cv-field"><label>预览</label>
+        <div class="cv-field"><label>${I18N.t('chemdah.preview')}</label>
           <div class="cv-input cv-input-mono" id="qpe-preview" style="background:var(--color-bg-primary);padding:6px 10px;word-break:break-all;">${_escHtml(generatePos())}</div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-          <button class="cv-btn cv-btn-secondary" id="qpe-cancel">取消</button>
-          <button class="cv-btn cv-btn-primary" id="qpe-confirm">确定</button>
+          <button class="cv-btn cv-btn-secondary" id="qpe-cancel">${I18N.t('chemdah.cancel')}</button>
+          <button class="cv-btn cv-btn-primary" id="qpe-confirm">${I18N.t('chemdah.ok')}</button>
         </div>
       </div>
     `;
@@ -3473,11 +4149,11 @@ window.ChemdahInterpreter = (() => {
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;gap:4px;margin-bottom:4px;align-items:center;';
         row.innerHTML = `
-          <input class="cv-input cv-input-mono" data-idx="${i}" data-field="w" value="${_escHtml(p.world)}" placeholder="世界" style="flex:1;min-width:60px;">
+          <input class="cv-input cv-input-mono" data-idx="${i}" data-field="w" value="${_escHtml(p.world)}" placeholder="${I18N.t('chemdah.world')}" style="flex:1;min-width:60px;">
           <input class="cv-input cv-input-mono" data-idx="${i}" data-field="x" value="${_escHtml(p.x)}" placeholder="X" style="flex:1;">
           <input class="cv-input cv-input-mono" data-idx="${i}" data-field="y" value="${_escHtml(p.y)}" placeholder="Y" style="flex:1;">
           <input class="cv-input cv-input-mono" data-idx="${i}" data-field="z" value="${_escHtml(p.z)}" placeholder="Z" style="flex:1;">
-          <button class="cv-btn-icon cv-btn-icon-danger qpe-multi-del" data-idx="${i}" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:14px;">✕</button>
+          <button class="cv-btn-icon cv-btn-icon-danger qpe-multi-del" data-idx="${i}" style="width:auto;height:auto;font-size:14px;">✕</button>
         `;
         row.querySelectorAll('input').forEach(inp => {
           inp.addEventListener('input', () => {
@@ -3508,10 +4184,10 @@ window.ChemdahInterpreter = (() => {
     if (parsed.mode === 'multi') renderMultiList();
 
     overlay.querySelector('#qpe-cancel').addEventListener('click', () => { playSound('close'); overlay.remove(); });
-    overlay.querySelector('#qpe-confirm').addEventListener('click', () => { playSound('click');
+    overlay.querySelector('#qpe-confirm').addEventListener('click', async () => { playSound('click');
       readInputs();
       if (!parsed.world) {
-        alert('请填写世界名称');
+        await UI.alert({ message: I18N.t('chemdah.worldRequired') });
         worldInp.focus();
         return;
       }
@@ -3628,7 +4304,7 @@ window.ChemdahInterpreter = (() => {
     const yaml = _genQuestYAML(parsed);
     if (window.codeMirrorEditor) {
       window.codeMirrorEditor.setValue(yaml);
-      window.updateStatus('已从可视化编辑器同步到源码');
+      window.updateStatus(I18N.t('chemdah.syncedToSource'));
     }
   }
 
@@ -3650,36 +4326,40 @@ window.ChemdahInterpreter = (() => {
     modal.className = 'cv-modal';
 
     const typeLabels = {
-      conversation: '对话文件 (Conversation)',
-      quest: '任务文件 (Quest)',
-      unknown: '无法识别',
+      conversation: I18N.t('chemdah.typeConversationFull'),
+      quest: I18N.t('chemdah.typeQuestFull'),
+      unknown: I18N.t('chemdah.typeUnknown'),
     };
+    const hasCE = typeof CraftEngineInterpreter !== 'undefined';
+    if (hasCE) {
+      typeLabels.craftengine = I18N.t('editor.typeCraftEngine');
+    }
 
     modal.innerHTML = `
       <div class="cv-modal-content">
-        <h3>选择 Chemdah 解释器类型</h3>
+        <h3>${I18N.t('chemdah.selectTypeTitle')}</h3>
         <p class="cv-modal-desc">
-          无法自动识别文件类型${detectedType !== 'unknown' ? `（检测为：${typeLabels[detectedType] || detectedType}）` : ''}。
-          请手动选择解释器类型：
+          ${I18N.t('chemdah.typeUnknownMsg', {detected: detectedType !== 'unknown' ? I18N.t('chemdah.detectedAs', {type: typeLabels[detectedType] || detectedType}) : ''})}
         </p>
         <div class="cv-modal-field">
-          <label>解释器类型</label>
+          <label>${I18N.t('chemdah.interpreterType')}</label>
           <select id="cv-type-select" class="cv-select cv-select-lg">
-            <option value="conversation" ${detectedType === 'conversation' ? 'selected' : ''}>对话 (Conversation)</option>
-            <option value="quest" ${detectedType === 'quest' ? 'selected' : ''}>任务 (Quest)</option>
+            <option value="conversation" ${detectedType === 'conversation' ? 'selected' : ''}>${I18N.t('chemdah.typeConversation')}</option>
+            <option value="quest" ${detectedType === 'quest' ? 'selected' : ''}>${I18N.t('chemdah.typeQuest')}</option>
+            ${hasCE ? `<option value="craftengine" ${detectedType === 'craftengine' ? 'selected' : ''}>${I18N.t('editor.typeCraftEngine')}</option>` : ''}
           </select>
         </div>
         <div class="cv-modal-field">
-          <label>作用范围</label>
+          <label>${I18N.t('chemdah.scopeLabel')}</label>
           <select id="cv-scope-select" class="cv-select cv-select-lg">
-            <option value="file">仅此文件</option>
-            <option value="directory">当前文件夹下全部文件</option>
-            <option value="project">整个项目</option>
+            <option value="file">${I18N.t('chemdah.scopeFile')}</option>
+            <option value="directory">${I18N.t('chemdah.scopeDirectory')}</option>
+            <option value="project">${I18N.t('chemdah.scopeProject')}</option>
           </select>
         </div>
         <div class="cv-modal-actions">
-          <button class="cv-btn cv-btn-secondary" id="cv-type-cancel">取消</button>
-          <button class="cv-btn cv-btn-primary" id="cv-type-confirm">确认</button>
+          <button class="cv-btn cv-btn-secondary" id="cv-type-cancel">${I18N.t('chemdah.cancel')}</button>
+          <button class="cv-btn cv-btn-primary" id="cv-type-confirm">${I18N.t('chemdah.confirm')}</button>
         </div>
       </div>
     `;
@@ -3731,8 +4411,8 @@ window.ChemdahInterpreter = (() => {
       showTypeSelector(filePath, detectedType, (type, scope) => {
         if (!type) {
           containerEl.innerHTML = `<div class="cv-empty">
-            <h2>可视化编辑</h2>
-            <p>请选择解释器类型后重试，或在源代码模式中编辑。</p>
+            <h2>${I18N.t('chemdah.visualEditTitle')}</h2>
+            <p>${I18N.t('chemdah.visualEditHint')}</p>
           </div>`;
           return;
         }
@@ -3756,6 +4436,9 @@ window.ChemdahInterpreter = (() => {
 
     if (detectedType === TYPES.CONVERSATION) {
       const parsed = parseConversation(parsedContent);
+
+      // 存储文件路径，供思维导图缓存使用
+      containerEl._cvFilePath = filePath;
 
       // 存储渲染函数以便重新渲染（从当前 parsed 数据重绘，不丢失未同步修改）
       const reRender = () => {
@@ -3798,19 +4481,19 @@ window.ChemdahInterpreter = (() => {
 
     // Unknown
     containerEl.innerHTML = `<div class="cv-empty">
-      <h2>无法识别的文件类型</h2>
-      <p>当前文件不属于 conversation 或 quest 类型。</p>
-      <p>请在源代码模式中编辑，或使用 <button class="cv-btn cv-btn-sm cv-btn-secondary"
+      <h2>${I18N.t('chemdah.unknownTypeTitle')}</h2>
+      <p>${I18N.t('chemdah.unknownTypeMsg')}</p>
+      <p>${I18N.t('chemdah.unknownTypeHint')} <button class="cv-btn cv-btn-sm cv-btn-secondary"
         onclick="ChemdahInterpreter.showTypeSelector(
           '${_escHtml(filePath)}',
           'unknown',
           (type, scope) => {
             if (type) {
-              document.getElementById('visual-editor').innerHTML = '<div class=\"cv-empty\">重新渲染中...</div>';
+              document.getElementById('visual-editor').innerHTML = '<div class=\"cv-empty\">' + I18N.t('chemdah.rendering') + '</div>';
               ChemdahInterpreter.render('${_escHtml(filePath)}', document.getElementById('source-editor').textContent || window.codeMirrorEditor.getValue(), document.getElementById('visual-editor'), { forceType: type });
             }
           }
-        )">手动选择类型</button></p>
+        )">${I18N.t('chemdah.manualSelect')}</button></p>
     </div>`;
   }
 

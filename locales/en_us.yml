@@ -1,0 +1,1763 @@
+# ChoTenEditor English (US)
+app:
+  title: "CHOTEN EDITOR"
+  loading: "Loading..."
+
+titlebar:
+  minimize: "Minimize"
+  maximize: "Maximize"
+  close: "Close"
+
+common:
+  openProject: "📁 Open Project"
+  newFile: "📄 New File"
+  save: "💾 Save"
+  settings: "⚙️ Settings"
+  remote: "🌐 Remote"
+  ai: "✨ AI"
+  ok: "OK"
+  cancel: "Cancel"
+  delete: "Delete"
+  reload: "Reload"
+  back: "Back"
+  close: "Close"
+  approve: "Approve"
+  reject: "Reject"
+
+ui:
+  ok: "OK"
+  cancel: "Cancel"
+  confirmTitle: "Confirm"
+  alertTitle: "Notice"
+  promptTitle: "Enter Input"
+
+sidebar:
+  files: "Project Files"
+  previousFile: "Previous File"
+  tabLocal: "Local"
+  tabRemote: "Remote"
+
+editor:
+  sourceMode: "Source"
+  visualMode: "Visual"
+  typeAuto: "Auto Detect"
+  typeConversation: "Conversation"
+  typeQuest: "Quest"
+  typeCraftEngine: "CraftEngine"
+  visualEmptyTitle: "Visual Editing"
+  visualEmptyHint: "Open a .yml / .yaml file to switch to visual editing"
+
+status:
+  ready: "Ready"
+  projectOpened: "Project opened: {name}"
+  projectTypesConversationQuest: " [Conversation + Quest]"
+  projectTypesConversation: " [Conversation]"
+  projectTypesQuest: " [Quest]"
+  directory: "Directory: {path}"
+  file: "File: {name}"
+  fileType: "File: {name} [{type}]"
+  interpreterTypeAuto: "Interpreter type: Auto Detect"
+  interpreterType: "Interpreter type: {type}"
+  noFileOpen: "No file is open"
+  visualMode: "Visual editor mode"
+  sourceMode: "Source editor mode"
+  fileModified: "File modified"
+  fileSaved: "File saved: {path}"
+  fileCreated: "File created: {path}"
+  typeOverrideCleared: "Type override cleared"
+  typeOverrideSet: "Interpreter type set to: {type} (Scope: {scope})"
+  ceOwner: " · CE project: {root} · Pack: {pack}"
+
+typeScope:
+  file: "File"
+  directory: "Directory"
+  project: "Project"
+
+welcome:
+  title: "Welcome to ChoTenEditor!"
+  version: "Current version: {version}"
+  descPre: "This editor is a general-purpose Minecraft plugin editing tool. Currently it supports "
+  descPost: " only, with Sertraline, LithiumCarbon and more coming later."
+  channelsTitle: "For any questions or feedback, please reach out via:"
+  channelQq: "📢 QQ Group:"
+  channelDiscord: "🌐 Discord:"
+  channelQqAddPre: "💬 Add QQ "
+  channelQqAddPost: " and note your purpose"
+  settingsHint: "You can also find the feedback channels in Settings."
+  noTip: "Don't show again"
+  dismissHint: "After checking \"Don't show again\", this dialog only appears again on version updates."
+
+remote:
+  title: "🌐 Remote Mode"
+  asServer: "As Server"
+  asClient: "Connect Remote"
+  serverHost: "Server Address"
+  port: "Port"
+  password: "Connection Password"
+  setPasswordPlaceholder: "Set connection password"
+  ipPlaceholder: "IP Address"
+  serverPasswordPlaceholder: "Password set on the server"
+  startServer: "Start Server"
+  stopServer: "Stop Server"
+  connect: "Connect"
+  disconnect: "Disconnect"
+  disconnectAll: "Disconnect All"
+  clients: "Connected Clients"
+  securityCode: "Security Code"
+  securityHint: "Share this security code with the server admin to confirm the connection"
+  confirmTitle: "🔌 New Connection Request"
+  clientIp: "Client IP:"
+  securityCodeLabel: "Security Code:"
+  confirmWarningPre: "⚠️ Make sure the security code provided matches the one above, otherwise the connection may fail. Confirming carelessly may cause data leaks or loss, "
+  confirmWarningStrong: "please verify the security code carefully"
+  confirmWarningPost: ". The software is not responsible for any loss caused by this."
+  confirmAccept: "Accept Connection"
+  fileChangeTitle: "📝 File Change Request"
+  client: "Client:"
+  filePath: "File Path:"
+  fileDeleteTitle: "🗑️ File Delete Request"
+  approveDelete: "Approve Delete"
+  invalidMessageFormat: "Invalid message format"
+  wrongPassword: "Wrong password"
+  versionMismatch: "Client version ({client}) does not match server version ({server}). Enable \"Allow Different Versions\" in settings"
+  authenticateFirst: "Please authenticate first"
+  connectionRejectedByAdmin: "The administrator rejected the connection request"
+  disconnectedByAdmin: "Disconnected by the administrator"
+  unknownMessageType: "Unknown message type: {type}"
+  noReadPermission: "No permission to read this file"
+  noEditPermission: "No permission to edit this file"
+  guestNoEditPermission: "Guest mode: no edit permission"
+  noPathSpecified: "No path specified"
+  noDeletePermission: "No permission to delete this file"
+  guestNoDeletePermission: "Guest mode: no delete permission"
+  deleteRejectedByAdmin: "The administrator rejected the delete request"
+  authTimeout: "Authentication timed out"
+  authRejected: "Authentication rejected"
+  changeRejectedByAdmin: "Change rejected by the administrator"
+
+dialog:
+  apiInitFailed: "API Initialization Failed"
+  apiInitFailedMsg: "The Electron API failed to initialize. Check the console for errors."
+  apiError: "API Error"
+  deleteFailed: "Delete Failed"
+  openProjectFailed: "Failed to Open Project"
+  loadDirFailed: "Failed to Read Directory"
+  loadDirError: "Failed to Load Directory"
+  openFileFailed: "Failed to Open File"
+  readFailed: "Read Failed"
+  error: "Error"
+  createFileFailed: "Failed to Create File"
+  saveFileFailed: "Failed to Save File"
+
+error:
+  openDirectoryApi: "openDirectory API unavailable"
+  readdirApi: "readdir API unavailable"
+  readFileApi: "readFile API unavailable"
+  remoteApiUnavailable: "Remote API unavailable"
+  cannotReadFile: "Cannot read file"
+  cannotReadRemote: "Cannot read file from the remote server"
+  codemirrorMissing: "codeMirrorEditor does not exist"
+  unknown: "Unknown error"
+
+tabs:
+  unsaved: "Unsaved Changes"
+  unsavedMsg: "File <strong>{name}</strong> has unsaved changes.<br>Save?"
+  unsavedMsgNoName: "Save?"
+  save: "Save"
+  discard: "Don't Save"
+  cancel: "Cancel"
+
+unsupported:
+  title: "Unsupported Format"
+  msg: "The {ext} format is not supported. Load anyway?"
+  forceLoad: "Load Anyway"
+
+confirm:
+  deleteFile: "Delete \"{name}\"?"
+
+prompt:
+  newFileName: "Enter a file name (e.g. config.yml):"
+
+alert:
+  openProjectFirst: "Please open a project first"
+  noFileOpen: "No file is open"
+
+tab:
+  unsavedTitle: "{name} (unsaved)"
+
+tabMenu:
+  closeCurrent: "Close Current"
+  closeSaved: "Close Saved"
+  closeLeft: "Close Left"
+  closeRight: "Close Right"
+  closeAll: "Close All"
+
+breadcrumb:
+  root: "Root"
+
+visual:
+  onlyYaml: "Visual editing supports only .yml / .yaml files."
+  interpreterMissing: "Interpreter Not Loaded"
+  interpreterMissingMsg: "The ChemdahInterpreter module was not loaded correctly. Check the console for errors."
+  renderFailed: "Visual Rendering Failed"
+  editInSource: "Please edit in source mode."
+
+rm:
+  apiError: "Error: Remote API unavailable"
+  errorPrefix: "Error: {msg}"
+  startingServer: "Starting server..."
+  serverStarted: "Server started on port {port}"
+  startFailed: "Start failed: {msg}"
+  serverStopped: "Server stopped"
+  connecting: "Connecting..."
+  sendCodeToAdmin: "Connected. Share the security code with the admin"
+  connected: "✅ Connected to server"
+  connectFailed: "Connection failed: {msg}"
+  disconnected: "Disconnected"
+  newClient: "New client connected: {ip}"
+  requestingDelete: "Requesting file deletion..."
+  loadingRemoteDir: "Loading remote directory..."
+  readingRemoteFile: "Reading remote file..."
+  savingRemoteFile: "Saving remote file..."
+  fileUpdated: "File updated: {path}"
+  fileDeleted: "File deleted: {path}"
+  fileSavedOk: "File saved: {path}"
+  fileSaveFailed: "File save failed: {msg}"
+  waitingApproveWrite: "Waiting for admin approval of file change..."
+  fileReadOk: "Remote file read"
+  fileReadFailed: "Failed to read remote file: {msg}"
+  listLoaded: "Remote file list loaded"
+  listLoadFailed: "Failed to load remote file list: {msg}"
+  deleteFailed: "Delete failed: {msg}"
+  waitingApproveDelete: "Waiting for admin approval of deletion..."
+  serverClosed: "Server closed"
+  permUpdated: "Permission updated: {level}"
+  securityCode: "Security code: {code}"
+  disconnect: "Disconnect"
+
+perm:
+  guest: "Guest"
+  confirm: "Ask to Confirm"
+  full: "Full Control"
+
+settings:
+  title: "Settings"
+  titlePage: "⚙️ Settings"
+  backToEditor: "Back to Editor"
+  tabGeneral: "General"
+  tabAppearance: "Appearance"
+  tabEditor: "Editor"
+  tabAI: "AI Studio"
+  tabRemote: "Remote"
+  tabShortcuts: "Shortcuts"
+  tabAbout: "About"
+  sectionLanguage: "🌐 Language"
+  language: "Language"
+  sectionTheme: "🎨 Theme"
+  themeSelect: "Select Theme"
+  themeDark: "Dark"
+  themeLight: "Light"
+  themeAuto: "Auto"
+  sectionBackground: "🖼️ Background Image"
+  sectionFonts: "🔤 Fonts"
+  uiFont: "Interface Font"
+  editorFontFamily: "Editor Font"
+  fontSystemDefault: "System Default"
+  editorFontDefault: "Default (Fira Code)"
+  bgDisclaimer: "Background images are from the web, for preview only. Contact us for removal if infringing."
+  bgSelect: "Select Background"
+  bgNoneThumb: "None"
+  bgNoneName: "No Background"
+  bgOpacity: "Background Opacity"
+  bgUpload: "📤 Upload Background"
+  sectionColors: "🎭 Custom Colors"
+  colorGroupMain: "Main Colors"
+  colorPrimary: "Primary"
+  colorSuccess: "Success"
+  colorWarning: "Warning"
+  colorError: "Error"
+  colorGroupBg: "Background Colors"
+  colorBgPrimary: "Primary Background"
+  colorBgSecondary: "Secondary Background"
+  colorGroupText: "Text Colors"
+  colorTextPrimary: "Primary Text"
+  colorTextSecondary: "Secondary Text"
+  sectionSyntax: "📝 Syntax Highlighting Colors"
+  syntaxGroup: "Syntax Token Colors"
+  syntaxKeyword: "Keyword"
+  syntaxString: "String"
+  syntaxNumber: "Number"
+  syntaxComment: "Comment"
+  syntaxFunction: "Function"
+  syntaxOperator: "Operator"
+  syntaxPunctuation: "Punctuation"
+  syntaxProperty: "Property Name"
+  sectionCategories: "🎯 Category Colors"
+  categoriesGroup: "Kether Block Category Colors"
+  sectionPresets: "🎪 Preset Themes"
+  presetDarkDefault: "Dark Classic"
+  presetLightClean: "Light Fresh"
+  sectionEditor: "📝 Editor Settings"
+  editorFontSize: "Font Size (px)"
+  editorTabSize: "Tab Size"
+  tabSize2: "2 Spaces"
+  tabSize4: "4 Spaces"
+  tabSize8: "8 Spaces"
+  editorLineNumbers: "Show Line Numbers"
+  show: "Show"
+  hide: "Hide"
+  editorLineWrapping: "Line Wrapping"
+  enable: "Enable"
+  disable: "Disable"
+  editorTheme: "Editor Theme"
+  themeDefault: "Default"
+  editorAutoSync: "Auto Sync Changes"
+  off: "Off"
+  on: "On"
+  autoSyncHint: "When enabled, editor content is saved automatically after each modification"
+  editorDevtools: "Open F12 DevTools on startup"
+  prewarmTitle: "Startup Prewarm"
+  prewarmFiles: "Prewarm last opened project files"
+  prewarmMax: "Max"
+  prewarmHint: "On startup, reads last opened files into memory cache for instant tab switching"
+  prewarmKether: "Prewarm Kether actions"
+  prewarmKetherHint: "Loads Kether action definitions on startup so the block editor opens instantly"
+  aiTitle: "AI Generation"
+  aiEndpoint: "API Endpoint"
+  aiEndpointHint: "API endpoint compatible with OpenAI format"
+  aiModel: "Model"
+  aiModelCustom: "Custom"
+  aiCustomModel: "Custom Model Name"
+  aiCustomModelPlaceholder: "Enter model name"
+  aiApiKey: "API Key"
+  aiNewKeyPlaceholder: "Enter a new key"
+  aiAddKey: "Add"
+  aiSystemPrompt: "System Prompt"
+  aiPromptDefault: "Default"
+  aiPromptCustom: "Custom"
+  aiCustomPrompt: "Custom Prompt Content"
+  aiCustomPromptPlaceholder: "Enter a custom system prompt..."
+  aiSavePrompt: "Save as Custom Prompt"
+  aiManagePrompts: "Manage Prompts"
+  aiNewPromptNamePlaceholder: "New prompt name"
+  aiNewPromptDescPlaceholder: "Description"
+  aiMaxTokens: "Max Output Tokens"
+  aiTemperature: "Temperature"
+  remoteTitle: "Remote Mode"
+  remotePassword: "Remote Connection Password"
+  remotePasswordPlaceholder: "Set remote connection password"
+  remotePasswordHint: "Default password used when starting the server in remote mode"
+  remoteAllowDifferentVersions: "Allow clients of different versions to connect"
+  remoteAllowDifferentVersionsHint: "When off, only clients with matching versions can connect to the server"
+  blockTitle: "Block Display"
+  blockFontSize: "Block Font Size (px)"
+  sectionShortcuts: "⌨️ Keyboard Shortcuts"
+  shortcutSave: "Save File"
+  shortcutNewFile: "New File"
+  shortcutOpenProject: "Open Project"
+  shortcutToggleMode: "Toggle Edit Mode"
+  shortcutFind: "Find"
+  shortcutReplace: "Replace"
+  shortcutComment: "Toggle Comment"
+  shortcutFormat: "Format Code"
+  resetShortcuts: "Reset Shortcuts"
+  editShortcuts: "Edit Shortcuts"
+  sectionFeedback: "💬 Feedback Channels"
+  feedbackIntro: "For any questions or feedback, please reach out via:"
+  feedbackQqGroup: "📢 QQ Group: "
+  feedbackQq: "💬 QQ: "
+  feedbackJoinQq: "Join Group"
+  feedbackJoinDiscord: "Join Discord"
+  feedbackAddFriend: "Add Friend"
+  sectionSave: "💾 Save & Reset"
+  saveSettings: "✓ Save Settings"
+  resetSettings: "↻ Restore Defaults"
+  exportSettings: "⬇ Export Settings"
+  importSettings: "⬆ Import Settings"
+  sectionPreview: "👁️ Component Preview"
+  previewPrimary: "Primary Button"
+  previewSecondary: "Secondary Button"
+  previewDanger: "Danger Button"
+  previewAccent: "Accent Button"
+  previewCheckbox: "Checkbox"
+  previewInputPlaceholder: "Input example…"
+  previewSelect1: "Option 1"
+  previewSelect2: "Option 2"
+  previewSelect3: "Option 3"
+  previewMainText: "This is how primary text looks"
+  previewSecondaryText: "This is how secondary text looks"
+  previewDemoDialog: "📦 Show Example Dialog"
+  previewDialogTitle: "Example Dialog"
+  previewDialogBody: "This dialog is drawn by the app itself, following the theme and custom colors in real time."
+  previewDialogInput: "Type something to test the input box:"
+  previewDialogResult: "You entered: {value}"
+  loading: "Loading..."
+  noPrompts: "No prompts yet"
+  aiNoKeys: "No keys added yet"
+  badgeBuiltIn: "Built-in"
+  badgeUser: "User"
+  badgeOverridden: "(Overridden)"
+  badgeLocal: "Local"
+  promptNameRequired: "Please enter a prompt name"
+  promptContentRequired: "Please enter prompt content"
+  promptSaved: "Prompt saved"
+  promptSaveFailed: "Save failed: {msg}"
+  promptSavedLocal: "Prompt saved (local)"
+  promptDeleted: "Prompt deleted"
+  promptDeleteFailed: "Delete failed: {msg}"
+  deletePromptConfirm: "Delete prompt \"{name}\"?"
+  promptInfoCustom: "Use the content in the custom input box below as the system prompt"
+  promptInfoBuiltin: "Built-in prompt"
+  promptInfoUser: "User custom prompt"
+  promptInfoOverridden: " (overridden by user version)"
+  promptInfoLocal: "Local custom prompt"
+  promptNameUser: "{name} (User)"
+  promptNameLocal: "{name} (Local)"
+  keyRequired: "Please enter a key"
+  keyExists: "Key already exists"
+  keyAdded: "Key added"
+  keyDeleted: "Key deleted"
+  bgUploadSuccess: "Background uploaded"
+  bgUploadFailed: "Upload failed: {msg}"
+  bgUploadError: "Background upload failed"
+  saved: "Settings saved"
+  resetConfirm: "Reset to default settings?"
+  resetDone: "Settings reset"
+  exportDone: "Settings exported"
+  invalidConfig: "Invalid config file"
+  importDone: "Settings imported"
+  importFailed: "Import failed: {msg}"
+  imageFilter: "Image files"
+  remotePasswordSet: "Password set"
+
+ai:
+  title: "AI Generation"
+  followSettings: "Use Settings"
+  customModel: "Custom Model"
+  settings: "Settings"
+  clearChat: "Clear Chat"
+  currentFile: "Current file: {name}"
+  noContextFile: "No context file"
+  inputPlaceholder: "Enter your request... (Enter to send, Shift+Enter for newline)"
+  send: "Send"
+  stop: "Stop"
+  needApiKey: "Please configure an API key in Settings first."
+  thinking: "Thinking..."
+  error: "Error"
+  regenerate: "Regenerate"
+  requestFailed: "Request failed: {msg}"
+  apiError: "API Error {status}: {body}"
+  apiUnavailable: "AI feature unavailable (electronAPI not loaded)"
+  stopped: "Stopped"
+  pendingOps: "Pending file operations ({count})"
+  opCreate: "Create"
+  opEdit: "Edit"
+  opDelete: "Delete"
+  view: "View"
+  accept: "✓ Apply"
+  reject: "✕ Reject"
+  original: "Original content"
+  updated: "Updated"
+  willDelete: "This file will be deleted"
+  opFailedNoApi: "❌ File operation failed: electronAPI unavailable"
+  openFileFirst: "⚠️ Please open a file first to determine the project directory"
+  created: "✅ Created: {path}"
+  edited: "✅ Edited: {path}"
+  deleted: "✅ Deleted: {path}"
+  createFailed: "❌ Create failed: {msg}"
+  editFailed: "❌ Edit failed: {msg}"
+  deleteFailed: "❌ Delete failed: {msg}"
+  emptyHint: "💡 Describe your needs and AI will help you write and modify code"
+  clearConfirm: "Clear all chat history?"
+  cleared: "Chat cleared"
+
+kether:
+  builtinText: "Text"
+  builtinList: "List"
+  builtinBrace: "Block Group"
+  slotHelp: "Click or drag here to add an action<br>CTRL+Click quick add text<br>SHIFT+Click quick add action group<br>CTRL+SHIFT+Click quick add list"
+  back: "← Back"
+  title: "Kether Block Editor"
+  actionCount: "{count} actions"
+  blocks: "🧊 Blocks"
+  code: "📝 Code"
+  confirm: "✓ Confirm"
+  undo: "Undo (Ctrl+Z)"
+  redo: "Redo (Ctrl+Shift+Z)"
+  autoSync: "Auto sync blocks to Kether code"
+  minimize: "Minimize"
+  maximize: "Maximize"
+  close: "Close"
+  searchActions: "Search actions..."
+  workspaceInfo: "Entries ({entries}) · Blocks ({blocks})"
+  blockColor: "Block Color"
+  provider: "Provider"
+  category: "Category"
+  displayName: "Display Name"
+  nameCnEn: "Chinese + English"
+  nameCn: "Chinese only"
+  nameEn: "English only"
+  quoteBtn: "Quote Button"
+  semanticDisplay: "Semantic Display"
+  on: "On"
+  off: "Off"
+  addBlock: "+ Add Block"
+  newEntry: "📥 New Entry"
+  newDef: "📦 New Definition"
+  clear: "🗑 Clear"
+  codePreview: "▶ Code Preview"
+  codePreviewOpen: "▼ Code Preview"
+  empty: "(empty)"
+  stash: "Stash"
+  stashArea: "📦 Stash"
+  stashDrop: "Drag blocks here to stash"
+  saved: "💾 Saved"
+  common: "Common"
+  custom: "Custom"
+  catCommon: "⭐ Common"
+  catAll: "All"
+  deleteCommonConfirm: "Delete common block \"{name}\"?"
+  noCommonBlocks: "No common blocks yet<br><small>Right-click a block to add it as common</small>"
+  cancel: "Cancel"
+  insert: "Insert"
+  copyBlock: "📋 Copy Block"
+  viewDetail: "📖 View Description"
+  addFavorite: "⭐ Add as Common Block"
+  noMatchActions: "No matching actions"
+  customSymbol: "✎ Custom"
+  customSymbolPlaceholder: "Custom symbol"
+  itemEdit: "Visual item editor"
+  posEdit: "Visual position editor"
+  emptyState: "Click <strong>+ Add Block</strong> to start"
+  emptyStateHint: "or switch to code mode to type directly"
+  then: "Then"
+  else: "Else"
+  addCondition: "+ Add Condition"
+  deleteBranch: "Delete this branch"
+  addWhenBranch: "+ Add when Branch"
+  customBlock: "⧉ Custom"
+  ketherCode: "Kether code..."
+  removeQuote: "Click to remove quotes"
+  addQuote: "Click to add quotes"
+  textValue: "Text value..."
+  unquoted: "# No Quotes"
+  value: "Value..."
+  list: "[ ] List"
+  actionGroup: "{ } Action Group"
+  entry: "Entry"
+  normal: "Normal"
+  entrySlotHint: "+ Drag or click to add blocks"
+  blockDetail: "Block Details"
+  fieldName: "Name"
+  fieldProvider: "Provider"
+  fieldType: "Type"
+  private: "Private"
+  public: "Public"
+  fieldCategory: "Category"
+  fieldSyntax: "Syntax"
+  fieldExample: "Example"
+  fieldSemantic: "Semantics"
+  fieldDescription: "Description"
+  selectAction: "Select Action"
+  search: "Search..."
+  noMatch: "No match"
+  ctxDetail: "📋 View Description"
+  ctxCopy: "📋 Copy"
+  ctxPaste: "📄 Paste"
+  ctxSave: "💾 Save Statement"
+  ctxDelete: "🗑 Delete"
+  saveStmtPrompt: "Save statement name:"
+  saveStmtDefault: "Block"
+  codeTitle: "Kether Code"
+  parseToBlocks: "🔄 Parse to Blocks"
+
+chemdah:
+  noDialogues: "No dialogue entries"
+  dialoguesHeader: "Dialogue Entries"
+  addDialogue: "+ Add Dialogue"
+  cardView: "📋 Card View"
+  mindmapView: "🌐 Mind Map"
+  syncToSource: "Sync to Source"
+  autoSync: "Auto Sync"
+  syncHint: "Changes will be applied to the editor after clicking \"Sync to Source\""
+  dialogueNav: "Dialogue Navigation"
+  fileOptions: "File Options"
+  theme: "Theme"
+  customTheme: "Custom..."
+  customThemePlaceholder: "Enter custom theme name"
+  title: "Title"
+  optionalTitle: "Optional Title"
+  flags: "Tags (Flags)"
+  addFlag: "+ Add Tag"
+  custom: "Custom..."
+  switch: "SWITCH"
+  dialogue: "Dialogue"
+  noCondition: "No Condition"
+  optionCount: "{count} options"
+  deleteDialogue: "Delete this dialogue"
+  dialogueIdPrefix: "Dialogue ID: {id}"
+  npcId: "NPC ID"
+  npcIdPlaceholder: "e.g. adyeshach BoFeng"
+  whenBranches: "Conditional Branches (When)"
+  addBranch: "+ Add Branch"
+  noWhenBranches: "No conditional branches (default jump will be used)"
+  npcText: "NPC Dialogue Text"
+  npcTextPlaceholder: "NPC dialogue content..."
+  format: "Format"
+  tags: "Tags"
+  ifCondition: "If (if)"
+  conditionPlaceholder: "Condition expression or true"
+  openJump: "Jump (open)"
+  targetDialoguePlaceholder: "Target dialogue name"
+  deleteBranch: "Delete branch"
+  playerOptions: "Player Options"
+  addOption: "+ Add Option"
+  noOptions: "No player options"
+  condition: "Condition"
+  optionTextPlaceholder: "Option text"
+  thenScript: "Run Script (KETHER)"
+  ketherScriptPlaceholder: "KETHER script content..."
+  deleteOption: "Delete option"
+  newDialoguePrefix: "New Dialogue_{count}"
+  newQuestPrefix: "New Quest_{count}"
+  defaultReply: "Okay"
+  customTagPrompt: "Enter custom tag name:"
+  syncedToSource: "Synced from visual editor to source"
+  empty: "(empty)"
+  entryNode: "Entry Node"
+  orphanNode: "Orphan Node"
+  nodeCount: "{count} nodes"
+  edgeCount: "{count} edges"
+  entryCount: "{count} entries"
+  mindmapHint: "🔄 Scroll to zoom · Drag to pan · Click node to jump · Double-click to reset"
+  emptyObject: "Empty Object"
+  yamlError: "YAML Parse Error"
+  yamlErrorHint: "Please fix the syntax error in source code mode and try again."
+  questList: "Quest List"
+  addQuest: "+ Add Quest"
+  noQuests: "No quest data"
+  questNav: "Quest Navigation"
+  subtaskCount: "{count} subtasks"
+  deleteQuest: "Delete this quest"
+  basicInfo: "Basic Info"
+  questId: "Quest ID"
+  questIdPlaceholder: "Unique quest ID"
+  displayName: "Display Name"
+  questNamePlaceholder: "Quest display name"
+  type: "Type"
+  description: "Description"
+  questDescPlaceholder: "Quest description..."
+  depend: "Prerequisites (depend)"
+  dependPlaceholder: "Comma-separated quest IDs"
+  statsVisible: "Stats Progress Visible"
+  show: "Show"
+  hide: "Hide"
+  optional: "Optional Entry"
+  yes: "Yes"
+  no: "No"
+  subtasks: "Subtasks"
+  noSubtasks: "No subtasks"
+  agentScripts: "Quest Lifecycle Scripts (Agent)"
+  addHook: "+ Add Hook"
+  noHooks: "No Agent hooks set"
+  ketherScript: "KETHER script..."
+  deleteHook: "Delete this hook"
+  addons: "Addons"
+  noAddons: "No Addon components set"
+  search: "Search..."
+  addSelected: "Add Selected"
+  select: "Select"
+  addSelectedCount: "Add Selected ({count})"
+  cancel: "Cancel"
+  itemEditor: "Visual Item Editor"
+  namespaceNotice: "⚠ This namespace is addon-supported, some servers may not support it"
+  namespace: "Namespace"
+  itemId: "Item ID"
+  itemIdPlaceholder: "e.g. diamond, diamond_sword or *"
+  wildcard: "Wildcard"
+  display: "Display"
+  nameField: "Name (name)"
+  exact: "= (Exact)"
+  notEqual: "!= (Not equal)"
+  ignoreColor: "# (Ignore color)"
+  contains: "( ) (Contains)"
+  namePlaceholder: "Name text"
+  lore: "Lore (one per line)"
+  attributes: "Attributes"
+  amountPlaceholder: "Amount"
+  damagePlaceholder: "Durability/damage value"
+  valuePlaceholder: "Value"
+  enchants: "Enchantments"
+  add: "+ Add"
+  noEnchants: "No enchantments added"
+  nbt: "NBT"
+  noNbt: "No NBT added"
+  preview: "Preview"
+  confirm: "Confirm"
+  enchantIdPlaceholder: "Enchantment ID (e.g. damage_all)"
+  level: "Level"
+  nbtPathPlaceholder: "NBT path (e.g. craftengine:id)"
+  value: "Value"
+  minecraftVanilla: "minecraft (vanilla)"
+  nativeSupport: "Native support"
+  addonSupport: "Addon support (warning shown when used)"
+  taskManager: "Subtask Manager — {name}"
+  totalSubtasks: "{count} subtasks in total"
+  subtaskTab: "Subtask {index}"
+  subtaskPrefix: "Subtask {count}"
+  addSubtask: "+ Add Subtask"
+  addSubtaskHint: "Click the \"Add Subtask\" button on the left to add"
+  close: "Close"
+  selectObjectiveType: "Select Subtask Objective Type"
+  selectTaskObjectiveType: "Select Objective Type"
+  searchObjectivePlaceholder: "Search objective types..."
+  noSubtaskSelected: "No subtask selected"
+  selectType: "Select type..."
+  delete: "Delete"
+  subtaskId: "Subtask ID"
+  name: "Name"
+  objectiveType: "Objective Type"
+  customObjectivePlaceholder: "Custom objective type"
+  objectiveCondition: "Condition"
+  position: "Position"
+  posEdit: "Visual position editor"
+  itemEdit: "Visual item editor"
+  ketherScriptField: "KETHER script ($)"
+  goal: "Goal (goal)"
+  amountField: "Amount (amount)"
+  subtaskAgentScripts: "Subtask Agent Scripts"
+  addonManager: "Addon Manager — {name}"
+  totalAddons: "{count} addons in total"
+  addAddon: "+ Add Addon"
+  addAddonHint: "Click the \"Add Addon\" button on the left to add"
+  noAddonComponents: "No addons"
+  selectAddon: "Select Addon"
+  searchAddonPlaceholder: "Search addon names..."
+  customKeyValues: "Custom Key-Value Pairs"
+  enabled: "Enabled"
+  deleteItem: "Delete this item"
+  addNode: "+ Add Node"
+  noConfigurableFields: "This addon has no configurable fields"
+  selectAgentHook: "Select Agent Hook"
+  searchHookPlaceholder: "Search hook names..."
+  customScopePrompt: "Enter custom scope:"
+  customScopeLabel: "@ Custom"
+  selectScopeForHook: "Select scope for {hook}"
+  searchScopePlaceholder: "Search scopes..."
+  customHookPrompt: "Enter hook name + scope (e.g. completed @ all):"
+  scopeGroup: "Scope"
+  posEditor: "Position Expression Editor"
+  world: "World"
+  required: "Required"
+  xyz: "Position X Y Z"
+  mode: "Mode"
+  exactPos: "Exact position"
+  radiusPos: "Within range (~ radius)"
+  areaPos: "Within region (> position)"
+  multiPos: "Multiple positions (&)"
+  radius: "Radius"
+  radiusPlaceholder: "e.g. 10"
+  areaTo: "Region to X Y Z"
+  toX: "To X"
+  toY: "To Y"
+  toZ: "To Z"
+  multiCoords: "Multiple Positions"
+  addCoord: "+ Add Position"
+  ok: "OK"
+  worldRequired: "Please enter a world name"
+  selectTypeTitle: "Select Chemdah Interpreter Type"
+  typeUnknownMsg: "Unable to auto-detect file type{detected}. Please manually select the interpreter type:"
+  detectedAs: " (detected as {type})"
+  interpreterType: "Interpreter Type"
+  typeConversation: "Conversation"
+  typeQuest: "Quest"
+  scopeLabel: "Scope"
+  scopeFile: "This file only"
+  scopeDirectory: "All files in current folder"
+  scopeProject: "Whole project"
+  typeUnknown: "Unknown"
+  typeConversationFull: "Conversation File"
+  typeQuestFull: "Quest File"
+  unknownTypeTitle: "Unrecognized File Type"
+  unknownTypeMsg: "This file is neither a conversation nor a quest type."
+  unknownTypeHint: "Edit in source code mode, or"
+  manualSelect: "manually select type"
+  rendering: "Rendering..."
+  visualEditTitle: "Visual Edit"
+  visualEditHint: "Please select an interpreter type and retry, or edit in source code mode."
+
+craftengine:
+  syncedToSource: "Synced to source"
+  fieldEmpty: "(empty)"
+  type_config: "Plugin Config"
+  listEmpty: "No entries"
+  listAdd: "Add"
+  mapAdd: "+ Add key"
+  unionEmpty: "Not set"
+  unionClear: "Clear"
+  customValue: "Custom value…"
+  jsonEditor: "JSON Editor"
+  jsonEditorHint: "Edit this field as JSON; changes apply immediately"
+  material: "Material (material)"
+  customModelData: "Custom Model Data (custom-model-data)"
+  texture: "Texture (texture)"
+  category: "Category (category)"
+  dataLabel: "Item Data (data)"
+  displayName: "Display Name (item-name)"
+  itemName: "Item Name (display-name)"
+  lore: "Lore Lines (lore)"
+  dataJsonHint: "Full JSON editing of item data"
+  model: "Model (model)"
+  modelJsonHint: "Full JSON editing of the model"
+  behaviorType: "Behavior Type (behavior.type)"
+  behavior: "Behavior (behavior)"
+  settings: "Settings (settings)"
+  events: "Events (events)"
+  updater: "Updater (updater)"
+  state: "Block State (state)"
+  states: "States (states)"
+  statesHint: "Multi-state mapping, edited as JSON"
+  hardness: "Hardness (hardness)"
+  resistance: "Resistance (resistance)"
+  behaviors: "Behaviors (behaviors)"
+  loot: "Loot (loot)"
+  variants: "Variants (variants)"
+  variantsHint: "Variant elements / hitboxes / seats"
+  settingsItem: "Item (item)"
+  hitTimes: "Hit Times (hit-times)"
+  settingsSounds: "Sounds (sounds)"
+  recipeType: "Recipe Type (type)"
+  pattern: "Pattern (pattern)"
+  patternHint: "One pattern string per line"
+  ingredients: "Ingredients (ingredients)"
+  ingredientsHint: "Key-value pairs: character = item"
+  result: "Result (result)"
+  resultId: "Item (id)"
+  resultCount: "Count (count)"
+  experience: "Experience (experience)"
+  time: "Time (time)"
+  base: "Base Item (base)"
+  addition: "Addition Item (addition)"
+  templateType: "Smithing Template (template_type)"
+  group: "Group (group)"
+  unlockOnIngredient: "Unlock on Ingredient (unlock_on_ingredient_obtained)"
+  unlockOnJoin: "Unlock on Join (unlock_on_join)"
+  otherFields: "Other Fields"
+  type_item: "Item"
+  type_block: "Block"
+  type_furniture: "Furniture"
+  type_recipe: "Recipe"
+  type_generic: "Generic"
+  yamlError: "Unable to parse YAML"
+  yamlErrorHint: "The file contains a syntax error and cannot be visually edited. Fix it in source mode and retry."
+  noSections: "No editable sections found"
+  noEntries: "No entries in this section"
+  addEntry: "+ Add Entry"
+  emptySection: "Empty Section"
+  selectEntry: "Select an entry on the left to edit"
+  ownerLoading: "Locating project ownership..."
+  syncToSource: "Sync to Source"
+  autoSync: "Auto Sync"
+  ownerBadge: "Project: {root} · Pack: {pack}"
+  ownerNone: "No CE project ownership found"
+  newEntryTitle: "New Entry"
+  section: "Section"
+  entryNamespace: "Namespace (namespace)"
+  entryPath: "Path (path)"
+  confirmAdd: "Add"
+  confirmDelete: "Delete"
+  deleteEntry: "Delete Entry"
+  deleteConfirmTitle: "Confirm Delete"
+  deleteConfirmMsg: "Delete entry {key}? This cannot be undone."
+  entryNamespaceInvalid: "Namespace may only contain lowercase letters, digits and underscores"
+  entryPathInvalid: "Path may only contain letters, digits, underscores, dots, slashes and dashes"
+  entryExists: "Entry {key} already exists"
+  entryId: "Entry ID"
+  entryIdInvalid: "ID may only contain letters, digits, underscores, dots and dashes"
+  keyOnlyHint: "This section's entries have no namespace:path prefix, enter the ID directly"
+  type_equipment: "Equipment"
+  type_image: "Image"
+  type_category: "Category"
+  type_sound: "Sound"
+  type_emoji: "Emoji"
+  type_jukeboxSong: "Jukebox Song"
+  type_painting: "Painting"
+  type_globalVariable: "Global Variable"
+  type_translation: "Translation"
+  type_lang: "Lang"
+  type_lootSource: "Loot Source"
+  type_placedFeature: "Placed Feature"
+  type_template: "Template"
+  type: "Type (type)"
+  allItems: "All Items (all_items)"
+  arguments: "Arguments (arguments)"
+  ascent: "Ascent (ascent)"
+  assetId: "Asset ID (asset_id)"
+  author: "Author (author)"
+  biome: "Biome (biome)"
+  char: "Character (char)"
+  chars: "Characters (chars)"
+  chatCompletion: "Chat Completion (chat_completion)"
+  clientBoundMaterial: "Client Bound Material (client-bound-material)"
+  column: "Column (column)"
+  comparatorOutput: "Comparator Output (comparator_output)"
+  conditions: "Conditions (conditions)"
+  content: "Content (content)"
+  description: "Description (description)"
+  dimension: "Dimension (dimension)"
+  dimensionType: "Dimension Type (dimension_type)"
+  equipment: "Equipment (equipment)"
+  equipmentType: "Type (type)"
+  feature: "Feature (feature)"
+  featureHint: "String or object, e.g. default:tree or {type: ...}"
+  file: "File (file)"
+  font: "Font (font)"
+  food: "Food (food)"
+  globalVariableMap: "Global Variable (key-value)"
+  gridSize: "Grid Size (grid_size)"
+  height: "Height (height)"
+  hidden: "Hidden (hidden)"
+  icon: "Icon (icon)"
+  image: "Image (image)"
+  keywords: "Keywords (keywords)"
+  kvWholeHint: "Whole entry is a key-value map; JSON values are parsed automatically"
+  layers: "Layers (layers)"
+  layersHint: "Available layers: {names}; value can be a texture path or JSON object"
+  length: "Length (length)"
+  list: "Item List (list)"
+  lootSourceType: "Source Type (type)"
+  mapColor: "Map Color (map-color)"
+  merges: "Merges (merges)"
+  name: "Name (name)"
+  overrides: "Overrides (overrides)"
+  overwrite: "Overwrite (overwrite)"
+  permission: "Permission (permission)"
+  placement: "Placement (placement)"
+  priority: "Priority (priority)"
+  range: "Range (range)"
+  ref: "Reference (ref)"
+  replace: "Replace (replace)"
+  row: "Row (row)"
+  showInOpTab: "Show in OP Tab (show_in_op_tab)"
+  sound: "Sound (sound)"
+  sounds: "Sounds (sounds)"
+  soundsHint: "One per line: plain string or JSON object"
+  subtitle: "Subtitle (subtitle)"
+  tags: "Tags (tags)"
+  target: "Target (target)"
+  targets: "Targets (targets)"
+  template: "Template (template)"
+  title: "Title (title)"
+  translationMap: "Translation Map (key-value)"
+  width: "Width (width)"
+  world: "World (world)"
+  entryKey: "Entry Key (namespace:path)"
+  entryKeyHint: "Takes effect immediately; global_variables / translations / lang sections have no prefix"
+  tabBasic: "Basic"
+  tabModel: "Model"
+  tabItemData: "Item Data"
+  tabBehavior: "Behavior"
+  tabEvents: "Events"
+  eventsAdd: "+ Add Event"
+  eventsBack: "← Back to List"
+  eventsTrigger: "Trigger (on)"
+  eventsTriggerRequired: "Please enter a trigger name"
+  eventsTriggerHint: "Multiple triggers separated by space or comma, e.g. attack left_click"
+  eventsTriggerPh: "attack right_click…"
+  eventsFunctions: "Functions (functions)"
+  eventsFunctionsHint: "Executed in order; functions can nest conditions and events"
+  eventsScalarPh: "Raw string (custom/advanced)"
+  eventsContent: "Event Content"
+  eventsCount: "{count} events"
+  eventsEmpty: "No events yet, click Add Event in the top-right"
+  newEventTitle: "New Event"
+  newEventHint: "Multiple triggers separated by space or comma, e.g. attack left_click"
+  eventExists: "Event {name} already exists"
+  eventDeleteMsg: "Delete event {name}? This cannot be undone."
+
+content:
+  categories:
+    实体操作: "Entity Operations"
+    数据与变量: "Data & Variables"
+    文本与运算: "Text & Operations"
+    游戏机制: "Game Mechanics"
+    系统管理: "System Administration"
+    逻辑判断: "Logic"
+    世界与坐标: "World & Coordinates"
+    物品管理: "Item Management"
+    脚本控制: "Script Control"
+    界面与显示: "UI & Display"
+    时间与日期: "Time & Date"
+    基本: "Basic"
+  param:
+    symbol: "Symbol"
+    action: "Action"
+    int: "Integer"
+    double: "Decimal"
+    number: "Number"
+    string: "Text"
+    token: "Parameter"
+    player: "Player"
+    item: "Item"
+    location: "Location"
+    world: "World"
+    time: "Time"
+    message: "Message"
+    permission: "Permission"
+    list: "List"
+    条件: "Condition"
+    执行: "Then"
+    否则: "Else"
+    次数: "Count"
+    变量: "Variable"
+    条件列表: "Condition list"
+
+  kether:
+    all: 'Check whether all {return values} in the action list are {yes}.'
+    any: 'Check whether any {return value} in the action list matches {yes}.'
+    async: 'Execute actions in an {async} schedule not bound to the lifecycle.<br>When the program ends, all unfinished {#Async} actions are closed immediately.'
+    await: Wait for the action to complete.
+    await_all: 'Wait for {all actions} in the {action list} to complete.'
+    await_any: 'Wait for {any action} in the {action list} to complete.'
+    call: '{This statement does nothing in Shell mode.}<br>Call any declared function, including the {main} function.'
+    exit: Exit the program.
+    goto: '{This statement does nothing in Shell mode.}<br>Jump to any declared function, including the {main} function, or to a specific conversation structure.'
+    if_else: 'Basic logic statement.<br>When the {return value} of an action is {yes}, execute the second action; otherwise execute the third.'
+    literal: 'Create and return a {string}.<br>When the string contains spaces, wrap it in {double quotes} or {single quotes}; quotes may be omitted when there are no spaces.<br><br>{Note:}<br>Even {literal 100} is not an integer; use the {#Type} action if needed.'
+    not: 'Check whether the action''s {return value} is {false}, i.e. negate the result.'
+    repeat: Repeat an action several times.
+    sleep: Block the worker thread for a period of time.
+    variable_get: Get a variable.
+    variable_set: 'Set a variable to a {primitive type} or the {return value} of an action.'
+    while: 'Basic logic statement.<br>While the {return value} of the first action is {yes}, repeat the second action until it becomes {false}.'
+    absorption_amount: 'Get or set the player''s absorption health.'
+    action_bar: 'Send the action''s {return value} to the {executor} as an {action bar} message.'
+    address: 'Get the player''s IP address.'
+    allow_flight: Check or change whether the player may fly.
+    array: 'Return all {return values} of the action list as a {collection}.'
+    attack_cooldown: 'Get the player''s attack cooldown.'
+    bed_spawn: 'Get or change the player''s bed spawn point; the block must be a bed.'
+    'bed_spawn_x,y,z': 'Get an axis of the player''s bed spawn point.'
+    blocking: Check whether the player is blocking.
+    break: 'Ends the loop body when used inside loop statements ({ForEach, Join, Map, While}).'
+    'case & when': 'A complex selection statement with richer features than #IF.<br>A complete selection statement needs at least one branch, i.e. a {when block}.<br><br>Each standard branch consists of {when} {{condition}} -> {{expression}}.<br>You can also use {else} {{expression}} as the default branch.<br><br>{Here is an example:}<br>set number to 3<br>set numberProvided to case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> "One"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> "Two"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> "Three"<br>&nbsp;&nbsp;&nbsp;&nbsp;else "One"<br>]<br>log inline "You provide {{ &numberProvided }}"<br><br>{The result is:}<br>You provide Three<br><br>{It can also be used like other statements:}<br>set number to 3<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> log "One"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 2 -> log "Two"<br>&nbsp;&nbsp;&nbsp;&nbsp;when 3 -> log "Three"<br>&nbsp;&nbsp;&nbsp;&nbsp;else log "One"<br>]<br><br>{Or with multiple statements:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when 1 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log "Monday"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log "First day of the week"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when [ 2 3 4 5 6 7 ] -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log "Sunday"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log "Other days"<br>]<br><br>{Or for logic checks:}<br>set number to 1<br>case &number [<br>&nbsp;&nbsp;&nbsp;&nbsp;when < 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log "Small"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;when > 10 -> {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log "Big"<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;else log "Other"<br>]'
+    check: 'Compare the {return values} of two actions with multiple comparison modes.<br><br>1. Equal ({==}, {is}): the two values are the same {literally}.<br>2. Not equal ({!=}, {not}): the two values differ {literally}.<br>3. Similar equal ({=?}, {is?}): the two values are the same {literally} when {case is ignored}.<br>4. Absolute equal ({=!}, {is!}): the two values are the same in {memory}.<br>5. Greater than ({>}, {gt}): the first value is {greater than} the second.<br>6. Greater or equal ({>=}): the first value is {greater than} or {equal to} the second.<br>7. Less than ({<}, {lt}): the first value is {less than} the second.<br>8. Less or equal ({<=}): the first value is {less than} or {equal to} the second.<br>9. Right contains left (in): whether the second value contains the first.<br>10. Left contains right (has): whether the first value contains the second.<br><br>{Note:}<br>When comparing with an {equal} condition, {#Type} inference actions are automatically appended to both arguments.'
+    color: 'Replace all {color codes} in the action''s {return value}.<br>Advanced color codes provided by {TabooLib} are supported.'
+    command: 'Execute the action''s {return value} as a command, defaulting to the {player} as executor.'
+    compass_target: 'Get or change the player''s compass target.'
+    'compass_x,y,z': 'Get an axis of the player''s compass target.'
+    conversing: 'Tests to see if a Conversable object is actively engaged in a conversation.<br><br>{Returns:}<br>True if a conversation is in progress'
+    date_day: 'The day of the year, month, or week.<br>Year: ({1} ~ {365})<br>Month: ({1} ~ {31})<br>Week: ({1} ~ {7})'
+    date_hour: 'The current hour ({0} ~ {23}).'
+    date_minute: 'The current minute ({0} ~ {59}).'
+    date_month: 'The current month ({1} ~ {12}).'
+    date_second: 'The current second ({0} ~ {59}).'
+    date_year: 'The current year ({MIN_YEAR} ~ {MAX_YEAR}).'
+    dead: Check whether the player is dead.
+    element: 'Get the element at the given index from the action''s {return value} as a {list}.'
+    exhaustion: 'Get or change the player''s exhaustion.'
+    exp: 'Get or change the player''s experience data; only {player exp} is modifiable.'
+    first_played: Return when the player first played.
+    fly___walk_speed: 'Get or change the player''s flying or walking speed.'
+    flying: Check or change whether the player is flying.
+    food_level: 'Get or change the player''s food level.'
+    foreach: 'Iterate over all {members} of the first action''s {return value}, passing each as a {temporary variable} to the second action.'
+    format_time: 'Format a specific time using a specific {format}.<br><br>'
+    gamemode: 'Get or change the player''s game mode.<br><br>Available modes:<br>{Survival}: SURVIVAL, 0<br>{Creative}: CREATIVE, 1<br>{Adventure}: ADVENTURE, 2<br>{Spectator}: SPECTATOR, 3'
+    gliding: Check or change whether the player is gliding.
+    glowing: Check or change whether the player is glowing.
+    gravity: Check or change whether the player has gravity.
+    health: 'Get or change the player''s health or max health.'
+    inline: 'Replace all {inline scripts} in the action''s {return value}. <br>An inline script inserts script code into a string using {{{} ... {}}}.'
+    inside_vehicle: Check whether the player is inside a vehicle.
+    javascript: 'Run {JavaScript} code and {return} the result.<br>All variables of the current program are passed in, along with the event ({event}), sender ({sender}), and server ({server}).'
+    join: 'Join all {return values} of the action list into a {string}, using a {space} as separator by default.'
+    jumping: Check or change whether the player is jumping.
+    last_played: 'Return the player''s last played/logged-in time.'
+    leashed: Returns whether the entity is currently leashed.
+    level: 'Get or change the player''s level.'
+    locale: 'Get the player''s client language.'
+    location: Build a location.
+    location1: 'Get or change the player''s location.'
+    location_angle: 'Get or change the player''s angle.'
+    'location_x,y,z': 'Get or modify the X, Y, Z, Yaw, or Pitch of a location.'
+    map: 'Iterate over all {members} of the first action''s {return value}, passing each as a {temporary variable} to the second action.<br>Finally, return all {return values} of the second action as a {collection}.<br><br>Unlike {#ForEach}, {#Map} collects every non-empty result.<br><br>Returns a list containing the results of applying the given transform function to each element in the original collection.'
+    math: 'Process all {return values} of the action list with a {math operator}.<br><br>Supported operators:<br>{Add}: +, add, plus<br>{Subtract}: -, sub, minus<br>{Multiply}: *, mul, times<br>{Divide}: /, div, divided<br>'
+    name: 'Get the player''s game name, display name, or list name.'
+    no_damage_tick: 'Get or change the player''s invulnerability ticks.'
+    null: 'Return a {null} value.'
+    on_guard: Check whether the player is on the ground; this data comes from the client and may be tampered with.
+    op: Check or change whether the player has OP.
+    optional: 'Check whether the action''s {return value} is non-null.'
+    pass: 'Return an {empty string}.'
+    pause: 'Forcefully pause the program''s {lifecycle}; this cannot be undone until the program closes.'
+    permission: 'Check whether the {executor} holds the action''s {return value} as a permission.'
+    placeholderapi: 'Replace all {PlaceholderAPI} placeholders in the action''s {return value}.'
+    print: 'Send the action''s {return value} to the {console} as a message.'
+    random: 'Randomly return a {float} within a range, or randomly return a {member} from the action''s {return value}.<br>When defining a range, the second argument can be omitted to select from 0 to the range.'
+    random2: 'Randomly return a {float} or {integer} within a range; unlike #{random}, the range is given by an action''s return value.'
+    range: 'Create a numeric {collection}; omitting the {step} or using an {integer} step creates an integer collection, otherwise a float collection.<br>The collection type depends on the step type, not the range number type.'
+    remaining_air: 'Get or change the player''s remaining air.'
+    riptiding: Check whether the player is riptiding (trident).
+    round: 'Round the action''s {return value} as a {float} to the nearest {integer}.'
+    saturation: 'Get or change the player''s saturation.'
+    scale: 'Format the action''s {return value} as a {float} with two decimal places.'
+    size: 'Get the length of the action''s {return value} as a {list}.'
+    sleep_ignored: 'Returns whether the player is ignored as not sleeping. If everyone is either sleeping or has this flag set, time will advance to the next day. If everyone has this flag set but no one is actually in bed, then nothing will happen.'
+    sleep_ticks: 'Return the player''s sleep ticks.'
+    sleeping: Check whether the player is sleeping.
+    sneaking: Check whether the player is sneaking.
+    sound: 'Play the text as a sound; the default volume and pitch are {1.0}.<br>Use "{resource:}" as a prefix to play a sound from a {resource pack}.'
+    split: 'Split the action''s {return value} as a string and return the parts.'
+    sprinting: Check whether the player is sprinting.
+    subtitle: 'Send the action''s {return value} to the {executor} as a {subtitle}; the default fade in, stay, fade out times are {0}, {20}, {0}.'
+    swimming: Check or change whether the player is swimming.
+    switch: 'Switch the current {observer} to a specific player.'
+    tell: 'Send the action''s {return value} to the {executor} as a message.'
+    time: 'The current system time.<br><br>Returns the current time in milliseconds. Note that while the unit of time of the return value is a millisecond, the granularity of the value depends on the underlying operating system and may be larger. For example, many operating systems measure time in units of tens of milliseconds.<br>See the description of the class Date for a discussion of slight discrepancies that may arise between "computer time" and coordinated universal time (UTC).<br><br>{Returns: }the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC.'
+    time_format: 'Format the current system time with a specific {format}.<br><br>'
+    title: 'Send the action''s {return value} to the {executor} as a {title}; the default fade in, stay, fade out times are {0}, {20}, {0}.'
+    toast: 'Send the action''s {return value} to the {executor} as an {achievement toast}.<br>A {list} is supported as the return value.<br><br>Requires server version above 1.13'
+    type: 'Create and return the closest matching {string}, {integer}, {long}, {float}, or {boolean}.<br>When the string contains spaces, wrap it in {double quotes} or {single quotes}; quotes may be omitted when there are no spaces.<br><br>Or format with a {specific type} (passing an action as the argument):<br>int, long, float, double, boolean'
+    variable: 'Modify or get global variables.<br>See the {Chemdah} documentation for global variable help.<br><br>Using {default} after a get syntax returns the default value when the data is missing; using {default} after an add (add) syntax bases the addition on that data when it is missing.'
+    variables: 'Return all variables'' {nodes} merged into a string {list}.'
+    warning: 'Send the action''s {return value} to the {console} as a warning.'
+    whitelist: Check or change whether the player is whitelisted.
+    world: Get the name of the world the player is currently in.
+    import: Import a namespace.
+    release: Release a namespace.
+    block: 'Get the integer X, Y, Z values of a location.'
+    cancel: 'Used in script proxies at the start of a {quest} or {conversation} to cancel the behavior.'
+    ceil: Round up
+    close: Used in conversation script proxies to end the conversation.
+    distance: Get the distance between two locations; returns -1 if they are in different worlds.
+    equipment_check: 'Check whether the player''s equipment is a specific item using {Chemdah} item expressions.<br>See the {Chemdah} documentation for expression help.<br><br>Available slots:<br>{Main hand}: hand, mainhand<br>{Off hand}: offhand<br>{Helmet}: head, helmet<br>{Chestplate}: chest, chestplate<br>{Leggings}: legs, leggings<br>{Boots}: boots, feet'
+    floor: Round down
+    inventory_count: 'Count a specific item in the player''s inventory using {Chemdah} item expressions.<br>See the {Chemdah} documentation for expression help.'
+    inventory_check: 'Check whether the player''s inventory contains a specific item using {Chemdah} item expressions. See the {Chemdah} documentation for expression help.'
+    inventory_close: 'Close the player''s current inventory.'
+    inventory_slot_check: 'Check whether a specific slot in the player''s inventory is a certain item using {Chemdah} item expressions.<br>See the {Chemdah} documentation for expression help.'
+    inventory_take: 'Check whether the player''s inventory contains a specific item and remove it, using {Chemdah} item expressions.<br>See the {Chemdah} documentation for expression help.'
+    max: The maximum of two or more values
+    min: The minimum of two or more values
+    mmocore_attribute_point: 'Get the player''s {MMOCore} attribute points.'
+    mmocore_class: 'Get the player''s {MMOCore} class data.'
+    mmocore_level___exp: 'Get the player''s {MMOCore} level or experience.'
+    mmocore_mana: 'Get the player''s {MMOCore} mana.'
+    mmocore_skill_point: 'Get the player''s {MMOCore} skill points.'
+    mmocore_stamina: 'Get the player''s {MMOCore} stamina.'
+    mythicmobs_cast: 'Make the player cast a {MythicMobs} skill.<br><br>Available {Trigger} types:<br>DEFAULT, API, ATTACK, BOW_HIT, BLOCK, BLOCK_PLACE, BLOCK_BREAK, <br>COMBAT, CONSUME, CROUCH, UNCROUCH, DAMAGED, DROPCOMBAT, DEATH, <br>DESPAWNED, ENTERCOMBAT, EXPLODE, INTERACT, KILL, KILLPLAYER, <br>PLAYERDEATH, SHOOT, SIGNAL, SPAWN, SPLASH_POTION, SWING, TARGETCHANGE, <br>TARGETED, TELEPORT, TIMER, USE, RIGHTCLICK, READY, CAST, FISH, <br>FISH_BITE, FISH_CATCH_FISH, FISH_CATCH_ENTITY, FISH_GROUND, FISH_REEL, <br>FISH_FAIL, TAME, TAME_FAIL, TRIDENT_THROW, TRIDENT_HIT, CUSTOM'
+    origin: 'Used in conversation script proxies to get the location above the NPC''s head.'
+    particle_normal: 'Play a particle effect at the specified location; append {@self} at the end to only show it to yourself.<br><br>{Particle expression syntax:}<br>https://wiki.ptms.ink/index.php?title=Chemdah_通用粒子表达式'
+    position: Get the location of the selected NPCs; returns a list if multiple are selected.
+    profile_data: 'Modify or get the player''s variables.<br>See the {Chemdah} documentation for player variable help.<br><br>Using {default} after a get syntax returns the default value when the data is missing; using {default} after an add (add) syntax bases the addition on that data when it is missing.'
+    profile_level: 'Modify or get the player''s level or experience in {custom levels}.<br>See the {Chemdah} documentation for custom level help.'
+    quest_group_check: Check whether the player has accepted or completed a quest group.
+    quest_check: 'Check the player''s ongoing or not-yet-accepted quests (selected).<br><br>Available behaviors:<br>accept-check (whether acceptance is allowed) accepted (whether it has been accepted) completed (whether it has been completed)'
+    quest_control: 'Control the player''s ongoing or not-yet-accepted quests (selected).<br><br>Available behaviors:<br>accept (accept the quest) complete (complete the quest) fail (abandon the quest) restart (reset the quest) stop (end the quest)'
+    quest_progress: 'Get the progress of the player''s current (selected) quest or a specific entry of the (selected) quest.'
+    quest_select: Select any valid quest on the server for subsequent operations.
+    quest_data: 'Modify or get variables in the player''s current (selected) quest.<br>See the {Chemdah} documentation for quest variable help.<br><br>Using {default} after a get syntax returns the default value when the data is missing; using {default} after an add (add) syntax bases the addition on that data when it is missing.'
+    quest_stats: 'Hide or refresh the progress display of the (selected) quest or a specific entry in the (selected) quest.<br>Use a standalone {} to represent all entries.'
+    quest_tasks: Get the entry indexes of a (selected) quest.
+    quest_this: 'In {Chemdah} quest script proxies, return the current quest or entry index.'
+    quest_track: Make the player track the (selected) quest.
+    quest_tracking: Get the name of the quest the player is tracking.
+    quests: 'Get all quests the player is currently doing; use {self} to ignore shared (multiplayer) quests.'
+    schematic: 'Generate a specific {WorldEdit} schematic at the location built by {#Location}. Supports rotation and ignoring air.'
+    script: Run or stop a script file.
+    skillapi_attribute_point: 'Get the player''s {SkillAPI} attributes or attribute points.'
+    skillapi_cast: 'Make the player cast a {SkillAPI} skill.<br>'
+    skillapi_class: 'Get the player''s {SkillAPI} class data.'
+    skillapi_exp: 'Get the player''s {SkillAPI} current experience or experience needed to level up.'
+    skillapi_level: 'Get the player''s {SkillAPI} level or whether it is maxed.'
+    skillapi_mana: 'Get the player''s {SkillAPI} mana.'
+    skillapi_skill_point: 'Get the player''s {SkillAPI} skill points.'
+    talk: 'When used in {agent:begin}:<br>adds content the NPC is about to send.<br><br>When used in {agent:refuse}, {agent:end}, {then}:<br>makes the NPC send specific content immediately, often used to wrap up a conversation.'
+    trigger: 'Trigger the player''s {Trigger} quest.<br>See the {Chemdah} documentation for help on this quest type.'
+    ui: 'Only works in {UI} module configs, used to build quest progress.<br>See the {Chemdah} documentation for UI module help.'
+    wizard: Start or stop the Wizard guide.
+    workflow_fetch: 'Define offline compensation: if the player leaves the game before the {fetch reset} statement runs, the statements in {fetch mark} will run when they next join.'
+    animation: 'Make all currently selected NPCs play an animation.<br><br>{Known ones:}<br>SWING_MAIN_HAND, TAKE_DAMAGE, LEAVE_BED, SWING_OFFHAND<br>CRITICAL_EFFECT, MAGIC_CRITICAL_EFFECT'
+    controller: 'Assign a controller to all currently selected NPCs, or remove or clear them.<br><br>{Known ones:}<br>Move, Gravity, SmoothLook, LookAtPlayer, LookAtPlayerAlways<br>RandomLookGround, RandomStrollLand'
+    create: Create an NPC at a specific location.
+    delete: Delete and destroy all selected NPCs.
+    destroy: Destroy all currently selected NPCs.
+    look: 'Make all selected NPCs look at a location, optionally with smooth rotation.'
+    meta: 'Modify metadata of all selected NPCs, or reset it.<br><br>{See also:}<br>https://wiki.ptms.ink/index.php?title=AdyeshachPremium:开始:附录:第二节'
+    move: 'Make all selected NPCs walk to a location, optionally using relative coordinates.'
+    passenger: 'Add a passenger to all selected NPCs, or remove or clear them.'
+    remove: 'Remove all selected NPCs. They are removed from the manager and no longer managed, but the entities are not destroyed.'
+    respawn: Respawn all currently selected NPCs.
+    select: 'Use the action''s {return value} as an NPC {ID} or {UUID} to select it.'
+    still: 'Make all selected NPCs stop moving; the opposite of {#Move}.'
+    freeze: Freeze or resume all behaviors of the currently selected NPCs.
+    tag: 'Modify tags of all selected NPCs, or remove, clear, or check them.<br>Use the {persistent} keyword to manipulate persistent tags.<br>Note that persistent tags require Adyeshach 1.4.21 or above.'
+    teleport: 'Teleport all selected NPCs to the specified location, using the same location syntax as {#Create}.'
+    use: 'Use a specific NPC manager, or a temporary one.<br><br>{Known ones:}<br>public, private'
+    viewer: 'Add the action''s {return value} as an online player to the viewer list of all selected NPCs, or remove or clear them.'
+    modelengine_animation_add: Play a ModelEngine animation; the NPC must have a bound model.
+    modelengine_animation_remove: Remove a ModelEngine animation; the NPC must have a bound model.
+    germengine_animation_add: Play a GermEngine animation; the NPC must have a bound model.
+    germengine_animation_remove: Remove a GermEngine animation; the NPC must have a bound model.
+    arr-clear: Clear all elements in the list.
+    map-size: 'Get the number of entries in a Map, or the string length if it is not a Map.'
+    map-mutable: Convert to a mutable map.
+    map-shuffle: Shuffle the map.
+    map-reverse: Reverse the map.
+    map-get: Get an element from the map.
+    map-put: Append a key-value pair to the map.
+    map-remove: Remove a key-value pair from the map.
+    map-keys: Get the list of keys in the map.
+    a-wait: Wait for the specified time (seconds) in the script. The script is terminated if the player goes offline while waiting.
+    instance-of: Check whether an object is an instance of the specified type. Returns false if the type does not exist.
+    cast: Cast an object to the specified type. Returns the original object if the cast fails.
+    get-block-drops: Get the drop list of the specified block. A tool and breaking entity can be specified.
+    a-cd: 'Check or add an enchantment cooldown.<br>check: check the cooldown, optionally notifying the player and sending it via action bar<br>add: add cooldown time'
+    spawn-entity: Spawn an entity at the specified location.
+    real-damage: Deal true damage to an entity.
+    entity-name: 'Get the entity''s name. Returns the player name for players, otherwise the custom or localized name.'
+    remove-entity: Remove the specified entity.
+    add-potion-effect: Add a potion effect to an entity.
+    near-by-entities: Get the list of entities near an entity.
+    a-vec-add: Add a velocity to an entity. Safe mode and knockback checks can be enabled.
+    entity-is-behind: Check whether an entity is behind another entity.
+    launch-arrow: Launch an arrow.
+    equip-set-item: 'Set an entity''s equipment item.'
+    equip-get-item: 'Get an entity''s equipment item.'
+    build-firework: 'Spawn a firework at the specified location. Type (BALL, BALL_LARGE, BURST, CREEPER, STAR), power, flicker, trail, main color, and fade color can be specified. Colors accept common English names and can be single or a list.'
+    detonate-firework: Immediately detonate the specified firework entity.
+    send-lang: 'Send a localized message to an entity, optionally with a parameter array.'
+    mark: Add a metadata mark to an object.
+    unmark: 'Remove an object''s metadata mark.'
+    has-mark: Check whether an object has the specified metadata mark.
+    set-metadata: Set metadata on an object.
+    remove-metadata: 'Remove an object''s metadata.'
+    has-metadata: Check whether an object has the specified metadata.
+    get-metadata: 'Get an object''s metadata at the specified index.'
+    give-exp: Give the player experience. Optionally apply mending.
+    a-money: 'Get the player''s economy balance.'
+    take-money: Take money from the player.
+    give-money: Give money to the player.
+    has-money: Check whether the player has enough money.
+    get-vein: Get the ore vein around the specified block.
+    strike-lightning: Strike lightning at the specified location.
+    create-explosion: 'Create an explosion at the specified location. The source entity, whether it sets fire, and whether it breaks blocks can be configured.'
+    drop-item: 'Drop an item at the specified location, optionally as a natural drop.'
+    operation: Execute a registered operation.
+    modifiable-var: 'Get an enchantment''s modifiable variable value.'
+    modifiable-var-set: 'Set an enchantment''s modifiable variable value.'
+    arim-weight: Weighted random.
+    arim-inv: Inventory item check.
+    dungeon: 'Run a DungeonPlus script.<br>More details: https://ersha.gitbook.io/dungeonplus/di-lao/untitled/kether'
+    dungeon-data-area: Get the number of players in a dungeon area.
+    dungeon-data-players: Get all players in the dungeon.
+    dungeon-data-data: Get a dungeon data value.
+    dungeon-data-mob: Get the kill count of a mob or check whether it was killed.
+    dungeon-data-world: 'Get the dungeon''s world name.'
+    dungeon-data-name: Get the dungeon name.
+    dungeon-data-options: 'Get the dungeon''s start options.'
+    message: Send the player a message with Invero formatting support.
+    invero_money: Control Vault economy.
+    invero_points: Control PlayerPoints economy.
+    connect: Cross-server connection.
+    depend: 'Check whether the server has the specified dependency. Returns: true/false'
+    context: 'context /ctx — with a menu context active (i.e. a menu is open), operate on variable data in the menu context.'
+    persist: Operate on persistent data independently of the menu context.
+    menu: Menu-related operations.
+    icon: 'Icon operations:<br>relocate<br>update<br>refresh<br>index | sub_index<br>pause_update<br>pause_relocate<br>pause_frames<br>resume_update<br>resume_relocate<br>resume_frames<br>refresh = update (update variables) + relocate (redirect sub-icons)'
+    page: Page panel operation (requires a paginated panel context).
+    scroll: Scroll panel operation (requires a scrollable panel context).
+    regenerate: Element generator panel operation.
+    storage: Interactive slot operation (requires an interactive panel).
+    node: Node
+    item: Build an item.
+    item_match: 'Use the action''s {return value} as an {item pattern} to check whether the player holds it.<br>See the {TrMenu} documentation for item patterns.'
+    metadata: 'Get or set the player''s {metadata}.<br><br>{meta} is stored temporarily in server memory,<br>while {data} uses {LocalPlayer} from TabooLib to store in the player''s own data file.'
+    trmenu_money: 'Use the action''s {return value} as {Vault} currency to check whether the player has it.'
+    trmenu_playerpoints: 'Use the action''s {return value} as {PlayerPoints} currency to check whether the player has it.'
+    event_cancel: Cancel the current event or set whether it is cancelled.
+    event_wait: 'Wait for the specified event and handle it customly.<br>{See the syntax here:}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-event#x7y9W'
+    entity_damage: Deal damage to an entity.
+    entity_potion: 'Give or remove a potion effect on an entity.<br>{See the syntax here:}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-entity#ZzVee'
+    entity_teleport: Teleport an entity to the specified location.
+    regex: 'Find or replace text using regular expressions.<br>{See the syntax here:}<br>https://www.yuque.com/lanscarlos/vulpecula-doc/action-regex'
+    function_call: '{This statement does nothing in Shell mode.}<br>Call any declared function, including the main function. Arguments are supported.'
+    get_cooldown: 'In {Zaphkiel} item behaviors:<br>get the cooldown of the {current item} or {current player} (in game ticks).'
+    update_cooldown: 'In {Zaphkiel} item behaviors:<br>write the action''s {return value} as the cooldown (in game ticks) of the {current item} or {current player}.'
+    check_cooldown: 'In {Zaphkiel} item behaviors:<br>check whether the {current item} or {current player} is on cooldown.'
+    effect: 'In {Zaphkiel} item behaviors:<br>apply the action''s {return value} as a Bukkit potion effect to the player, or remove or clear them.'
+    item_durability: 'In {Zaphkiel} item behaviors:<br>get the item''s current durability; can be replaced by {item data durability_current}.'
+    item_durability_operate: 'In {Zaphkiel} item behaviors:<br>use the action''s {return value} as durability to deduct or repair.'
+    item_consume: 'In {Zaphkiel} item behaviors: consume 1 item from the behavior.'
+    item_data: 'In {Zaphkiel} item behaviors:<br>get or set the item''s active data.'
+    save: 'In {Zaphkiel} item behaviors:<br>write the cache to the item stream.'
+    build_1: 'During {Zaphkiel} item building:<br>modify variables in the name or description.'
+    build_2: 'During {Zaphkiel} item building:<br>modify the material or data value; here {data} means the item data value, not the active data.'
+  ketherSem:
+    all: 'All conditions {0}'
+    any: 'Any of the conditions {0}'
+    async: 'Asynchronously execute {0}'
+    await: 'Wait for {0}'
+    await_all: 'Wait for all actions {0}'
+    await_any: 'Wait for any action {0}'
+    call: 'Call {0}'
+    exit: 'Exit {0}'
+    goto: 'Jump to {0}'
+    if_else: 'If {0} then {1} else {2}'
+    not: 'Not {0}'
+    repeat: 'Repeat {0} times {1}'
+    sleep: 'Wait {0}'
+    while: 'While {0}, loop {1}'
+    absorption_amount: 'Player absorption {0} {1}'
+    action_bar: 'Send action bar {0}'
+    address: Get player IP
+    allow_flight: 'Player may fly {0}'
+    array: 'Create array {0}'
+    attack_cooldown: Get player attack cooldown
+    bed_spawn: 'Player bed spawn {0}'
+    'bed_spawn_x,y,z': 'Player bed spawn {0} axis'
+    blocking: Is player blocking
+    break: Break the loop
+    'case & when': 'Case {0} matches {1}'
+    check: 'Check {0} {1} {2}'
+    color: 'Format colors {0}'
+    command: 'Execute command {0} as {1}'
+    compass_target: 'Player compass target {0}'
+    'compass_x,y,z': 'Player compass {0} axis'
+    conversing: Is player conversing
+    date_day: 'Get day in {0}'
+    date_hour: Current hour
+    date_minute: Current minute
+    date_month: Current month
+    date_second: Current second
+    date_year: Current year
+    dead: Is player dead
+    element: 'Get element {1} from {0}'
+    exhaustion: 'Player exhaustion {0} {1}'
+    exp: 'Player exp {0} {1}'
+    first_played: Player first played time
+    fly___walk_speed: 'Player {0} speed {1} {2}'
+    flying: 'Player flying {0}'
+    food_level: 'Player food level {0} {1}'
+    foreach: 'For each {0} in {1} do {2}'
+    format_time: 'Format time {0} with {1}'
+    gamemode: 'Player gamemode {0}'
+    gliding: 'Player gliding {0}'
+    glowing: 'Player glowing {0}'
+    gravity: 'Player gravity {0} {1}'
+    health: 'Player {0} health {1} {2}'
+    inside_vehicle: Is player in a vehicle
+    javascript: 'Run JS {0}'
+    join: 'Join list {0} with {1}'
+    jumping: 'Player jumping {0}'
+    last_played: 'Player last {0} time'
+    leashed: Is entity leashed
+    level: 'Player level {0} {1}'
+    locale: Player client locale
+    location: 'Build location {0} {1} {2} {3} yaw {4} pitch {5}'
+    location1: 'Player location {0}'
+    location_angle: 'Player {0} angle {1} {2}'
+    'location_x,y,z': 'Player {0} {1}'
+    map: 'Map {0} of {1} apply {2}'
+    math: 'Math {0} {1}'
+    name: 'Player {0} name'
+    no_damage_tick: 'Player invulnerability ticks {0} {1}'
+    null: Null
+    on_guard: Is player on ground
+    op: 'Player OP {0}'
+    optional: 'Optional {0} else {1}'
+    pass: Empty string
+    pause: Pause program
+    permission: 'Check permission {0}'
+    random2: 'Random {0} to {1}'
+    range: 'Range {0} to {1} step {2}'
+    remaining_air: 'Player remaining air {0} {1}'
+    riptiding: Is player riptiding
+    round: 'Round {0}'
+    saturation: 'Player saturation {0} {1}'
+    scale: 'Scale to 2 decimals {0}'
+    size: 'Get size {0}'
+    sleep_ignored: 'Player sleep ignored {0}'
+    sleep_ticks: Player sleep ticks
+    sleeping: Is player sleeping
+    sneaking: Is player sneaking
+    sound: 'Play sound {0} volume {1} pitch {2}'
+    split: 'Split {0} by {1}'
+    sprinting: Is player sprinting
+    subtitle: 'Send subtitle {0} fade in {1} stay {2} fade out {3}'
+    swimming: 'Player swimming {0} {1}'
+    switch: 'Switch observer {0}'
+    title: 'Send title {0} subtitle {1} fade in {2} stay {3} fade out {4}'
+    toast: 'Send toast {0} {1} type {2}'
+    warning: 'Console warning {0}'
+    whitelist: 'Player whitelisted {0}'
+    world: Player current world
+    import: 'Import namespace {0}'
+    release: 'Release namespace {0}'
+    block: 'Get block location {0} of {1}'
+    cancel: Cancel current behavior
+    ceil: 'Ceil {0}'
+    close: Close conversation
+    distance: 'Distance {0} to {1}'
+    equipment_check: 'Check equipment {0} is {1} count {2}'
+    floor: 'Floor {0}'
+    inventory_count: 'Count inventory item {0}'
+    inventory_check: 'Check inventory {0} count {1}'
+    inventory_close: Close player inventory
+    inventory_slot_check: 'Check inventory slot {0} is {1} count {2}'
+    inventory_take: 'Remove inventory item {0} count {1}'
+    max: 'Max {0} {1}'
+    min: 'Min {0} {1}'
+    mmocore_attribute_point: Get MMOCore attribute points
+    mmocore_class: 'Get MMOCore class {0}'
+    mmocore_level___exp: 'Get MMOCore {0}'
+    mmocore_mana: Get MMOCore mana
+    mmocore_skill_point: Get MMOCore skill points
+    mmocore_stamina: Get MMOCore stamina
+    mythicmobs_cast: 'Cast MythicMobs skill {0} trigger {1}'
+    origin: Get NPC origin location
+    particle_normal: 'Play particle {0} {1} {2} self only {3}'
+    position: 'Check position in region {0}'
+    profile_level: 'Player profile level {0} {1} {2} {3}'
+    quest_group_check: 'Check quest group {0} {1}'
+    quest_check: 'Check quest {0}'
+    quest_control: 'Control quest {0}'
+    quest_progress: 'Get quest progress {0} quest {1}'
+    quest_select: 'Select quest {0}'
+    quest_stats: 'Quest stats {0} quest {1}'
+    quest_tasks: Get all quest entries
+    quest_this: Get current quest/entry
+    quest_track: Track current quest
+    quest_tracking: Get tracking quest
+    quests: Get active quests list
+    schematic: 'Paste schematic {0} {1} {2} rotation {3} ignore air {4}'
+    script: 'Script {0} {1}'
+    skillapi_attribute_point: 'Get SkillAPI attributes {0}'
+    skillapi_cast: 'Cast SkillAPI skill {0}'
+    skillapi_class: 'Get SkillAPI class {0}'
+    skillapi_exp: 'Get SkillAPI exp {0}'
+    skillapi_level: Get SkillAPI level
+    skillapi_mana: Get SkillAPI mana
+    skillapi_skill_point: Get SkillAPI skill points
+    talk: 'NPC talk {0}'
+    trigger: 'Trigger quest {0}'
+    ui: 'UI progress {0} {1} exclude {2}'
+    wizard: 'Wizard {0}'
+    workflow_fetch: 'Offline compensation {0} {1}'
+    animation: 'Play animation {0}'
+    controller: 'Controller {0} {1}'
+    create: 'Create NPC {0} {1} at {2}'
+    delete: Delete and destroy NPCs
+    destroy: Destroy NPCs
+    look: 'NPC look X {0} Y {1} Z {2} smooth {3}'
+    move: 'NPC move to X {0} Y {1} Z {2} relative {3}'
+    passenger: 'Passenger {0} {1}'
+    remove: Remove NPCs
+    respawn: Respawn NPCs
+    select: 'Select NPC {0} by {1}'
+    still: Stop moving
+    freeze: 'Freeze NPCs {0}'
+    tag: 'Tag {0} {1} as {2}'
+    teleport: 'Teleport NPCs to {0}'
+    use: 'Use NPC manager {0} temporary {1}'
+    viewer: 'Viewer {0} {1}'
+    modelengine_animation_add: 'ModelEngine animation add {0} {1} {2} async {3}'
+    modelengine_animation_remove: 'ModelEngine animation remove {0} ignore lerp {1}'
+    germengine_animation_add: 'GermEngine animation send {0}'
+    germengine_animation_remove: 'GermEngine animation remove {0}'
+    arr-clear: 'Clear array {0}'
+    map-mutable: 'Convert to mutable map {0}'
+    map-shuffle: 'Shuffle map {0}'
+    map-reverse: 'Reverse map {0}'
+    map-get: 'Get map key {0} from {1}'
+    map-put: 'Put map pair {0} value {1} into {2}'
+    map-remove: 'Remove map key {0} from {1}'
+    map-keys: 'Get all map keys {0}'
+    instance-of: 'Check if {0} is instance of {1}'
+    cast: 'Cast {0} to {1}'
+    get-block-drops: 'Get block drops {0} tool {1} breaker {2}'
+    spawn-entity: 'Spawn entity {0} at {1}'
+    real-damage: 'True damage {0} amount {1} source {2}'
+    entity-name: 'Get entity name {0}'
+    remove-entity: 'Remove entity {0}'
+    add-potion-effect: 'Add potion effect {0} to {1} duration {2} level {3} ambient {4} particles {5} icon {6}'
+    near-by-entities: 'Nearby entities {0} radius {1} {2} {3}'
+    a-vec-add: 'Add velocity {0} to {1} safe {2} knockback check {3}'
+    entity-is-behind: 'Is entity {0} behind {1}'
+    launch-arrow: 'Launch arrow {0} velocity {1}'
+    equip-set-item: 'Set equipment {0} slot {1} for {2}'
+    equip-get-item: 'Get equipment slot {0} from {1}'
+    build-firework: 'Spawn firework {0} type {1} power {2} flicker {3} trail {4} main color {5} fade {6}'
+    detonate-firework: 'Detonate firework {0}'
+    send-lang: 'Send localized message {0} to {1} args {2}'
+    mark: 'Add mark {0} to {1}'
+    unmark: 'Remove mark {0} from {1}'
+    give-exp: 'Give exp {0} to {1} mending {2}'
+    take-money: 'Take money {0} {1}'
+    give-money: 'Give money {0} {1}'
+    has-money: 'Has money {0} {1}'
+    get-vein: 'Get vein {0} max count {1}'
+    create-explosion: 'Create explosion {0} power {1} source {2} fire {3} break blocks {4}'
+    drop-item: 'Drop item {0} at {1} natural {2}'
+    operation: 'Run operation {0} args {1}'
+    modifiable-var: 'Get modifiable var {0} item name'
+    modifiable-var-set: 'Set modifiable var {0} item name value {1}'
+    dungeon: 'Dungeon script {0} {1} args {2} area {3}'
+    dungeon-data-area: 'Dungeon area {0} {1}'
+    dungeon-data-players: Players in dungeon
+    dungeon-data-data: 'Dungeon data {0}'
+    dungeon-data-mob: 'Dungeon mob {0} {1}'
+    dungeon-data-world: Dungeon world name
+    dungeon-data-name: Dungeon name
+    dungeon-data-options: 'Dungeon options {0}'
+    message: 'Send Invero message {0}'
+    invero_money: 'Economy {0} {1}'
+    invero_points: 'Points {0} {1}'
+    connect: 'Cross-server {0} player {1}'
+    depend: 'Check dependency {0}'
+    context: 'Menu context {0} {1}'
+    persist: 'Persistent data {0} {1} scope {2}'
+    menu: 'Menu operation {0} {1}'
+    icon: 'Icon operation {0} {1}'
+    page: 'Page operation {0}'
+    scroll: 'Scroll operation {0}'
+    regenerate: 'Regenerate {0} filter {1} sort {2}'
+    storage: 'Interactive slot {0} {1}'
+    node: 'Node {0} args {1}'
+    item: 'Build item {0} from {1} count {2}'
+    item_match: 'Match item {0}'
+    trmenu_money: 'Check money {0}'
+    trmenu_playerpoints: 'Check points {0}'
+    variable: 'Parse TrMenu variables {0}'
+    event_cancel: 'Cancel event {0}'
+    event_wait: 'Wait event {0} {1} {2}'
+    entity_damage: 'Entity damage {0} amount {1} source {2}'
+    entity_potion: 'Entity potion {0} {1} {2}'
+    entity_teleport: 'Teleport entity {0} to {1}'
+    regex: 'Regex {0} {1} {2}'
+    function_call: 'Call function {0} args {1}'
+    get_cooldown: 'Get ZAP cooldown {0}'
+    update_cooldown: 'Set ZAP cooldown {0} target {1}'
+    check_cooldown: 'Check ZAP cooldown {0}'
+    effect: 'ZAP potion effect {0} {1} {2} {3}'
+    item_durability: Get ZAP item durability
+    item_durability_operate: 'ZAP item {0} {1}'
+    item_consume: Consume ZAP item
+    item_data: 'ZAP item data {0} as {1}'
+    save: Save ZAP item
+    build_1: 'Build ZAP item name/desc {0} {1} as {2}'
+    build_2: 'Build ZAP item icon/data {0} {1}'
+  objective:
+    'player fish': 'Player fishing / Supports conditions on fish state, item type, exp, etc. / Counts fishing attempts'
+    'player chat': 'Player sends a chat message / Supports conditions on message content, location, etc. / Counts chat messages'
+    'change world': 'Player changes worlds / Supports conditions on source world, target world, location, etc. / Counts switches'
+    'player kill': 'Player kills an entity / Supports conditions on weapon, victim type, etc. / Counts kills'
+    'food change': 'Triggers when the player''s hunger changes / Supports conditions on hunger value, food type, etc. / Counts total hunger change'
+    'item break': 'Triggers when the player''s tool or armor durability runs out / Supports conditions on item type, location, etc. / Counts broken items'
+    'custom level': 'Checks whether the player''s custom level meets the requirement / Supports conditions on location, level ID, level value, etc. / For the Chemdah leveling system'
+    'player move': 'Player moves / Supports conditions on start location, target location, etc. / Counts movements'
+    'block interact': 'Player interacts with a block / Supports conditions on material, interaction type, direction, held item, etc. / Counts interactions'
+    'entity tame': 'Player tames an entity / Supports conditions on entity type, location, etc. / Counts tamed entities'
+    'horse jump': 'Triggers when the player jumps on a horse / Supports conditions on jump strength, horse type, etc. / Counts jumps'
+    'block break': 'Player breaks a block / Supports conditions on material, location, drops, etc. / Counts broken blocks'
+    'bucket fill': 'Player fills a bucket with fluid / Supports conditions on location, material, item, etc. / Counts fills'
+    'bucket empty': 'Player empties fluid from a bucket / Supports conditions on location, material, item, etc. / Counts empties'
+    'item consume': Triggers when the player consumes an item / Supports consumables such as food and potions / Counts consumed items
+    'pickup exp': 'Triggers when the player picks up an exp orb / Supports conditions on exp amount, reason, etc. / Counts total exp picked up'
+    'player teleport': 'Player teleports / Supports conditions on start location, target location, teleport reason, etc. / Counts teleports'
+    always: 'Checks the condition every game tick / For scenarios requiring a constantly met condition / No event trigger, auto periodic check'
+    'shoot bow': 'Player shoots a bow / Supports conditions on bow type, draw strength, consumed item, etc. / Counts shots'
+    'player animation': 'Triggers when the player plays an animation / Supports conditions on animation type, etc. / Counts plays'
+    'player attack': 'Player attacks an entity / Supports conditions on target entity, weapon, damage, etc. / Counts attacks'
+    'player damage by entity': 'Player takes damage from an entity attack / Supports conditions on attacker entity, weapon, damage, etc. / Counts hits taken'
+    'entity interact': 'Player right-clicks an entity / Supports conditions on entity type, location, held item, etc. / Counts interactions'
+    'bed enter': 'Player enters a bed / Supports conditions on bed location, material, reason, etc. / Counts entries'
+    'player anvil': 'Triggers when the player uses an anvil / Supports conditions on rename text, repair cost, result item, etc. / Counts uses'
+    'portal exit': 'Triggers when the player leaves a portal / Supports conditions on target and start locations, etc. / Counts exits'
+    never: A goal that can never be completed / For placeholders or special logic / Always returns false
+    'pickup arrow': 'Triggers when the player picks up an arrow / Supports conditions on arrow type, count, etc. / Counts total picked up'
+    'entity breed': 'Player breeds animals / Supports conditions on animal type, parents, breeding item, etc. / Counts breeds'
+    'player jump': 'Player jumps / Supports conditions on location, etc. / Counts jumps'
+    'player permission': Checks whether the player has a specific permission / Periodically checks the permission state / For scenarios where permissions change dynamically
+    'player statistic': 'Triggers when a player statistic changes / Supports conditions on statistic type, entity type, material type, value, etc. / Counts increments'
+    'entity combust': 'Player ignites an entity / Supports conditions on entity type, location, etc. / Counts ignitions'
+    'player damage by block': 'Player takes damage from a block / Supports conditions on block type, damage, location, etc. / Counts hits taken'
+    'pickup item': 'Triggers when the player picks up a dropped item / Automatically counts the stack size of picked items / Supports conditions on item, count, location, etc.'
+    'criterion grant': 'Triggers when the player completes a progress criterion (requires Paper server) / Supports conditions on advancement ID, criterion name, etc. / Counts completions'
+    'entity dismount': 'Player dismounts an entity / Supports conditions on entity type, location, etc. / Counts dismounts'
+    'player data': 'Checks the player''s persistent data values / Supports both event-driven and periodic check modes / For cross-quest data sharing and checking'
+    'exp change': 'Player gains experience / Supports conditions on exp amount, source entity, location, etc. / Counts total exp'
+    'player shear': 'Player shears sheep / Supports conditions on entity type, shears type, used hand, etc. / Counts shears'
+    'block ignite': 'Player ignites a block / Supports conditions on material, ignition reason, location, etc. / Counts ignitions'
+    'item held': 'Triggers when the player switches the held item in the hotbar / Supports conditions on old/new items, old/new slots, etc. / Counts switches'
+    'entity mount': 'Player rides an entity / Supports conditions on entity type, location, etc. / Counts rides'
+    'craft item': 'Player crafts items at a crafting table / Supports conditions on item, recipe materials, location, etc. / Supports batch craft counting'
+    'drop item': 'Triggers when the player drops an item / Supports conditions on item, count, location, etc. / Counts drops'
+    'armor change': 'Player changes armor equipment (requires Paper server) / Supports conditions on equipment slot, item, etc. / Counts changes'
+    'portal enter': 'Triggers when the player enters a portal / Supports conditions on portal location, etc. / Counts entries'
+    'enchant item': 'Triggers when the player enchants an item at an enchanting table / Supports conditions on item, enchant type, exp cost, etc. / Counts enchants'
+    'block place': 'Player places a block / Supports conditions on material, location, held item, etc. / Counts placements'
+    'player damage': 'Player takes damage / Supports conditions on damage type, damage value, location, etc. / Counts hits taken'
+    'player respawn': 'Player respawns / Supports conditions on respawn location, respawn type (bed/respawn anchor), etc. / Counts respawns'
+    'player real move': 'Triggers when the player actually moves a block / Supports conditions on target and start locations, etc. / Counts movements'
+    'player inventory': 'Checks or consumes items in the player''s inventory / Supports conditions on location, item type, count, consumption, etc. / For item collection or consumption quests'
+    'block farm': 'Player tills farmland with a hoe / Supports conditions on material, location, hoe type, etc. / Counts tilts'
+    'player conversation': 'Player ends a conversation by replying with an option / Supports conditions on location, conversation ID, etc. / For the Chemdah internal conversation system'
+    'item mend': 'Triggers when the player''s item is mended / Supports conditions on mended item type, mend amount, etc. / Counts total mended'
+    'player conversation refused': 'Player abandons or refuses a conversation / Supports conditions on location, conversation ID, etc. / For the Chemdah internal conversation system'
+    'player toggle flight': 'Triggers when the player toggles flight / Supports conditions on flight state, etc. / Counts toggles'
+    'furnace extract': 'Triggers when the player extracts items from a furnace / Automatically counts the extracted amount / Supports conditions on item, exp, location, etc.'
+    'player conversation closed': 'Player ends a conversation normally / Supports conditions on location, conversation ID, etc. / For the Chemdah internal conversation system'
+    'item interact': 'Triggers when the player interacts using an item / Supports right-click, left-click, etc. / Can check held slot and interaction type'
+    trigger: Triggered manually by external commands or scripts / Supports custom trigger value matching / For linking with other systems
+    'bed leave': 'Player leaves a bed / Supports conditions on bed location, material, etc. / Counts leaves'
+    'level change': 'Player level changes / Supports conditions on level difference, new level, old level, etc. / Counts level-ups'
+    'player swap hand': 'Triggers when the player presses F to swap main/off hand items / Supports conditions on main and off hand items, etc. / Counts swaps'
+    'pressure plate': 'Triggers when the player steps on a pressure plate / Supports conditions on plate location and type, etc. / Counts steps'
+    'quest data': Checks quest persistent data values / Supports both event-driven and periodic check modes / For intra-quest data sharing and checking
+    'health regain': 'Triggers when the player''s health regenerates / Supports conditions on regain amount, reason, etc. / Counts total regained'
+    'player resurrect': 'Triggers when the player revives with a totem of undying / Supports conditions on used item type, etc. / Counts revives'
+    'player advancement': 'Player completes an advancement / Supports conditions on advancement ID, location, etc. / Counts completions'
+    'player command': 'Player executes a command / Supports conditions on command content, location, etc. / Counts command executions'
+    'edit book': 'Triggers when the player edits or signs a book / Supports conditions on signed state, pages, title, content, etc. / Counts edits'
+    'player death': 'Player dies / Supports conditions on attacker, weapon, death message, etc. / Counts deaths'
+    'anpc interact': 'Interact with an Adyeshach NPC / Supports conditions on NPC ID, type, location, held item, main/off hand, etc. / Requires the Adyeshach plugin'
+    'anpc damage': 'Deal damage to an Adyeshach NPC / Supports conditions on NPC ID, type, location, used item, etc. / Requires the Adyeshach plugin'
+    'mythicmobs kill': 'Kill a MythicMobs monster / Supports conditions on mob name, level, location, etc. / Requires the MythicMobs plugin'
+    'placeholder api': Get PlaceholderAPI variable values / Supports all PAPI variables / Requires the PlaceholderAPI plugin
+  objectiveLabel:
+    'player fish': Player Fishing
+    'player chat': Player Chat
+    'change world': Change World
+    'player kill': Player Kill
+    'food change': Food Change
+    'item break': Item Break
+    'custom level': Custom Level
+    'player move': Player Move
+    'block interact': Block Interact
+    'entity tame': Entity Tame
+    'horse jump': Horse Jump
+    'block break': Block Break
+    'bucket fill': Bucket Fill
+    'bucket empty': Bucket Empty
+    'item consume': Item Consume
+    'pickup exp': Pickup Exp
+    'player teleport': Player Teleport
+    always: Always
+    'shoot bow': Shoot Bow
+    'player animation': Player Animation
+    'player attack': Player Attack
+    'player damage by entity': Player Damaged by Entity
+    'entity interact': Entity Interact
+    'bed enter': Bed Enter
+    'player anvil': Player Anvil
+    'portal exit': Portal Exit
+    never: Never
+    'pickup arrow': Pickup Arrow
+    'entity breed': Entity Breed
+    'player jump': Player Jump
+    'player permission': Player Permission
+    'player statistic': Player Statistic
+    'entity combust': Entity Combust
+    'player damage by block': Player Damaged by Block
+    'pickup item': Pickup Item
+    'criterion grant': Criterion Grant
+    'entity dismount': Entity Dismount
+    'player data': Player Data
+    'exp change': Exp Change
+    'player shear': Player Shear
+    'block ignite': Block Ignite
+    'item held': Item Held
+    'entity mount': Entity Mount
+    'craft item': Craft Item
+    'drop item': Drop Item
+    'armor change': Armor Change
+    'portal enter': Portal Enter
+    'enchant item': Enchant Item
+    'block place': Block Place
+    'player damage': Player Damage
+    'player respawn': Player Respawn
+    'player real move': Player Real Move
+    'player inventory': Player Inventory
+    'block farm': Block Farm
+    'player conversation': Player Conversation
+    'item mend': Item Mend
+    'player conversation refused': Conversation Refused
+    'player toggle flight': Toggle Flight
+    'furnace extract': Furnace Extract
+    'player conversation closed': Conversation Closed
+    'item interact': Item Interact
+    trigger: Trigger
+    'bed leave': Bed Leave
+    'level change': Level Change
+    'player swap hand': Swap Hand
+    'pressure plate': Pressure Plate
+    'quest data': Quest Data
+    'health regain': Health Regain
+    'player resurrect': Player Resurrect
+    'player advancement': Player Advancement
+    'player command': Player Command
+    'edit book': Edit Book
+    'player death': Player Death
+    'anpc interact': Adyeshach NPC Interact
+    'anpc damage': Adyeshach NPC Damage
+    'mythicmobs kill': MythicMobs Kill
+    'placeholder api': PlaceholderAPI
+  addon:
+    automation: Automates starting quest flows / Checks online players every 40 ticks to handle auto-accept and scheduled quests
+    ui: 'Configures how quests appear in the UI / Controls quest visibility, icon, and description'
+    depend: 'Sets quest prerequisites / Supports single quest and quest group dependencies / Supports dependencies between entries / Can be a string, list, or comma/semicolon-separated string'
+    stats: 'Displays quest and entry progress / Supports BossBar progress bar, custom styles, and script calculations / Configurable as temporary or persistent display'
+    restart: Controls whether a quest can be restarted / Defines restart conditions via Kether scripts
+    track: 'Tracks quest objective locations and provides path guidance / Supports beacon, landmark, navigation, and scoreboard display / A player can only track one quest at a time'
+    party: 'Manages party features for quests / Supports quest sharing, cooperative completion, and player limits / For team dungeons, multiplayer cooperation, etc.'
+    timeout: Sets a timeout for quests / Supports fixed duration and periodic time points
+    reset-data-on-accepted: 'Controls whether specific data is reset when a quest is accepted / Only affects entries implementing the IPlayerData interface / For resetting count, progress, and state data'
+    optional: 'Marks a quest entry as optional / Optional entries do not affect quest completion / For bonus rewards, side quests, etc.'
+    control: 'Manages various quest restrictions / Supports coexistence, repeat, cooldown limits, and script proxies / Configured as a Map list, each Map representing a control rule'
+  addonLabel:
+    automation: Quest Automation
+    ui: Quest UI
+    depend: Quest Dependency
+    stats: Quest Stats
+    restart: Quest Restart
+    track: Quest Tracking
+    party: Quest Party
+    timeout: Quest Timeout
+    reset-data-on-accepted: Reset Data on Accept
+    optional: Optional Entry
+    control: Quest Control
+  hook:
+    accepted: Executed after the quest is accepted
+    accept: Executed before accepting the quest (return false to cancel)
+    accept_cancelled: Executed after quest acceptance is cancelled
+    complete: Executed before quest completion (return false to cancel)
+    completed: Executed after the quest is completed
+    fail: Executed before the quest fails
+    failed: Executed after the quest fails
+    restart: Executed before the quest is reset
+    restarted: Executed after the quest is reset
+    continued: Executed after a quest entry is continued
+  scope:
+    '@ all': All scope types
+    '@ party': Party scope
+    '@ custom': Custom scope
+tips:
+  - "Cooking a great beef stew..."
+  - "Flying the eight-cent plane..."
+  - "Prepare Escape To Blockov..."
+  - "Writing quests..."
+  - "✶ Thinking..."
+  - "Prepare 1M-fans Live..."
+  - "Going to the seaside with AmeChan..."
+  - "Pain shock..."
+  - "Say goodbye to zero..."
+  - "Set things right and move forward together..."
+  - "Drinking Japan Raw-Cola..."
+  - "Resolving the Buryat mutiny..."
+  - "United as one..."
+  - "Launch the great asian war..."
+  - "Using LithiumCarbon tablets..."
+  - "Smiling like an angel..."
+  - "Make Organization of Free Servers..."
