@@ -682,6 +682,586 @@
     ],
   };
 
+  // ============ Item 可视化编辑 ============
+  // 数据源: wiki item/data.mdx, item/models.mdx + models/ 子文档, item/settings.mdx,
+  //         item/behaviors.mdx + behaviors/ 子文档, item/updater.mdx
+
+  // ---- 常量补充 (datalist) ----
+  S.constants.glowColors = ['#000000', '#FF0000', '#FF8000', '#FFFF00', '#80FF00', '#00FF00', '#00FF80',
+    '#00FFFF', '#0080FF', '#0000FF', '#8000FF', '#FF00FF', '#FF0080', '#FFFFFF'];
+  S.constants.equipmentSlots = ['main_hand', 'off_hand', 'head', 'chest', 'legs', 'feet', 'body', 'saddle', 'any'];
+  S.constants.enchantOperations = ['ADD', 'MULTIPLY_BASE', 'MULTIPLY_TOTAL'];
+  S.constants.bannerColors = ['white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray',
+    'light_gray', 'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black'];
+  S.constants.headKinds = ['SKULL', 'PLAYER', 'BLOCK', 'CREEPER', 'DRAGON', 'PIGLIN', 'SKELETON', 'WITHER_SKELETON', 'ZOMBIE'];
+  S.constants.rotations = ['NONE', 'CLOCKWISE_45', 'CLOCKWISE_90', 'CLOCKWISE_135', 'FLIPPED',
+    'COUNTERCLOCKWISE_45', 'COUNTERCLOCKWISE_90', 'COUNTERCLOCKWISE_135'];
+  S.constants.alignments = ['none', 'center', 'bottom'];
+  S.constants.modelCondProps = ['component', 'custom_model_data', 'item_model'];
+  S.constants.modelSelProps = ['component', 'custom_model_data', 'item_model'];
+  S.constants.modelRangeProps = ['component', 'custom_model_data', 'item_model'];
+  S.constants.bookGenerations = ['ORIGINAL', 'COPY_OF_ORIGINAL', 'COPY_OF_COPY', 'TATTERED'];
+
+  // legacy 行为字段 → 新 schema 字段 (数据源: 旧版 interpreter BEHAVIOR_FIELDS, 与 wiki behaviors 文档一致)
+  // spec: [path, 'text'|'number'|'bool'|'lines'|'select'|'json']
+  function _bh(list) {
+    return (list || []).map(function (spec) {
+      var p = spec[0], t = spec[1];
+      if (p === 'conditions') return f(p, p, p, 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') });
+      if (t === 'number') return f(p, p, p, 'number');
+      if (t === 'bool') return f(p, p, p, 'bool');
+      if (t === 'lines') return f(p, p, p, 'lines');
+      if (t === 'select') return f(p, p, p, 'select', { options: spec[2] || [] });
+      if (t === 'json') return f(p, p, p, 'kv');
+      return f(p, p, p, 'text');
+    });
+  }
+
+  // ---- 通用小块 ----
+  var CRAFT_REMAINDER_TYPES = {
+    fixed: { label: l('固定物品 (fixed)', 'Fixed Item'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
+    hurt_and_break: { label: l('损坏并破碎 (hurt_and_break)', 'Hurt And Break'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
+    recipe_based: { label: l('基于配方 (recipe_based)', 'Recipe Based'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
+    same: { label: l('相同物品 (same)', 'Same Item') },
+  };
+  var ROTATION_TYPES = {
+    quaternion: { label: l('四元数 (quaternion)', 'Quaternion'), fields: [f('quaternion', '四元数', 'Quaternion', 'lines', { hint: l('4 个数, 每行一个', '4 numbers, one per line') })] },
+    axis_angle: { label: l('轴角 (axis_angle)', 'Axis Angle'), fields: [f('axis', '轴', 'Axis', 'text'), f('angle', '角度', 'Angle', 'number')] },
+  };
+  var TRANSFORM_TYPES = {
+    decomposed: { label: l('分解 (decomposed)', 'Decomposed'), fields: [
+      f('rotation', '旋转', 'Rotation', 'lines', { hint: l('3 个数, 每行一个', '3 numbers, one per line') }),
+      f('translation', '平移', 'Translation', 'lines', { hint: l('3 个数, 每行一个', '3 numbers, one per line') }),
+      f('scale', '缩放', 'Scale', 'lines', { hint: l('3 个数, 每行一个', '3 numbers, one per line') }),
+      f('left_rotation', '左旋转', 'Left Rotation', 'union', { types: ROTATION_TYPES, label: l('左旋转', 'Left Rotation') }),
+      f('right_rotation', '右旋转', 'Right Rotation', 'union', { types: ROTATION_TYPES, label: l('右旋转', 'Right Rotation') }),
+    ] },
+    matrix: { label: l('矩阵 (matrix)', 'Matrix'), widget: { type: 'lines', label: l('矩阵', 'Matrix'), hint: l('16 个数, 每行一个', '16 numbers, one per line') } },
+  };
+  // 方块状态: 字符串 或 键值映射 (item data.block_state / block 相关)
+  var BLOCK_STATE_WIDGET = {
+    type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('facing=north', 'facing=north') },
+    label: l('方块状态', 'Block State'),
+    types: {
+      map: { label: l('属性映射', 'Property Map'), widget: { type: 'kv', label: l('属性映射', 'Property Map') } },
+    },
+  };
+
+  // ---- data 组件 (wiki item/data.mdx) ----
+  var LORE_LINE_TYPES = {
+    advanced: { label: l('高级 (advanced)', 'Advanced'), fields: [
+      f('content', '内容', 'Content', 'text'),
+      f('priority', '优先级', 'Priority', 'number'),
+      f('operation', '操作', 'Operation', 'select', { options: ['APPEND', 'PREPEND'] }),
+      f('split_lines', '按行拆分', 'Split Lines', 'bool'),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
+    ] },
+    simple: { label: l('简单文本', 'Simple Text'), widget: { type: 'text' } },
+  };
+  var LORE_LINE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('Lore 行', 'Lore Line'), types: LORE_LINE_TYPES };
+  var INSERT_LORE_LINE_FIELDS = [
+    f('position', '位置', 'Position', 'select', { options: ['HEAD', 'TAIL', 'BEFORE', 'AFTER'] }),
+    f('pattern', '匹配行', 'Pattern', 'text', { hint: l('BEFORE/AFTER 时匹配的行 (正则)', 'Line matched for BEFORE/AFTER (regex)') }),
+    f('lore', '插入内容', 'Insert', 'listOf', { itemType: LORE_LINE_UNION, label: l('插入内容', 'Insert') }),
+  ];
+  // 注意: fields 数组不能注册循环引用, fallback 用非递归变体避免死循环
+  var INSERT_LORE_LINES_ONLY = [
+    f('lines', '插入行', 'Lines', 'listOf', { itemType: { type: 'object', fields: INSERT_LORE_LINE_FIELDS, label: l('插入行', 'Insert Line') }, label: l('插入行', 'Lines') }),
+  ];
+  var INSERT_LORE_FIELDS = [
+    f('lines', '插入行', 'Lines', 'listOf', { itemType: { type: 'object', fields: INSERT_LORE_LINE_FIELDS, label: l('插入行', 'Insert Line') }, label: l('插入行', 'Lines') }),
+    f('fallback', '未匹配回退', 'Fallback', 'object', { fields: INSERT_LORE_LINES_ONLY, label: l('未匹配回退', 'Fallback') }),
+  ];
+  var CUSTOM_MODEL_DATA_TYPES = {
+    map: { label: l('详细 (floats/flags/strings)', 'Detailed'), widget: { type: 'object', fields: [
+      f('floats', '浮点数', 'Floats', 'lines'),
+      f('flags', '旗标', 'Flags', 'lines'),
+      f('strings', '字符串', 'Strings', 'lines'),
+    ] } },
+  };
+  var CUSTOM_MODEL_DATA_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('Custom Model Data', 'Custom Model Data'), types: CUSTOM_MODEL_DATA_TYPES };
+  var PROFILE_TYPES = {
+    map: { label: l('字段', 'Fields'), widget: { type: 'object', fields: [
+      f('name', '玩家名', 'Player Name', 'text'),
+      f('texture', '纹理 URL', 'Texture URL', 'text'),
+      f('url', '皮肤 URL', 'Skin URL', 'text'),
+      f('base64', 'Base64', 'Base64', 'text'),
+    ] } },
+  };
+  var PROFILE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('皮肤', 'Profile'), types: PROFILE_TYPES };
+  var WRITTEN_PAGE_TYPES = {
+    lines: { label: l('多行文本', 'Lines'), widget: { type: 'lines', label: l('文本', 'Text') } },
+    raw_filtered: { label: l('原始过滤 (raw_filtered)', 'Raw Filtered'), widget: { type: 'kv', label: l('原始文本', 'Raw Filtered') } },
+  };
+  var WRITTEN_PAGE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('页', 'Page'), types: WRITTEN_PAGE_TYPES };
+  var ATTR_MOD_FIELDS = [
+    f('type', '属性', 'Attribute', 'text', { hint: l('如 minecraft:max_health', 'e.g. minecraft:max_health') }),
+    f('amount', '数值', 'Amount', 'number'),
+    f('operation', '操作', 'Operation', 'select', { options: S.constants.enchantOperations }),
+    f('id', 'ID', 'ID', 'text'),
+    f('slot', '槽位', 'Slot', 'select', { options: S.constants.equipmentSlots }),
+  ];
+  var FOOD_EFFECT_FIELDS = [
+    f('effect', '效果', 'Effect', 'text', { hint: l('如 minecraft:speed', 'e.g. minecraft:speed') }),
+    f('probability', '概率', 'Probability', 'number'),
+    f('duration', '时长 (tick)', 'Duration', 'number'),
+    f('amplifier', '等级', 'Amplifier', 'number'),
+    f('ambient', '环境', 'Ambient', 'bool'),
+    f('show_particles', '显示粒子', 'Show Particles', 'bool'),
+    f('show_icon', '显示图标', 'Show Icon', 'bool'),
+  ];
+  var FOOD_FIELDS = [
+    f('nutrition', '营养', 'Nutrition', 'number'),
+    f('saturation', '饱和度', 'Saturation', 'number'),
+    f('can_always_eat', '随时可吃', 'Can Always Eat', 'bool'),
+    f('eat_seconds', '进食时间 (秒)', 'Eat Seconds', 'number'),
+    f('using_converts_to', '食用后得到', 'Using Converts To', 'text', { datalist: 'items' }),
+    f('effects', '效果', 'Effects', 'listOf', { itemType: { type: 'object', fields: FOOD_EFFECT_FIELDS, label: l('效果', 'Effect') }, label: l('效果', 'Effects') }),
+  ];
+  var EQUIPPABLE_FIELDS = [
+    f('slot', '槽位', 'Slot', 'select', { options: S.constants.equipmentSlots }),
+    f('model', '模型', 'Model', 'text', { hint: l('如 minecraft:item/elytra', 'e.g. minecraft:item/elytra') }),
+    f('camera_overlay', '相机覆盖', 'Camera Overlay', 'text'),
+    f('allowed_entities', '允许实体', 'Allowed Entities', 'lines'),
+    f('dispensable', '可发射', 'Dispensable', 'bool'),
+    f('swappable', '可替换', 'Swappable', 'bool'),
+    f('equip_sound', '装备音效', 'Equip Sound', 'text', { hint: l('如 minecraft:item.armor.equip_elytra', 'e.g. minecraft:item.armor.equip_elytra') }),
+    f('asset_id', '资源 ID', 'Asset ID', 'text'),
+  ];
+  var WRITTEN_BOOK_FIELDS = [
+    f('pages', '页', 'Pages', 'listOf', { itemType: WRITTEN_PAGE_UNION, label: l('页', 'Pages') }),
+    f('author', '作者', 'Author', 'text'),
+    f('title', '标题', 'Title', 'text'),
+    f('resolved', '已解析', 'Resolved', 'bool'),
+    f('generation', '版本', 'Generation', 'select', { options: S.constants.bookGenerations }),
+  ];
+  var JUKEPLAYABLE_FIELDS = [
+    f('song', '歌曲', 'Song', 'text', { hint: l('如 minecraft:cat', 'e.g. minecraft:cat') }),
+    f('show_in_tooltip', '显示在提示中', 'Show In Tooltip', 'bool'),
+  ];
+  var CONDITIONAL_FIELDS = [
+    f('data', '数据', 'Data', 'components', { components: DATA_COMPONENT_TYPES_REF, label: l('数据', 'Data'), hint: l('条件满足时应用的数据', 'Data applied when conditions pass') }),
+    f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
+  ];
+  // 35 个 data 组件 (wiki item/data.mdx); conditional.data 递归引用自身 → 注册 + 函数延迟
+  var DATA_COMPONENT_TYPES = {
+    item_name: { label: l('物品名 (item_name)', 'Item Name'), widget: { type: 'textarea', rows: 2, label: l('物品名', 'Item Name') } },
+    custom_name: { label: l('自定义名 (custom_name)', 'Custom Name'), widget: { type: 'textarea', rows: 2, label: l('自定义名', 'Custom Name') } },
+    lore: { label: l('Lore', 'Lore'), widget: { type: 'listOf', itemType: LORE_LINE_UNION, label: l('Lore', 'Lore') } },
+    insert_lore: { label: l('插入 Lore (insert_lore)', 'Insert Lore'), widget: { type: 'object', fields: INSERT_LORE_FIELDS, label: l('插入 Lore', 'Insert Lore') } },
+    remove_lore: { label: l('移除 Lore (remove_lore)', 'Remove Lore'), widget: { type: 'object', fields: [
+      f('pattern', '匹配行', 'Pattern', 'text', { hint: l('要移除的行 (正则)', 'Line to remove (regex)') }),
+      f('count', '数量', 'Count', 'number', { hint: l('移除的行数, 默认 1', 'Lines to remove, default 1') }),
+      f('regex', '正则匹配', 'Regex', 'bool'),
+    ], label: l('移除 Lore', 'Remove Lore') } },
+    attribute_modifiers: { label: l('属性修饰 (attribute_modifiers)', 'Attribute Modifiers'), widget: { type: 'listOf', itemType: { type: 'object', fields: ATTR_MOD_FIELDS, label: l('修饰', 'Modifier') }, label: l('属性修饰', 'Attribute Modifiers') } },
+    enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), widget: { type: 'object', fields: [
+      f('effects', '效果', 'Effects', 'kv', { hint: l('键: 附魔谓词, 值: 值/概率', 'Key: enchantment predicate, value: value/chance') }),
+      f('glow', '发光', 'Glow', 'bool'),
+    ], label: l('附魔', 'Enchantment') } },
+    food: { label: l('食物 (food)', 'Food'), widget: { type: 'object', fields: FOOD_FIELDS, label: l('食物', 'Food') } },
+    equippable: { label: l('可装备 (equippable)', 'Equippable'), widget: { type: 'object', fields: EQUIPPABLE_FIELDS, label: l('可装备', 'Equippable') } },
+    use_remainder: { label: l('使用剩余 (use_remainder)', 'Use Remainder'), widget: { type: 'text', datalist: 'items', label: l('使用后物品', 'Use Remainder') } },
+    trim: { label: l('饰纹 (trim)', 'Trim'), widget: { type: 'object', fields: [
+      f('material', '材料', 'Material', 'text'),
+      f('pattern', '图案', 'Pattern', 'text'),
+      f('show_in_tooltip', '显示在提示中', 'Show In Tooltip', 'bool'),
+    ], label: l('饰纹', 'Trim') } },
+    dyed_color: { label: l('染色 (dyed_color)', 'Dyed Color'), widget: { type: 'object', fields: [
+      f('rgb', '颜色', 'RGB', 'text', { placeholder: l('#FF0000', '#FF0000') }),
+      f('show_in_tooltip', '显示在提示中', 'Show In Tooltip', 'bool'),
+    ], label: l('染色', 'Dyed Color') } },
+    profile: { label: l('皮肤 (profile)', 'Profile'), widget: PROFILE_UNION },
+    max_damage: { label: l('最大耐久 (max_damage)', 'Max Damage'), widget: { type: 'number', label: l('最大耐久', 'Max Damage') } },
+    unbreakable: { label: l('不可破坏 (unbreakable)', 'Unbreakable'), widget: { type: 'object', fields: [
+      f('show_in_tooltip', '显示在提示中', 'Show In Tooltip', 'bool'),
+    ], label: l('不可破坏', 'Unbreakable') } },
+    hide_tooltip: { label: l('隐藏提示 (hide_tooltip)', 'Hide Tooltip'), widget: { type: 'object', fields: [], label: l('隐藏提示', 'Hide Tooltip') } },
+    tooltip_style: { label: l('提示样式 (tooltip_style)', 'Tooltip Style'), widget: { type: 'text', label: l('提示样式', 'Tooltip Style'), hint: l('如 minecraft:missing', 'e.g. minecraft:missing') } },
+    block_state: { label: l('方块状态 (block_state)', 'Block State'), widget: BLOCK_STATE_WIDGET },
+    pdc: { label: l('持久数据 (pdc)', 'PDC'), widget: { type: 'kv', label: l('持久数据', 'PDC') } },
+    tags: { label: l('标签 (tags)', 'Tags'), widget: { type: 'kv', label: l('标签', 'Tags'), hint: l('键: 标签名, 值: 值', 'Key: tag name, value: value') } },
+    nbt: { label: l('NBT', 'NBT'), widget: { type: 'kv', label: l('NBT', 'NBT') } },
+    written_book_content: { label: l('成书内容 (written_book_content)', 'Written Book Content'), widget: { type: 'object', fields: WRITTEN_BOOK_FIELDS, label: l('成书内容', 'Written Book Content') } },
+    external: { label: l('外部 (external)', 'External'), widget: { type: 'object', fields: [
+      f('resource_pack', '资源包', 'Resource Pack', 'text', { hint: l('如 minecraft', 'e.g. minecraft') }),
+      f('data', '数据', 'Data', 'mapOf', { valueType: { type: 'scalar' }, label: l('数据', 'Data') }),
+    ], label: l('外部', 'External') } },
+    components: { label: l('组件映射 (components)', 'Components'), widget: { type: 'kv', label: l('组件映射', 'Components') } },
+    remove_components: { label: l('移除组件 (remove_components)', 'Remove Components'), widget: { type: 'lines', label: l('移除组件', 'Remove Components') } },
+    painting_variant: { label: l('画变体 (painting_variant)', 'Painting Variant'), widget: { type: 'text', label: l('画变体', 'Painting Variant') } },
+    jukebox_playable: { label: l('唱片 (jukebox_playable)', 'Jukebox Playable'), widget: { type: 'object', fields: JUKEPLAYABLE_FIELDS, label: l('唱片', 'Jukebox Playable') } },
+    conditional: { label: l('条件数据 (conditional)', 'Conditional'), widget: { type: 'object', fields: CONDITIONAL_FIELDS, label: l('条件数据', 'Conditional') } },
+    custom_model_data: { label: l('Custom Model Data', 'Custom Model Data'), widget: CUSTOM_MODEL_DATA_UNION },
+  };
+  function DATA_COMPONENT_TYPES_REF() { return DATA_COMPONENT_TYPES; }
+  var DATA_COMPONENTS_DEF = { type: 'components', label: l('数据组件', 'Data Components'), components: DATA_COMPONENT_TYPES_REF };
+
+  // ---- 模型 (wiki item/models.mdx + models/ 子文档) ----
+  // 简化模型
+  var MODEL_SIMPLIFIED_FIELDS = [
+    f('texture', '纹理', 'Texture', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx') }),
+    f('textures', '纹理映射', 'Textures', 'mapOf', { valueType: { type: 'text' }, label: l('纹理映射', 'Textures') }),
+    f('models', '模型映射', 'Models', 'mapOf', { valueType: { type: 'text' }, label: l('模型映射', 'Models') }),
+    f('blueprint', '蓝图', 'Blueprint', 'text'),
+    f('legacy_model', '旧版模型', 'Legacy Model', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, label: l('旧版模型', 'Legacy Model'), types: {
+      map: { label: l('映射', 'Map'), widget: { type: 'mapOf', label: l('映射', 'Map'), valueType: { type: 'text' } } },
+    } }),
+    f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
+  ];
+  // 特殊模型 (special 类型体)
+  var SPECIAL_MODEL_TYPES = {
+    'minecraft:command_block': { label: l('命令方块', 'Command Block'), fields: [
+      f('command', '命令', 'Command', 'text'),
+      f('custom_name', '自定义名', 'Custom Name', 'text'),
+      f('last_execution', '上次执行', 'Last Execution', 'text'),
+      f('mode', '模式', 'Mode', 'select', { options: ['SEQUENCE', 'AUTO', 'REDSTONE', 'CYCLE'] }),
+      f('track_output', '记录输出', 'Track Output', 'bool'),
+      f('condition_met', '条件满足', 'Condition Met', 'bool'),
+      f('needs_redstone', '需要红石', 'Needs Redstone', 'bool'),
+    ] },
+    'minecraft:shulker_box': { label: l('潜影盒', 'Shulker Box'), fields: [
+      f('color', '颜色', 'Color', 'text'),
+      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    ] },
+    'minecraft:beehive': { label: l('蜂箱', 'Beehive'), fields: [
+      f('occupants', '住户', 'Occupants', 'kv'),
+      f('flower_pos', '花朵位置', 'Flower Pos', 'kv'),
+    ] },
+    'minecraft:chest': { label: l('箱子', 'Chest'), fields: [
+      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+      f('loot_table', '战利品表', 'Loot Table', 'text'),
+    ] },
+    'minecraft:decorated_pot': { label: l('饰纹陶罐', 'Decorated Pot'), fields: [
+      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    ] },
+    'minecraft:furnace': { label: l('熔炉', 'Furnace'), fields: [
+      f('lit', '燃烧', 'Lit', 'bool'),
+      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    ] },
+    'minecraft:jukebox': { label: l('唱片机', 'Jukebox'), fields: [
+      f('record', '唱片', 'Record', 'text'),
+    ] },
+    'minecraft:mob_effect': { label: l('药水效果', 'Mob Effect'), fields: [
+      f('color', '颜色', 'Color', 'text'),
+      f('effects', '效果', 'Effects', 'lines'),
+    ] },
+    'minecraft:potion_contents': { label: l('药水内容', 'Potion Contents'), fields: [
+      f('potion', '药水', 'Potion', 'text'),
+      f('custom_color', '自定义颜色', 'Custom Color', 'text'),
+      f('custom_effects', '自定义效果', 'Custom Effects', 'kv'),
+    ] },
+    'minecraft:skull': { label: l('头颅', 'Skull'), fields: [
+      f('kind', '类型', 'Kind', 'select', { options: S.constants.headKinds }),
+      f('profile', '皮肤', 'Profile', 'union', { types: PROFILE_TYPES, label: l('皮肤', 'Profile') }),
+    ] },
+    'minecraft:suspicious_stew': { label: l('迷之炖菜', 'Suspicious Stew'), fields: [
+      f('effects', '效果', 'Effects', 'listOf', { itemType: { type: 'object', fields: FOOD_EFFECT_FIELDS, label: l('效果', 'Effect') }, label: l('效果', 'Effects') }),
+    ] },
+    'minecraft:tnt': { label: l('TNT', 'TNT'), fields: [
+      f('fuse', '引信', 'Fuse', 'number'),
+      f('block_state', '方块状态', 'Block State', 'text'),
+    ] },
+    'minecraft:composite': { label: l('复合', 'Composite'), widget: { type: 'listOf', itemType: { type: 'union', types: function () { return MODEL_TREE_TYPES; }, label: l('模型', 'Model') }, label: l('模型', 'Models') } },
+  };
+  // 模型树节点 (8+ 种, 递归引用自身 → 注册 + 函数延迟)
+  // 注意: 必须先于 SPECIAL_MODEL_TYPES 定义 (其 minecraft:composite 直接引用 MODEL_TREE_REF)
+  var MODEL_TREE_TYPES = {
+    'minecraft:model': { label: l('模型 (minecraft:model)', 'Model'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:model'] }),
+      f('model', '模型', 'Model', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx') }),
+      f('tints', '色调', 'Tints', 'listOf', { itemType: { type: 'object', fields: [
+        f('type', '类型', 'Type', 'select', { options: ['minecraft:constant', 'minecraft:dye', 'minecraft:grass', 'minecraft:water', 'minecraft:fire', 'minecraft:potion', 'minecraft:map_color', 'minecraft:tint_source'] }),
+        f('value', '值', 'Value', 'text', { hint: l('constant 时为 #RRGGBB', '#RRGGBB for constant') }),
+        f('default', '默认色', 'Default', 'text'),
+      ], label: l('色调', 'Tint') }, label: l('色调', 'Tints') }),
+      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
+    ] },
+    'minecraft:composite': { label: l('复合 (minecraft:composite)', 'Composite'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:composite'] }),
+      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
+    ] },
+    'minecraft:condition': { label: l('条件 (minecraft:condition)', 'Condition'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:condition'] }),
+      f('property', '属性', 'Property', 'text', { hint: l('如 custom_model_data / item_model', 'e.g. custom_model_data / item_model') }),
+      f('then', '满足时', 'Then', 'union', { types: MODEL_TREE_REF, label: l('满足时', 'Then') }),
+      f('else', '不满足时', 'Else', 'union', { types: MODEL_TREE_REF, label: l('不满足时', 'Else') }),
+      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+    ] },
+    'minecraft:select': { label: l('选择 (minecraft:select)', 'Select'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:select'] }),
+      f('property', '属性', 'Property', 'text', { hint: l('如 component / item_model', 'e.g. component / item_model') }),
+      f('cases', '分支', 'Cases', 'listOf', { itemType: { type: 'object', fields: [
+        f('when', '条件', 'When', 'text'),
+        f('model', '模型', 'Model', 'union', { types: MODEL_TREE_REF, label: l('模型', 'Model') }),
+      ], label: l('分支', 'Case') }, label: l('分支', 'Cases') }),
+      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+    ] },
+    'minecraft:range_dispatch': { label: l('区间分发 (minecraft:range_dispatch)', 'Range Dispatch'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:range_dispatch'] }),
+      f('property', '属性', 'Property', 'text', { hint: l('如 custom_model_data', 'e.g. custom_model_data') }),
+      f('entries', '区间', 'Entries', 'listOf', { itemType: { type: 'object', fields: [
+        f('threshold', '阈值', 'Threshold', 'number'),
+        f('model', '模型', 'Model', 'union', { types: MODEL_TREE_REF, label: l('模型', 'Model') }),
+      ], label: l('区间', 'Entry') }, label: l('区间', 'Entries') }),
+      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+    ] },
+    'minecraft:special': { label: l('特殊 (minecraft:special)', 'Special'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:special'] }),
+      f('model', '特殊模型', 'Special Model', 'union', { types: SPECIAL_MODEL_TYPES, label: l('特殊模型', 'Special Model') }),
+    ] },
+    'minecraft:empty': { label: l('空 (minecraft:empty)', 'Empty'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:empty'] }),
+    ] },
+    'minecraft:bundle': { label: l('收纳袋 (minecraft:bundle)', 'Bundle'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:bundle'] }),
+      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
+    ] },
+    'minecraft:selected_item': { label: l('手持物品 (minecraft:selected_item)', 'Selected Item'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:selected_item'] }),
+      f('in_hand', '手持时', 'In Hand', 'union', { types: MODEL_TREE_REF, label: l('手持时', 'In Hand') }),
+      f('in_hand_high', '高举时', 'In Hand High', 'union', { types: MODEL_TREE_REF, label: l('高举时', 'In Hand High') }),
+      f('in_hand_third_person', '第三人称手持', 'Third Person Hand', 'union', { types: MODEL_TREE_REF, label: l('第三人称手持', 'Third Person Hand') }),
+    ] },
+  };
+  function MODEL_TREE_REF() { return MODEL_TREE_TYPES; }
+  var MODEL_TREE_UNION = { type: 'union', label: l('模型树', 'Model Tree'), types: MODEL_TREE_REF };
+  S.itemModelForms = {
+    simplified: { type: 'object', fields: MODEL_SIMPLIFIED_FIELDS },
+    tree: MODEL_TREE_UNION,
+  };
+
+  // ---- 行为 (wiki item/behaviors.mdx + behaviors/ 子文档) ----
+  var FURNITURE_RULE_TYPES = {
+    map: { label: l('详细规则', 'Detailed'), widget: { type: 'object', fields: [
+      f('rotation', '旋转', 'Rotation', 'select', { options: ['left', 'right'] }),
+      f('alignment', '对齐', 'Alignment', 'select', { options: S.constants.alignments }),
+    ] } },
+  };
+  var INLINE_FURNITURE_SETTINGS = [
+    f('item', '物品', 'Item', 'text'),
+    f('hit_times', '击打次数', 'Hit Times', 'number'),
+    f('sounds', '音效', 'Sounds', 'kv'),
+    f('adventure_mode_breaking', '冒险模式可破坏', 'Adventure Mode Breaking', 'bool'),
+    f('correct_tools', '正确工具', 'Correct Tools', 'lines'),
+  ];
+  var INLINE_FURNITURE_FIELDS = [
+    f('events', '事件', 'Events', 'kv'),
+    f('settings', '设置', 'Settings', 'object', { fields: INLINE_FURNITURE_SETTINGS, label: l('设置', 'Settings') }),
+    f('variants', '变体', 'Variants', 'kv'),
+    f('loot', '掉落', 'Loot', 'union', { types: LOOT_TYPES, label: l('掉落', 'Loot') }),
+    f('behaviors', '行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: function () { return FURNITURE_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behaviors') }),
+  ];
+  var FURNITURE_BEHAVIOR_TYPES = {
+    simple_storage_furniture: { label: l('简单存储 (simple_storage_furniture)', 'Simple Storage'), fields: [
+      f('title', '标题', 'Title', 'text'), f('rows', '行数', 'Rows', 'number'),
+      f('data_key', '数据键', 'Data Key', 'text'), f('sounds', '音效', 'Sounds', 'kv'),
+    ] },
+    glowing_furniture: { label: l('发光 (glowing_furniture)', 'Glowing'), fields: [
+      f('lights', '光源', 'Lights', 'lines'), f('variants', '变体', 'Variants', 'kv'),
+    ] },
+    display_item_furniture: { label: l('展示物品 (display_item_furniture)', 'Display Item'), fields: [
+      f('data_key', '数据键', 'Data Key', 'text'), f('sounds', '音效', 'Sounds', 'kv'), f('variants', '变体', 'Variants', 'kv'),
+    ] },
+  };
+  var FURNITURE_ITEM_FIELDS = [
+    f('furniture', '家具', 'Furniture', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, label: l('家具', 'Furniture'), types: {
+      inline: { label: l('内联家具', 'Inline Furniture'), widget: { type: 'object', fields: INLINE_FURNITURE_FIELDS } },
+    } }),
+    f('rules', '规则', 'Rules', 'mapOf', { valueType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('规则', 'Rule'), types: FURNITURE_RULE_TYPES }, label: l('规则', 'Rules'), hint: l('键: 变体名; 值: left/center 或详细规则', 'Key: variant; value: left/center or details') }),
+    f('ignore_placer', '忽略放置者', 'Ignore Placer', 'bool'),
+    f('ignore_entities', '忽略实体', 'Ignore Entities', 'bool'),
+    f('against_blocks', '可放置方块', 'Against Blocks', 'lines'),
+    f('against_block_tags', '可放置方块标签', 'Against Block Tags', 'lines'),
+    f('blacklist', '黑名单', 'Blacklist', 'bool'),
+  ];
+  var INLINE_BLOCK_SETTINGS = [
+    f('hardness', '硬度', 'Hardness', 'number'),
+    f('resistance', '抗性', 'Resistance', 'number'),
+    f('item', '物品', 'Item', 'text'),
+    f('map-color', '地图颜色', 'Map Color', 'number'),
+    f('tags', '标签', 'Tags', 'lines'),
+    f('sounds', '音效', 'Sounds', 'kv'),
+  ];
+  var INLINE_BLOCK_FIELDS = [
+    f('settings', '设置', 'Settings', 'object', { fields: INLINE_BLOCK_SETTINGS, label: l('设置', 'Settings') }),
+    f('behavior', '行为', 'Behavior', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behavior') }),
+    f('loot', '掉落', 'Loot', 'union', { types: LOOT_TYPES, label: l('掉落', 'Loot') }),
+    f('state', '状态', 'State', 'kv'),
+  ];
+  var BLOCK_ITEM_FIELDS = [
+    f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: {
+      inline: { label: l('内联方块', 'Inline Block'), widget: { type: 'object', fields: INLINE_BLOCK_FIELDS } },
+    } }),
+  ];
+  var ITEM_BEHAVIOR_TYPES = {
+    block_item: { label: l('放置方块 (block_item)', 'Block Item'), fields: BLOCK_ITEM_FIELDS },
+    ceiling_block_item: { label: l('顶部方块 (ceiling_block_item)', 'Ceiling Block Item'), fields: BLOCK_ITEM_FIELDS },
+    compostable_item: { label: l('可堆肥 (compostable_item)', 'Compostable'), fields: [f('chance', '概率', 'Chance', 'number', { hint: l('0.5 = 50%', '0.5 = 50%') })] },
+    double_high_block_item: { label: l('双层方块 (double_high_block_item)', 'Double High Block Item'), fields: BLOCK_ITEM_FIELDS },
+    furniture_item: { label: l('放置家具 (furniture_item)', 'Furniture Item'), fields: FURNITURE_ITEM_FIELDS },
+    ground_block_item: { label: l('地面方块 (ground_block_item)', 'Ground Block Item'), fields: BLOCK_ITEM_FIELDS },
+    liquid_collision_block_item: { label: l('液体碰撞方块 (liquid_collision_block_item)', 'Liquid Collision Block'), fields: [
+      f('offset_y', '偏移 Y', 'Offset Y', 'number'),
+      f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: {
+        inline: { label: l('内联方块', 'Inline Block'), widget: { type: 'object', fields: INLINE_BLOCK_FIELDS } },
+      } }),
+    ] },
+    liquid_collision_furniture_item: { label: l('液体碰撞家具 (liquid_collision_furniture_item)', 'Liquid Collision Furniture'), fields: FURNITURE_ITEM_FIELDS.concat([
+      f('source_only', '仅源方块', 'Source Only', 'bool'),
+      f('liquid_type', '液体类型', 'Liquid Type', 'lines'),
+    ]) },
+    multi_high_block_item: { label: l('多层方块 (multi_high_block_item)', 'Multi High Block Item'), fields: BLOCK_ITEM_FIELDS },
+    range_mining_item: { label: l('连锁挖掘 (range_mining_item)', 'Range Mining'), fields: [
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
+      f('range', '范围', 'Range', 'lines', { hint: l('每行一个如 x:1 y:1 z:1', 'One per line, e.g. x:1 y:1 z:1') }),
+    ] },
+    wall_block_item: { label: l('墙上方块 (wall_block_item)', 'Wall Block Item'), fields: BLOCK_ITEM_FIELDS },
+  };
+  // 43+ 个方块行为 (数据源: 旧版 BEHAVIOR_FIELDS + wiki behaviors/ 文档; Phase 3 细化)
+  var BLOCK_BEHAVIOR_TYPES = {
+    attached_stem_block: { label: l('附着茎 (attached_stem_block)', 'Attached Stem Block'), fields: _bh([['fruit', 'text'], ['stem', 'text']]) },
+    bouncing_block: { label: l('弹跳 (bouncing_block)', 'Bouncing Block'), fields: _bh([['bounce_height', 'number'], ['fall_damage_multiplier', 'number'], ['sync_player_position', 'bool']]) },
+    budding_block: { label: l('芽 (budding_block)', 'Budding Block'), fields: _bh([['growth_chance', 'number'], ['blocks', 'lines']]) },
+    bush_block: { label: l('灌木 (bush_block)', 'Bush Block'), fields: _bh([['blacklist', 'bool'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number'], ['bottom_blocks', 'lines'], ['bottom_block_tags', 'lines']]) },
+    button_block: { label: l('按钮 (button_block)', 'Button Block'), fields: _bh([['ticks_to_stay_pressed', 'number'], ['can_be_activated_by_arrows', 'bool'], ['sounds', 'json']]) },
+    change_over_time_block: { label: l('随时间变化 (change_over_time_block)', 'Change Over Time Block'), fields: _bh([['change_speed', 'number'], ['next_block', 'text'], ['excluded_properties', 'lines']]) },
+    chime_block: { label: l('风铃 (chime_block)', 'Chime Block'), fields: _bh([['sounds', 'json']]) },
+    concrete_powder_block: { label: l('混凝土粉末 (concrete_powder_block)', 'Concrete Powder Block'), fields: _bh([['solid_block', 'text']]) },
+    crop_block: { label: l('作物 (crop_block)', 'Crop Block'), fields: _bh([['grow_speed', 'number'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['spawn_light_requirement', 'number'], ['max_spawn_light_requirement', 'number'], ['is_bone_meal_target', 'bool'], ['bone_meal_age_bonus', 'json']]) },
+    decay_block: { label: l('腐烂 (decay_block)', 'Decay Block'), fields: _bh([['decay_into', 'text'], ['delay', 'text'], ['chance', 'number'], ['required_light', 'number']]) },
+    directional_attached_block: { label: l('定向附着 (directional_attached_block)', 'Directional Attached Block'), fields: _bh([['blacklist', 'bool'], ['attached_blocks', 'lines'], ['attached_block_tags', 'lines']]) },
+    display_item_block: { label: l('展示物品方块 (display_item_block)', 'Display Item Block'), fields: _bh([['position', 'text'], ['has_signal', 'bool'], ['data_key', 'text'], ['tint_source', 'bool'], ['sounds', 'json']]) },
+    door_block: { label: l('门 (door_block)', 'Door Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
+    drawer_block: { label: l('抽屉 (drawer_block)', 'Drawer Block'), fields: _bh([['max_stacks', 'number'], ['has_signal', 'bool'], ['allow_input', 'bool'], ['allow_output', 'bool'], ['item_position', 'text'], ['text_position', 'text'], ['item_scale', 'text'], ['text_scale', 'text'], ['data_key', 'text'], ['compatible_mode', 'bool'], ['sounds', 'json']]) },
+    drop_exp_block: { label: l('经验掉落 (drop_exp_block)', 'Drop Exp Block'), fields: _bh([['amount', 'text'], ['conditions', 'json']]) },
+    drop_experience_block: { label: l('经验掉落 (drop_experience_block)', 'Drop Experience Block'), fields: _bh([['amount', 'text'], ['conditions', 'json']]) },
+    face_attached_horizontal_directional_block: { label: l('面附水平定向 (face_attached_horizontal_directional_block)', 'Face Attached Horizontal Directional'), fields: _bh([['blacklist', 'bool'], ['attached_blocks', 'lines'], ['attached_block_tags', 'lines']]) },
+    falling_block: { label: l('下落方块 (falling_block)', 'Falling Block'), fields: _bh([['hurt_amount', 'number'], ['max_hurt', 'number'], ['sounds', 'json']]) },
+    fence_block: { label: l('栅栏 (fence_block)', 'Fence Block'), fields: _bh([['connectable_block_tag', 'text'], ['can_leash', 'bool']]) },
+    fence_gate_block: { label: l('栅栏门 (fence_gate_block)', 'Fence Gate Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
+    grass_block: { label: l('草方块 (grass_block)', 'Grass Block'), fields: _bh([['feature', 'text']]) },
+    hanging_block: { label: l('悬挂 (hanging_block)', 'Hanging Block'), fields: _bh([['blacklist', 'bool'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number'], ['above_blocks', 'lines'], ['above_block_tags', 'lines']]) },
+    item_frame_block: { label: l('物品展示框 (item_frame_block)', 'Item Frame Block'), fields: _bh([['position', 'text'], ['glow', 'bool'], ['invisible', 'bool'], ['render_map_item', 'bool'], ['data_key', 'text'], ['sounds', 'json']]) },
+    liquid_flowable_block: { label: l('液体可流经 (liquid_flowable_block)', 'Liquid Flowable Block'), fields: _bh([['drop_item', 'bool']]) },
+    multi_high_block: { label: l('多层 (multi_high_block)', 'Multi High Block'), fields: _bh([['property', 'text']]) },
+    near_liquid_block: { label: l('液体附近 (near_liquid_block)', 'Near Liquid Block'), fields: _bh([['liquid_type', 'lines'], ['stackable', 'bool'], ['positions', 'lines']]) },
+    on_liquid_block: { label: l('液体上 (on_liquid_block)', 'On Liquid Block'), fields: _bh([['liquid_type', 'lines'], ['stackable', 'bool']]) },
+    pressure_plate_block: { label: l('压力板 (pressure_plate_block)', 'Pressure Plate Block'), fields: _bh([['sensitivity', 'select', ['all', 'mob']], ['pressed_time', 'number'], ['sounds', 'json']]) },
+    sapling_block: { label: l('树苗 (sapling_block)', 'Sapling Block'), fields: _bh([['feature', 'text'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['grow_speed', 'number'], ['bone_meal_success_chance', 'number']]) },
+    seat_block: { label: l('座椅 (seat_block)', 'Seat Block'), fields: _bh([['seats', 'lines']]) },
+    simple_particle_block: { label: l('简单粒子 (simple_particle_block)', 'Simple Particle Block'), fields: _bh([['tick_interval', 'number'], ['particles', 'json']]) },
+    simple_storage_block: { label: l('简单存储 (simple_storage_block)', 'Simple Storage Block'), fields: _bh([['title', 'text'], ['rows', 'number'], ['has_signal', 'bool'], ['allow_input', 'bool'], ['allow_output', 'bool'], ['data_key', 'text'], ['sounds', 'json']]) },
+    spreading_block: { label: l('蔓延 (spreading_block)', 'Spreading Block'), fields: _bh([['target_block', 'text']]) },
+    stackable_block: { label: l('可堆叠 (stackable_block)', 'Stackable Block'), fields: _bh([['property', 'text'], ['items', 'lines']]) },
+    stem_block: { label: l('茎 (stem_block)', 'Stem Block'), fields: _bh([['fruit', 'text'], ['attached_stem', 'text'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['fruit_bottom_blocks', 'lines'], ['fruit_bottom_block_tags', 'lines']]) },
+    strippable_block: { label: l('可去皮 (strippable_block)', 'Strippable Block'), fields: _bh([['stripped', 'text'], ['excluded_properties', 'lines'], ['tools', 'lines'], ['sound', 'text']]) },
+    sturdy_base_block: { label: l('坚固底座 (sturdy_base_block)', 'Sturdy Base Block'), fields: _bh([['direction', 'text'], ['support_types', 'lines'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number']]) },
+    surface_spreading_block: { label: l('表面蔓延 (surface_spreading_block)', 'Surface Spreading Block'), fields: _bh([['light_requirement', 'number'], ['max_light_requirement', 'number'], ['base_block', 'text']]) },
+    tint_source_block: { label: l('色调源 (tint_source_block)', 'Tint Source Block'), fields: _bh([['drop_item', 'bool'], ['data_key', 'text']]) },
+    toggleable_lamp_block: { label: l('可切换灯 (toggleable_lamp_block)', 'Toggleable Lamp Block'), fields: _bh([['can_open_with_hand', 'bool']]) },
+    trapdoor_block: { label: l('活板门 (trapdoor_block)', 'Trapdoor Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
+    vertical_crop_block: { label: l('垂直作物 (vertical_crop_block)', 'Vertical Crop Block'), fields: _bh([['max_height', 'number'], ['grow_speed', 'number'], ['direction', 'select', ['up', 'down']]]) },
+    wall_torch_particle_block: { label: l('墙上火把粒子 (wall_torch_particle_block)', 'Wall Torch Particle Block'), fields: _bh([['tick_interval', 'number'], ['particles', 'json']]) },
+    // wiki 新增 (Phase 3 细化字段)
+    hangable_block: { label: l('可悬挂 (hangable_block)', 'Hangable Block'), fields: [] },
+    lamp_block: { label: l('灯 (lamp_block)', 'Lamp Block'), fields: [] },
+    leaves_block: { label: l('树叶 (leaves_block)', 'Leaves Block'), fields: [] },
+    slab_block: { label: l('台阶 (slab_block)', 'Slab Block'), fields: [] },
+    snowy_block: { label: l('积雪 (snowy_block)', 'Snowy Block'), fields: [] },
+    sofa_block: { label: l('沙发 (sofa_block)', 'Sofa Block'), fields: [f('seats', '座位', 'Seats', 'lines')] },
+    stairs_block: { label: l('楼梯 (stairs_block)', 'Stairs Block'), fields: [] },
+  };
+
+  // ---- settings (wiki item/settings.mdx) ----
+  var ITEM_SETTINGS_FIELDS = [
+    f('fuel_time', '燃料时间 (tick)', 'Fuel Time', 'number', { hint: l('>0 表示可作为燃料', '>0 = usable as fuel') }),
+    f('tags', '标签', 'Tags', 'lines', { hint: l('每行一个标签, 如 minecraft:planks', 'One tag per line') }),
+    f('equipment', '装备槽位', 'Equipment', 'listOf', { itemType: { type: 'text', datalist: 'equipmentSlots' }, label: l('装备槽位', 'Equipment') }),
+    f('repairable', '可修复', 'Repairable', 'union', { allowScalar: { type: 'bool' }, label: l('可修复', 'Repairable'), types: {
+      items: { label: l('修复物品', 'Items'), widget: { type: 'lines', label: l('修复物品', 'Items') } },
+    } }),
+    f('anvil_repair_item', '铁砧修复物品', 'Anvil Repair Item', 'lines', { hint: l('每行一个物品 ID', 'One item ID per line') }),
+    f('renameable', '可重命名', 'Renameable', 'union', { allowScalar: { type: 'bool' }, label: l('可重命名', 'Renameable'), types: {
+      map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [f('anvil_requires_level', '铁砧需要等级', 'Anvil Requires Level', 'bool')] } },
+    } }),
+    f('prevent_break', '不可破坏', 'Prevent Break', 'bool'),
+    f('can_place', '可放置方块', 'Can Place', 'lines', { hint: l('每行一个方块 ID/标签', 'One block ID/tag per line') }),
+    f('allowed_projectiles', '允许弹射物', 'Allowed Projectiles', 'lines'),
+    f('projectile', '弹射物', 'Projectile', 'text', { hint: l('实体 ID, 如 minecraft:fireball', 'Entity ID, e.g. minecraft:fireball') }),
+    f('dyeable', '可染色', 'Dyeable', 'bool'),
+    f('food', '食物', 'Food', 'bool', { hint: l('可用饥饿值吃下', 'Can be eaten') }),
+    f('consume_replacement', '消耗替换', 'Consume Replacement', 'select', { options: ['fixed', 'same'] }),
+    f('craft_remainder', '合成残留', 'Craft Remainder', 'union', { types: CRAFT_REMAINDER_TYPES, label: l('合成残留', 'Craft Remainder') }),
+    f('fuel_remainder', '燃料残留', 'Fuel Remainder', 'union', { types: CRAFT_REMAINDER_TYPES, label: l('燃料残留', 'Fuel Remainder') }),
+    f('invulnerable', '不可破坏', 'Invulnerable', 'bool'),
+    f('enchantable', '可附魔', 'Enchantable', 'bool'),
+    f('compost_probability', '堆肥概率', 'Compost Probability', 'number', { hint: l('0.1 = 10%', '0.1 = 10%') }),
+    f('dye_color', '染料颜色', 'Dye Color', 'bool'),
+    f('firework_color', '烟花颜色', 'Firework Color', 'bool'),
+    f('ingredient_substitute', '材料替代', 'Ingredient Substitute', 'bool'),
+    f('hat_height', '帽子高度', 'Hat Height', 'number'),
+    f('keep_on_death_chance', '死亡保留概率', 'Keep On Death Chance', 'number'),
+    f('destroy_on_death_chance', '死亡销毁概率', 'Destroy On Death Chance', 'number'),
+    f('drop_display', '掉落显示', 'Drop Display', 'bool'),
+    f('glow_color', '发光颜色', 'Glow Color', 'text', { placeholder: l('#FF0000', '#FF0000') }),
+  ];
+
+  // ---- updater (wiki item/updater.mdx) ----
+  var UPDATER_DATA_FIELDS = [
+    f('path', '路径', 'Path', 'text', { hint: l('如 item_model / data.custom_name', 'e.g. item_model / data.custom_name') }),
+    f('value', '值', 'Value', 'text'),
+  ];
+  var UPDATER_STEP_TYPES = {
+    apply_data: { label: l('应用数据 (apply_data)', 'Apply Data'), fields: [
+      f('data', '数据', 'Data', 'listOf', { itemType: { type: 'object', fields: UPDATER_DATA_FIELDS, label: l('数据', 'Data') }, label: l('数据', 'Data') }),
+    ] },
+    transmute: { label: l('转换物品 (transmute)', 'Transmute'), fields: [
+      f('to', '目标物品', 'To', 'text', { datalist: 'items' }),
+    ] },
+    reset: { label: l('重置 (reset)', 'Reset') },
+  };
+  var UPDATER_VALUE_TYPES = {
+    step: { label: l('单个步骤', 'Single Step'), widget: { type: 'union', types: UPDATER_STEP_TYPES, label: l('步骤', 'Step') } },
+    steps: { label: l('步骤列表', 'Steps'), widget: { type: 'listOf', itemType: { type: 'union', types: UPDATER_STEP_TYPES, label: l('步骤', 'Step') }, label: l('步骤', 'Steps') } },
+  };
+
+  // ---- item section ----
+  SECTIONS.item = {
+    tabs: [
+      { key: 'basic', label: l('基础', 'Basic') },
+      { key: 'data', label: l('数据', 'Data') },
+      { key: 'model', label: l('模型', 'Model') },
+      { key: 'behavior', label: l('行为', 'Behavior') },
+      { key: 'settings', label: l('设置', 'Settings') },
+      { key: 'events', label: l('事件', 'Events') },
+    ],
+    fields: [
+      // 基础
+      f('material', '材质', 'Material', 'text', { datalist: 'items', tab: 'basic' }),
+      f('custom_model_data', 'Custom Model Data', 'Custom Model Data', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, types: CUSTOM_MODEL_DATA_TYPES, tab: 'basic', label: l('Custom Model Data', 'Custom Model Data') }),
+      f('texture', '纹理', 'Texture', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx'), tab: 'basic' }),
+      f('category', '分类', 'Category', 'linesScalar', { hint: l('多行 = 多个分类', 'Multiple lines = several categories'), tab: 'basic' }),
+      f('template', '模板', 'Template', 'linesScalar', { hint: l('多行 = 多个模板', 'Multiple lines = several templates'), tab: 'basic' }),
+      f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments'), tab: 'basic' }),
+      f('client-bound-material', '客户端材质', 'Client Bound Material', 'text', { datalist: 'items', tab: 'basic' }),
+      // 数据组件
+      f('data', '数据', 'Data', 'components', { components: DATA_COMPONENT_TYPES_REF, label: l('数据', 'Data'), tab: 'data' }),
+      // 模型
+      f('item_model', '物品模型', 'Item Model', 'model', { tab: 'model' }),
+      f('model', '模型 (旧键)', 'Model (legacy)', 'model', { tab: 'model' }),
+      // 行为
+      f('behavior', '行为', 'Behavior', 'union', { types: ITEM_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behavior' }),
+      f('updater', '更新器', 'Updater', 'mapOf', { valueType: { type: 'union', noTypeKey: true, label: l('更新', 'Update'), types: UPDATER_VALUE_TYPES }, label: l('更新器', 'Updater'), hint: l('键: 版本号, 值: 步骤或步骤列表', 'Key: version, value: step or steps'), tab: 'behavior' }),
+      // 设置
+      f('settings', '设置', 'Settings', 'object', { fields: ITEM_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
+      // 事件
+      f('events', '事件', 'Events', 'events', { tab: 'events', custom: 'events' }),
+      f('merges', '合并', 'Merges', 'kv', { tab: 'events' }),
+      f('overrides', '覆盖', 'Overrides', 'kv', { tab: 'events' }),
+    ],
+  };
+
   // ============ 插件 config.yml (S.config) ============
   // 数据源: 插件 config.yml 实测 + wiki reference/file_conflict.mdx + getting_start/installation.mdx
   var CONFIG_TERM_TYPES = {
@@ -1037,6 +1617,22 @@
     term: CONFIG_TERM_TYPES,
     resolution: CONFIG_RESOLUTION_TYPES,
     hosting: CONFIG_HOSTING_TYPES,
+    // item 编辑器 (Phase 2)
+    dataComponents: DATA_COMPONENT_TYPES,
+    loreLines: LORE_LINE_TYPES,
+    customModelData: CUSTOM_MODEL_DATA_TYPES,
+    profile: PROFILE_TYPES,
+    writtenPages: WRITTEN_PAGE_TYPES,
+    itemBehaviors: ITEM_BEHAVIOR_TYPES,
+    blockBehaviors: BLOCK_BEHAVIOR_TYPES,
+    furnitureBehaviors: FURNITURE_BEHAVIOR_TYPES,
+    craftRemainder: CRAFT_REMAINDER_TYPES,
+    transforms: TRANSFORM_TYPES,
+    rotations: ROTATION_TYPES,
+    modelTree: MODEL_TREE_TYPES,
+    specialModels: SPECIAL_MODEL_TYPES,
+    updaterSteps: UPDATER_STEP_TYPES,
+    updaterValues: UPDATER_VALUE_TYPES,
   };
 
   S.sections = SECTIONS;

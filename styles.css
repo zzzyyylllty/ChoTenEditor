@@ -3305,6 +3305,39 @@ textarea.ce-sf-input {
 .ce-sf-map-val {
   min-width: 0;
 }
+.ce-sf-map-add {
+  margin-top: 6px;
+}
+.ce-sf-map-add .ce-input {
+  width: 100%;
+}
+
+/* components (data 组件) 编辑器 */
+.ce-sf-comp-row {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: var(--color-bg-primary);
+}
+.ce-sf-comp-row:last-child {
+  margin-bottom: 0;
+}
+.ce-sf-comp-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  border-bottom: 1px dashed var(--color-border);
+  background: var(--color-bg-secondary, rgba(128, 128, 128, 0.06));
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.ce-sf-comp-head .ce-sf-map-key {
+  width: auto;
+}
+.ce-sf-comp-row > .ce-sf-map-val {
+  padding: 6px 8px;
+}
 
 /* union (类型选择卡片) */
 .ce-sf-union-head {

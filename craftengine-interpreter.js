@@ -651,9 +651,13 @@
       var ks = Object.keys(_sfSchemas.types);
       for (var i = 0; i < ks.length; i++) _sfRegPairs.push({ key: ks[i], obj: _sfSchemas.types[ks[i]] });
     }
-    _sfDatalistMap = { items: [], blocks: [] };
+    _sfDatalistMap = {};
     if (_sfSchemas && _sfSchemas.constants) {
-      var vi = _sfSchemas.constants.vanillaItems || [];
+      var cs = _sfSchemas.constants;
+      Object.keys(cs).forEach(function (k) {
+        if (Array.isArray(cs[k])) _sfDatalistMap[k] = cs[k];
+      });
+      var vi = cs.vanillaItems || [];
       _sfDatalistMap.items = vi;
       _sfDatalistMap.blocks = vi;
     }
@@ -769,7 +773,7 @@
   }
 
   // ---- 布局: 两栏 (行) / 堆叠 ----
-  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1 };
+  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1 };
   function _sfIsStack(t) { return _SF_STACK_TYPES[t] === 1; }
 
   // ---- 控件 (无标签) ----
@@ -887,6 +891,8 @@
     if (t === 'listOf') return _sfListHtml(def, path, value, opts);
     if (t === 'mapOf') return _sfMapHtml(def, path, value, opts);
     if (t === 'object') return _sfObjectHtml(def, path, value, opts);
+    if (t === 'components') return _sfComponentsHtml(def, path, value, opts);
+    if (t === 'model') return _sfModelHtml(def, path, value, opts);
     return _sfControl(def, path, value);
   }
   function _sfListHtml(def, path, value, opts) {
@@ -895,7 +901,7 @@
     var itemDef = def.itemType;
     var isUnionItem = itemDef && itemDef.type === 'union';
     var html = '<div class="ce-sf-list" data-sf-kind="list" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
-      _escHtml(JSON.stringify(_sfNorm(def))) + '">';
+      _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < arr.length; i++) {
       html += '<div class="ce-sf-list-item" data-sf-idx="' + i + '">' +
         '<div class="ce-sf-list-ops">' +
@@ -917,6 +923,7 @@
     var types = _sfTypesOf(def);
     var html = '<select class="ce-input ce-sf-pick" data-sf-action="list-add" data-sf-uid="' + uid + '">' +
       '<option value="">-- ' + _escHtml(_t('craftengine.listAdd')) + ' --</option>';
+    if (def.allowScalar) html += '<option value="__scalar">' + _escHtml(_t('craftengine.customValue')) + '</option>';
     var keys = Object.keys(types);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
@@ -932,12 +939,12 @@
     var keys = Object.keys(obj);
     var valueDef = def.valueType || { type: 'scalar' };
     var html = '<div class="ce-sf-map" data-sf-kind="map" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
-      _escHtml(JSON.stringify(_sfNorm(def))) + '">';
+      _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       html += '<div class="ce-sf-map-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">' +
-        '<div class="ce-sf-map-val">' + _sfItemHtml(valueDef, path + '.' + k, obj[k], opts) + '</div>' +
+        '<div class="ce-sf-map-val">' + _sfItemHtml(valueDef, _sfKeyPath(path, k), obj[k], opts) + '</div>' +
         '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '">✕</button>' +
         '</div>';
     }
@@ -959,7 +966,7 @@
         } else {
           for (var j = 0; j < ks.length; j++) {
             var w2 = (types[ks[j]].widget || {}).type;
-            if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest') return { key: ks[j], neg: false };
+            if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest' || w2 === 'union') return { key: ks[j], neg: false };
           }
         }
         return { key: ks.length ? ks[0] : '', neg: false };
@@ -1038,14 +1045,14 @@
     if (cur.key && !(opts && opts.inList)) {
       clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="union-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
-    return '<div class="ce-sf-union-head">' +
+    return '<div class="ce-sf-union-head" data-sf-uid="' + uid + '">' +
       '<select class="ce-input" data-sf-action="union-set" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' + optHtml + '</select>' + clear +
       '</div>' +
       '<div class="ce-sf-union-body">' + body + '</div>';
   }
   function _sfObjectHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'object', def, opts);
-    var html = '<div class="ce-sf-object">';
+    var html = '<div class="ce-sf-object" data-sf-uid="' + uid + '">';
     var modeled = {};
     (def.fields || []).forEach(function (fld) {
       modeled[fld.key] = 1;
@@ -1065,7 +1072,73 @@
     }
     return html;
   }
-  // 容器局部重渲染 (list/map/union/object 内容), 不整页刷新、不丢焦点
+  // ---- data 组件编辑器: 键 + 每组件独立表单 + 添加组件下拉 ----
+  function _sfCompsOf(def) {
+    var c = def ? def.components : null;
+    return (typeof c === 'function') ? c() : (c || {});
+  }
+  function _sfComponentsHtml(def, path, value, opts) {
+    var uid = (opts && opts.uid) || _sfUidAlloc(path, 'components', def, opts);
+    var obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    var comps = _sfCompsOf(def);
+    var keys = Object.keys(obj);
+    var html = '<div class="ce-sf-map ce-sf-components" data-sf-kind="components" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var base = String(k).split('#')[0];
+      var wd = comps[base];
+      var body = wd ? _sfItemHtml(wd, _sfKeyPath(path, k), obj[k], opts)
+        : '<div class="ce-stack">' + _sfKvTextarea({ type: 'kv' }, _sfKeyPath(path, k), obj[k]) + '</div>';
+      html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
+        '<div class="ce-sf-comp-head">' +
+        '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">' +
+        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '" title="✕">✕</button>' +
+        '</div>' +
+        '<div class="ce-sf-map-val">' + body + '</div>' +
+        '</div>';
+    }
+    if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.listEmpty')) + '</div>';
+    var addSel = '<select class="ce-input ce-sf-pick" data-sf-action="comp-add" data-sf-uid="' + uid + '">' +
+      '<option value="">-- ' + _escHtml(_t('craftengine.componentAdd')) + ' --</option>';
+    var cks = Object.keys(comps);
+    for (var c = 0; c < cks.length; c++) {
+      var ck = cks[c];
+      if (obj[ck] === undefined) {
+        addSel += '<option value="' + _escHtml(ck) + '">' + _escHtml(_labelOf(comps[ck]) || ck) + '</option>';
+      }
+    }
+    addSel += '</select>';
+    html += '<div class="ce-sf-map-add">' + addSel + '</div>';
+    return html;
+  }
+  // ---- item 模型编辑器: 简化 / 模型树 / 路径 三种模式 ----
+  function _sfModelForms() {
+    _sfInit();
+    return (_sfSchemas && _sfSchemas.itemModelForms) ? _sfSchemas.itemModelForms : null;
+  }
+  function _sfModelHtml(def, path, value, opts) {
+    var uid = (opts && opts.uid) || _sfUidAlloc(path, 'model', def, opts);
+    var isStr = typeof value === 'string';
+    var isObj = !isStr && value !== null && typeof value === 'object' && !Array.isArray(value);
+    var mode = isStr ? 'path' : (isObj && value.type !== undefined && value.type !== null && value.type !== '' ? 'tree' : 'simplified');
+    var html = '<div class="ce-sf-union-head" data-sf-uid="' + uid + '">' +
+      '<select class="ce-input" data-sf-action="model-mode" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' +
+      '<option value="simplified"' + (mode === 'simplified' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelSimplified')) + '</option>' +
+      '<option value="tree"' + (mode === 'tree' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelTree')) + '</option>' +
+      '<option value="path"' + (mode === 'path' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelPath')) + '</option>' +
+      '</select></div>';
+    var forms = _sfModelForms();
+    var body;
+    if (mode === 'path') {
+      body = _sfInput({ type: 'text', placeholder: _sfL('minecraft:item/custom/xxx', 'minecraft:item/custom/xxx') }, path, value);
+    } else if (mode === 'tree') {
+      body = forms && forms.tree ? _sfUnionHtml(forms.tree, path, value, opts) : _sfInput({ type: 'text' }, path, value);
+    } else {
+      body = forms && forms.simplified ? _sfObjectHtml(forms.simplified, path, value, opts) : _sfKvTextarea({ type: 'kv' }, path, value);
+    }
+    return html + body;
+  }
+  // 容器局部重渲染 (list/map/union/object/components/model 内容), 不整页刷新、不丢焦点
   function _sfRerender(uid, containerEl) {
     var rec = _sfUidMap[uid];
     if (!rec || !containerEl || !containerEl.querySelectorAll) return;
@@ -1082,6 +1155,8 @@
     else if (rec.kind === 'map') html = _sfMapHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'union') html = _sfUnionHtml(rec.def, rec.path, value, { uid: uid, inList: rec.inList });
     else if (rec.kind === 'object') html = _sfObjectHtml(rec.def, rec.path, value, { uid: uid });
+    else if (rec.kind === 'components') html = _sfComponentsHtml(rec.def, rec.path, value, { uid: uid });
+    else if (rec.kind === 'model') html = _sfModelHtml(rec.def, rec.path, value, { uid: uid });
     else return;
     wrap.innerHTML = html;
   }
@@ -1101,7 +1176,21 @@
       var v = el.value;
       if (v === '') return;
       var cur = path ? _getNested(entry.data, path) : entry.data;
-      if (rec.def.noTypeKey) { _sfRerender(uid, containerEl); return; }
+      if (rec.def.noTypeKey) {
+        // 形状推断 union: 切换类型时若当前值不匹配目标形状, 创建默认值
+        var curShape = _sfUnionCurrent(rec.def, cur);
+        if (v === '__scalar') {
+          if (curShape.key !== '__scalar') { if (path) _applyValue(entry, path, '', parsed, section); }
+        } else if (curShape.key !== v) {
+          var td = _sfTypesOf(rec.def)[v];
+          var defVal = {};
+          if (td && td.widget) defVal = _sfDefaultOf(td.widget);
+          if (path) _applyValue(entry, path, defVal, parsed, section);
+        }
+        _sfRerender(uid, containerEl);
+        if (ROOT.__keAutoSync) syncToSource(parsed);
+        return;
+      }
       var newVal;
       if (v === '__scalar') {
         newVal = (typeof cur === 'string') ? cur : '';
@@ -1130,7 +1219,7 @@
       if (itemDef && itemDef.type === 'union') {
         var tv = el.value;
         if (!tv) return;
-        nv = { type: tv };
+        nv = tv === '__scalar' ? '' : { type: tv };
       } else {
         nv = _sfDefaultOf(itemDef);
       }
@@ -1192,6 +1281,44 @@
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
     }
+    if (action === 'comp-add') {
+      if (!rec || rec.kind !== 'components') return;
+      var ckey = el.value;
+      if (!ckey) return;
+      var comps = _sfCompsOf(rec.def);
+      var wd = comps[ckey];
+      var cobj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
+      if (!cobj || typeof cobj !== 'object' || Array.isArray(cobj)) {
+        cobj = {};
+        if (rec.path) _setNested(entry.data, rec.path, cobj);
+      }
+      cobj[ckey] = wd ? _sfDefaultOf(wd) : {};
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+      return;
+    }
+    if (action === 'model-mode') {
+      if (!rec || rec.kind !== 'model') return;
+      var mode2 = el.value;
+      var cur = rec.path ? _getNested(entry.data, rec.path) : entry.data;
+      var next;
+      if (mode2 === 'path') {
+        next = (typeof cur === 'string') ? cur
+          : (cur && typeof cur === 'object' && typeof cur.path === 'string') ? cur.path
+          : '';
+      } else if (mode2 === 'simplified') {
+        next = (cur !== null && typeof cur === 'object' && !Array.isArray(cur)) ? cur
+          : (typeof cur === 'string') ? { path: cur }
+          : {};
+      } else {
+        next = (cur !== null && typeof cur === 'object' && !Array.isArray(cur)) ? Object.assign({}, cur) : {};
+        if (!next.type) next.type = 'minecraft:model';
+      }
+      if (rec.path) _applyValue(entry, rec.path, next, parsed, section);
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+      return;
+    }
   }
 
   // ---- schema section 表单 ----
@@ -1223,7 +1350,7 @@
     }
     return html + '</details>';
   }
-  function _sfEntryFormHtml(section, entry, schema) {
+  function _sfEntryFormHtml(section, entry, schema, formTab, evKey) {
     _sfInit();
     var html = _renderField(_t('craftengine.entryKey'),
       '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(entry.key).replace(/"/g, '&quot;') + '" spellcheck="false">',
@@ -1241,13 +1368,62 @@
       return html;
     }
     var modeled = {};
+    var tabs = null;
+    if (schema.tabs && schema.tabs.length) {
+      tabs = { other: '' };
+      for (var t = 0; t < schema.tabs.length; t++) tabs[schema.tabs[t].key] = '';
+    }
     (schema.fields || []).forEach(function (fld) {
       modeled[fld.key] = 1;
-      html += _sfFieldHtml(fld, fld.key, entry.data ? entry.data[fld.key] : undefined);
+      var fhtml;
+      if (fld.custom === 'events') fhtml = _eventsPanel(entry, evKey);
+      else fhtml = _sfFieldHtml(fld, fld.key, entry.data ? entry.data[fld.key] : undefined);
+      if (tabs) {
+        var tk = fld.tab || 'other';
+        if (tabs[tk] === undefined) tabs[tk] = '';
+        tabs[tk] += fhtml;
+      } else {
+        html += fhtml;
+      }
     });
-    html += _sfOtherFieldsHtml(entry, modeled);
+    var other = _sfOtherFieldsHtml(entry, modeled);
+    if (tabs) {
+      tabs.other += other;
+      html += _sfTabsHtml(schema, tabs, formTab);
+    } else {
+      html += other;
+    }
     html += _sfDatalistHtml();
     return html;
+  }
+  // schema 选项卡: 标签取 schema.tabs 定义, 'other' 用 i18n
+  function _sfTabsHtml(schema, tabsData, activeTab) {
+    var order = [];
+    Object.keys(tabsData).forEach(function (k) {
+      if (tabsData[k] !== '') order.push(k);
+    });
+    if (!order.length) return '';
+    var tabDefs = {};
+    (schema.tabs || []).forEach(function (t) { tabDefs[t.key] = t; });
+    var idx = 0;
+    for (var i = 0; i < order.length; i++) {
+      if (order[i] === activeTab) { idx = i; break; }
+    }
+    var bar = '<div class="ce-tabs">';
+    for (var j = 0; j < order.length; j++) {
+      var label;
+      if (tabDefs[order[j]]) label = _labelOf(tabDefs[order[j]]);
+      else if (order[j] === 'other') label = _t('craftengine.otherFields');
+      else label = order[j];
+      bar += '<button class="cv-btn cv-btn-sm ce-tab-btn' + (j === idx ? ' active' : '') + '" data-action="ce-tab" data-ce-tab="' + _escHtml(order[j]) + '">' +
+        _escHtml(label) + '</button>';
+    }
+    bar += '</div>';
+    var panels = '';
+    for (var k = 0; k < order.length; k++) {
+      panels += '<div class="ce-tab-panel' + (k === idx ? ' ce-tab-active' : '') + '" data-ce-tabpanel="' + _escHtml(order[k]) + '">' + tabsData[order[k]] + '</div>';
+    }
+    return bar + panels;
   }
   // config.yml 组表单: 顶层键投影的伪 section
   function _sfConfigEntryForm(section, entry) {
@@ -1314,8 +1490,25 @@
   }
 
   // ============ 渲染 ============
+  // 路径: 点号分段; map/组件键含 '.' 时经 _sfKeyPath 转义为 \.
+  function _pathParts(path) {
+    var parts = [];
+    var cur = '';
+    var s = String(path);
+    for (var i = 0; i < s.length; i++) {
+      if (s[i] === '\\' && s[i + 1] === '.') { cur += '.'; i++; }
+      else if (s[i] === '.') { parts.push(cur); cur = ''; }
+      else cur += s[i];
+    }
+    parts.push(cur);
+    return parts;
+  }
+  function _sfKeyPath(path, key) {
+    var esc = String(key).replace(/\./g, '\\.');
+    return path ? path + '.' + esc : esc;
+  }
   function _setNested(obj, path, value) {
-    var parts = path.split('.');
+    var parts = _pathParts(path);
     var o = obj;
     for (var i = 0; i < parts.length - 1; i++) {
       if (o[parts[i]] == null || typeof o[parts[i]] !== 'object') o[parts[i]] = {};
@@ -1324,7 +1517,7 @@
     o[parts[parts.length - 1]] = value;
   }
   function _getNested(obj, path) {
-    var parts = path.split('.');
+    var parts = _pathParts(path);
     var o = obj;
     for (var i = 0; i < parts.length; i++) {
       if (o == null) return undefined;
@@ -1333,7 +1526,7 @@
     return o;
   }
   function _deleteNested(obj, path) {
-    var parts = path.split('.');
+    var parts = _pathParts(path);
     var o = obj;
     for (var i = 0; i < parts.length - 1; i++) {
       if (o == null || typeof o[parts[i]] !== 'object') return;
@@ -1486,7 +1679,7 @@
     // config 伪 section / schema 化 section (简单类型) 走数据驱动表单
     if (section.base === 'config') return _sfConfigEntryForm(section, entry);
     var schema = _sfSchemaOf(type);
-    if (schema) return _sfEntryFormHtml(section, entry, schema);
+    if (schema) return _sfEntryFormHtml(section, entry, schema, formTab, evKey);
     var keyField = _renderField(_t('craftengine.entryKey'),
       '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(entry.key).replace(/"/g, '&quot;') + '" spellcheck="false">',
       _t('craftengine.entryKeyHint'));
@@ -1911,7 +2104,7 @@
     }
     if (!existed) {
       // 记录新键序
-      var topKey = path.split('.')[0];
+      var topKey = _pathParts(path)[0];
       if (entry._rawOrder.indexOf(topKey) === -1) entry._rawOrder.push(topKey);
     }
     _setNested(entry.data, path, value);
@@ -1991,7 +2184,7 @@
 
       // ---- schema 表单 ----
       var sfAct = target.getAttribute('data-sf-action');
-      if (sfAct === 'union-set' || sfAct === 'list-add') {
+      if (sfAct) {
         _sfHandleAction(sfAct, target, containerEl);
         return;
       }

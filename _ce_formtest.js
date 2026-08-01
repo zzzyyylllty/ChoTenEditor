@@ -38,7 +38,7 @@ function render(content, file) {
   return el;
 }
 
-// ---------- 1. legacy 表单 (item 等尚无 schema, 保持原行为) ----------
+// ---------- 1. schema item 表单 (Phase 2) ----------
 const itemYaml = `
 items:
   default:test_item:
@@ -75,9 +75,10 @@ items:
 const el1 = render(itemYaml);
 const h = el1.innerHTML;
 check(h.includes('data-action="ce-tab" data-ce-tab="basic"'), 'item 选项卡 basic 存在');
+check(h.includes('data-ce-tab="data"'), 'item 选项卡 data 存在');
 check(h.includes('data-ce-tab="model"'), 'item 选项卡 model 存在');
-check(h.includes('data-ce-tab="itemData"'), 'item 选项卡 itemData 存在');
 check(h.includes('data-ce-tab="behavior"'), 'item 选项卡 behavior 存在');
+check(h.includes('data-ce-tab="settings"'), 'item 选项卡 settings 存在');
 check(h.includes('data-ce-tab="events"'), 'item 选项卡 events 存在');
 check(h.includes('data-ce-tab="other"'), 'item 选项卡 other 存在 (未知字段)');
 check(h.includes('data-ce-field="__key__"'), 'key 输入框在表单内');
@@ -85,12 +86,13 @@ check(h.indexOf('ce-form-header') < h.indexOf('ce-tabs'), 'key 已从 header 移
 check(h.includes('data-ce-tabpanel="basic"') && h.includes('data-ce-tabpanel="events"'), '选项卡面板存在');
 check(h.includes('ce-events-header') && h.includes('data-action="ce-add-event"'), '事件列表视图 + 添加按钮');
 check(h.includes('ce-event-item') && h.includes('data-ce-ev="0"'), '事件行存在 (数组形式)');
-check(h.includes('data-ce-field="behavior.type"'), 'behavior.type select 存在');
-check(h.includes('data-ce-field="behavior.block"'), 'block_item 的 block 字段存在');
-check(h.includes('data-ce-field="category"') && h.includes('data-ce-type="lines-scalar"'), 'category lines-scalar (多行数组)');
-check(h.includes('data-ce-field-json="model"'), 'model JSON 字段存在 (legacy)');
-check(h.includes('data-ce-field-json="settings"') && h.includes('data-json-exclude="tags,equipment"'), 'settings JSON 带 exclude');
-check(h.includes('data-ce-field-json="events.0"') === false, '事件不在 JSON 兜底中');
+check(h.includes('data-sf-kind="components"') && h.includes('data-sf-path="data"'), 'data 组件编辑器渲染');
+check(h.includes('data-sf-action="model-mode"') && h.includes('data-sf-path="item_model"'), 'item_model 模型编辑器渲染');
+check(h.includes('data-sf-action="union-set"') && h.includes('data-sf-path="behavior"'), 'behavior union 渲染');
+check(h.includes('data-sf-path="behavior.block"'), 'block_item 的 block 字段存在 (union)');
+check(h.includes('data-sf-path="category"') && h.includes('data-sf-type="lines-scalar"'), 'category lines-scalar (多行数组)');
+check(h.includes('data-sf-path="custom-model-data"') && h.includes('data-sf-type="scalar"'), 'custom-model-data 未知字段 → other 折叠区');
+check(!h.includes('data-ce-field-json'), 'item 表单无 JSON 字段编辑器');
 check(h.includes('unknown_field'), '未知字段进入其他选项卡');
 
 // 2. legacy 事件子页面 (map 形式 + array 形式)
@@ -262,6 +264,72 @@ const eqR = renderCap(eqYaml);
 const eqEntry = eqR.el._ceParsed.sections[0].entries[0];
 eqR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'map-key', 'data-sf-path': 'layers', 'data-sf-okey': 'texture' }, 'chestplate') });
 check(!eqEntry.data.layers.texture && eqEntry.data.layers.chestplate === 'minecraft:leather', '写回: map-key 重命名');
+
+// ---------- 2.2 item 写回 (Phase 2) ----------
+const iR = renderCap(itemYaml);
+const iEntry = iR.el._ceParsed.sections[0].entries[0];
+const iCh = iR.listeners['change'][0];
+
+iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'material', 'data-sf-type': 'text' }, 'minecraft:iron_ingot') });
+check(iEntry.data.material === 'minecraft:iron_ingot', 'item 写回: material text');
+iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.item-name', 'data-sf-type': 'text' }, '<!i>New') });
+check(iEntry.data.data['item-name'] === '<!i>New', 'item 写回: data.item-name');
+
+// 组件键重命名 (map-key 在 components 内)
+iCh({ target: mk({ 'data-sf-kind': 'map-key', 'data-sf-path': 'data', 'data-sf-okey': 'item-name' }, 'custom_name') });
+check(!iEntry.data.data['item-name'] && iEntry.data.data.custom_name === '<!i>New', '写回: 组件键重命名 item-name → custom_name');
+
+// comp-add: 添加数据组件
+const compUidRe = /data-sf-action="comp-add" data-sf-uid="([^"]+)"/;
+const compUid = h.match(compUidRe);
+check(!!compUid, 'comp-add uid 可定位');
+if (compUid) {
+  iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, 'max_damage') });
+  check(iEntry.data.data.max_damage === '', '写回: comp-add 添加组件 (默认空值)');
+}
+
+// model-mode: 切换 item_model 为树模式 (原值 undefined → 补 type)
+const modelUidRe = /data-sf-action="model-mode" data-sf-path="item_model" data-sf-uid="([^"]+)"/;
+const modelUid = h.match(modelUidRe);
+check(!!modelUid, 'model-mode uid 可定位');
+if (modelUid) {
+  iCh({ target: mk({ 'data-sf-action': 'model-mode', 'data-sf-path': 'item_model', 'data-sf-uid': modelUid[1] }, 'tree') });
+  check(!!iEntry.data.item_model && iEntry.data.item_model.type === 'minecraft:model', '写回: model-mode → tree 补默认 type');
+  iCh({ target: mk({ 'data-sf-action': 'model-mode', 'data-sf-path': 'item_model', 'data-sf-uid': modelUid[1] }, 'path') });
+  check(iEntry.data.item_model === undefined, '写回: model-mode → path 空值删除字段');
+}
+
+// union-set (noTypeKey): block 字符串 ↔ 内联方块
+const blkUidRe = /data-sf-action="union-set" data-sf-path="behavior\.block" data-sf-uid="([^"]+)"/;
+const blkUid = h.match(blkUidRe);
+check(!!blkUid, 'block union-set uid 可定位');
+if (blkUid) {
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, 'inline') });
+  check(iEntry.data.behavior.block !== null && typeof iEntry.data.behavior.block === 'object' && !Array.isArray(iEntry.data.behavior.block), '写回: noTypeKey union-set → inline 默认对象');
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, '__scalar') });
+  check(iEntry.data.behavior.block === undefined, '写回: noTypeKey union-set → __scalar 删除字段');
+}
+
+// updater: map 版本 → 步骤列表/单个步骤
+const upYaml = `
+items:
+  default:u:
+    updater:
+      "1.0.0":
+        - type: apply_data
+          data:
+            - path: item_model
+              value: minecraft:apple
+      "2.0.0":
+        type: reset
+`;
+const upR = renderCap(upYaml);
+const upEntry = upR.el._ceParsed.sections[0].entries[0];
+check(Array.isArray(upEntry.data.updater['1.0.0']) && upEntry.data.updater['1.0.0'][0].type === 'apply_data', 'updater 解析: 步骤列表');
+check(upEntry.data.updater['2.0.0'].type === 'reset', 'updater 解析: 单个步骤');
+check(upR.el.innerHTML.includes('data-sf-path="updater.1\\.0\\.0"'), 'updater map 值 union (noTypeKey) 渲染 (点键转义)');
+upR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'updater.1\\.0\\.0.0.data.0.value', 'data-sf-type': 'text' }, 'minecraft:stick') });
+check(upEntry.data.updater['1.0.0'][0].data[0].value === 'minecraft:stick', 'updater 写回: apply_data 嵌套 value (含点键)');
 
 // 3. wholeValue section (global_variables / translations / lang)
 const gvYaml = `
