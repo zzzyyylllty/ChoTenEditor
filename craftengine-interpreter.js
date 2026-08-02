@@ -1098,7 +1098,7 @@
         '<div class="ce-sf-map-val">' + body + '</div>' +
         '</div>';
     }
-    if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.listEmpty')) + '</div>';
+    if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.componentsEmpty')) + '</div>';
     var addSel = '<select class="ce-input ce-sf-pick" data-sf-action="comp-add" data-sf-uid="' + uid + '">' +
       '<option value="">-- ' + _escHtml(_t('craftengine.componentAdd')) + ' --</option>';
     var cks = Object.keys(comps);
