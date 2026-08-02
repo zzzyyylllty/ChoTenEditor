@@ -6,6 +6,9 @@ const http = require('http');
 const ceProject = require('./ce-project.js');
 const appVersion = require('./package.json').version;
 
+// 单实例检测: 多实例共享同一磁盘缓存会导致缓存读写错误, 检测到已有实例时询问是否继续
+const gotLock = app.requestSingleInstanceLock();
+
 let mainWindow;
 
 function createWindow() {
@@ -30,15 +33,34 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
-  createWindow();
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+function startApp() {
+  app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', function () {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
   });
-});
+}
+
+if (!gotLock) {
+  // 直接拦截: 多实例同时运行会因共享磁盘缓存/用户数据导致缓存错误与数据异常, 提示关闭现有实例后退出
+  console.log('[MAIN] another instance detected, blocking startup');
+  // dialog 只能在 app ready 后使用
+  app.whenReady().then(() => {
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'ChoTenEditor',
+      message: '检测到另一个编辑器实例正在运行',
+      detail: '请先关闭所有正在运行的编辑器实例，再重新启动编辑器。多个实例同时运行可能导致数据异常。',
+      buttons: ['确定'],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    app.quit();
+  });
+} else {
+  startApp();
+}
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
