@@ -87,7 +87,7 @@ check(h.indexOf('ce-form-header') < h.indexOf('ce-tabs'), 'key 已从 header 移
 check(h.includes('data-ce-tabpanel="basic"') && h.includes('data-ce-tabpanel="events"'), '选项卡面板存在');
 check(h.includes('ce-events-header') && h.includes('data-action="ce-add-event"'), '事件列表视图 + 添加按钮');
 check(h.includes('ce-event-item') && h.includes('data-ce-ev="0"'), '事件行存在 (数组形式)');
-check(h.includes('data-sf-kind="components"') && h.includes('data-sf-path="data"'), 'data 组件编辑器渲染');
+check(h.includes('data-sf-kind="tabs"') && h.includes('data-sf-path="data"') && h.includes('data-sf-kind="components"'), 'data 渲染为六类子选项卡 + 客户端数据 components');
 check(h.includes('data-sf-action="model-mode"') && h.includes('data-sf-path="item_model"'), 'item_model 模型编辑器渲染');
 check(h.includes('data-sf-action="union-set"') && h.includes('data-sf-path="behavior"'), 'behavior union 渲染');
 const bvPos = h.indexOf('data-sf-path="behavior"');
@@ -432,11 +432,59 @@ const dH = dR.el.innerHTML;
 check(dH.includes('data-sf-kind="map"') && dH.includes('data-sf-path="data.enchantment.effects"') && dH.includes('data-sf-type="scalar"'), 'enchantment effects 渲染: mapOf(scalar) (不再 kv)');
 check(dH.includes('data-sf-kind="map"') && dH.includes('data-sf-path="data.block_state"'), 'block_state map 形式: mapOf(scalar) (不再 kv)');
 check(dH.includes('data-sf-path="data.written_book_content.pages.0.raw"') && dH.includes('data-sf-path="data.written_book_content.pages.0.filtered"'), 'raw_filtered 对象字段渲染');
-check(!/data-sf-path="data\.[^"]*" data-sf-type="kv"/.test(dH), 'item data 组件无 kv 文本框 (data 前缀)');
+check(!/data-sf-path="data\.(?!pdc|tags|nbt|components)(\.|")[^"]*" data-sf-type="kv"/.test(dH), 'item data 无 kv 文本框 (仅 pdc/tags/nbt/components 保留)');
 dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.enchantment.effects.minecraft:sharpness', 'data-sf-type': 'scalar' }, '7') });
 check(dEntry.data.data.enchantment.effects['minecraft:sharpness'] === 7, '写回: enchantment effects scalar 值');
 dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.block_state.facing', 'data-sf-type': 'scalar' }, 'north') });
 check(dEntry.data.data.block_state.facing === 'north', '写回: block_state map 值');
+
+// v1.0.27: data 六类子选项卡 (tabs widget) + 客户端数据
+check(dH.includes('data-sf-kind="tabs"') && dH.includes('data-sf-path="data"'), 'data 渲染为 tabs widget');
+const subtabRe = /data-sf-subtab="([^"]+)"/g;
+const subtabs = [...dH.matchAll(subtabRe)].map(m => m[1]);
+check(subtabs.length === 6 && subtabs[0] === 'appearance' && subtabs[1] === 'behavior' && subtabs[5] === 'client', 'data 六个子选项卡: appearance/behavior/storage/external/components/client');
+check(dH.includes('data-sf-path="data.item_name"'), '外观面板: item_name 字段');
+check(dH.includes('data-sf-path="data.food"'), '行为面板: food 字段');
+check(dH.includes('data-sf-path="data.pdc"'), '存储面板: pdc 字段');
+check(dH.includes('data-sf-path="data.external"') && dH.includes('data-sf-path="data.external.plugin"'), '外部面板: external 对象 (plugin/id)');
+check(dH.includes('data-sf-path="data.components"'), '数据组件面板: components 字段');
+check(dH.includes('data-sf-path="client_bound_data"'), '客户端数据面板: components 绑定 client_bound_data');
+// 客户端数据: comp-add 添加条件块 conditional
+const dCompUid = dH.match(/data-sf-action="comp-add" data-sf-uid="([^"]+)"/);
+check(!!dCompUid, '客户端数据 comp-add uid 可定位');
+if (dCompUid) {
+  dR.listeners['change'][0]({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': dCompUid[1] }, 'conditional') });
+  check(dEntry.data.client_bound_data && dEntry.data.client_bound_data.conditional && typeof dEntry.data.client_bound_data.conditional === 'object' && !Array.isArray(dEntry.data.client_bound_data.conditional), '写回: comp-add conditional 条件块');
+  dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'client_bound_data.conditional.data.item_name', 'data-sf-type': 'textarea' }, 'Test Name') });
+  check(dEntry.data.client_bound_data.conditional.data && dEntry.data.client_bound_data.conditional.data.item_name === 'Test Name', '写回: 条件块内嵌套 data.item_name');
+}
+
+// 条件块渲染: 已含 conditional 的 yaml → data 嵌套五类子选项卡 + conditions 列表 + 追加写回
+const condBlkYaml = `
+items:
+  default:test:
+    client_bound_data:
+      conditional:
+        conditions:
+          - type: random
+            value: 0.5
+`;
+const cbR = renderCap(condBlkYaml);
+const cbH = cbR.el.innerHTML;
+const cbEntry = cbR.el._ceParsed.sections[0].entries[0];
+check(cbH.includes('data-sf-kind="tabs"') && cbH.includes('data-sf-path="client_bound_data.conditional.data"'), '条件块 data 嵌套五类子选项卡');
+check(cbH.includes('data-sf-kind="list"') && cbH.includes('data-sf-path="client_bound_data.conditional.conditions"'), '条件块 conditions 列表渲染');
+check(cbH.includes('data-sf-action="union-set"') && cbH.includes('data-sf-path="client_bound_data.conditional.conditions.0"'), '条件块 conditions 条目 union 渲染');
+const cbListUidRe = /data-sf-kind="list" data-sf-path="client_bound_data\.conditional\.conditions"[^>]*data-sf-uid="([^"]+)"/;
+const cbListUid = cbH.match(cbListUidRe);
+check(!!cbListUid, '条件块 conditions list-add 按钮');
+if (cbListUid) {
+  const cbPick = mk({ 'data-sf-list-pick': '1' }, 'permission');
+  const cbAddBtn = mk({ 'data-sf-action': 'list-add', 'data-sf-uid': cbListUid[1] }, null);
+  cbAddBtn.closest = () => ({ querySelector: () => cbPick });
+  cbR.listeners['change'][0]({ target: cbAddBtn });
+  check(cbEntry.data.client_bound_data.conditional.conditions.length === 2 && cbEntry.data.client_bound_data.conditional.conditions[1].type === 'permission', '写回: 条件块 list-add 追加条件');
+}
 
 // recipe predicate enchantments mapOf (Phase 2 B 表)
 const predYaml = `
@@ -492,21 +540,33 @@ check(iEntry.data.data['item-name'] === '<!i>New', 'item 写回: data.item-name'
 iCh({ target: mk({ 'data-sf-kind': 'map-key', 'data-sf-path': 'data', 'data-sf-okey': 'item-name' }, 'custom_name') });
 check(!iEntry.data.data['item-name'] && iEntry.data.data.custom_name === '<!i>New', '写回: 组件键重命名 item-name → custom_name');
 
-// comp-add: 添加数据组件
+// comp-add: 客户端数据面板添加数据键 (v1.0.27: data 改为 tabs, components 在 client 面板)
+// itemYaml 是 kebab 文件 (custom-model-data) → 客户端数据键为 client-bound-data
 const compUidRe = /data-sf-action="comp-add" data-sf-uid="([^"]+)"/;
 const compUid = h.match(compUidRe);
 check(!!compUid, 'comp-add uid 可定位');
 if (compUid) {
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, 'max_damage') });
-  check(iEntry.data.data.max_damage === '', '写回: comp-add 添加组件 (默认空值)');
+  check(iEntry.data['client-bound-data'] && iEntry.data['client-bound-data'].max_damage === '', '写回: comp-add 添加数据键 (默认空值)');
   check(h.includes('__custom__'), '组件下拉含自定义 (键值对) 选项');
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, '__custom__') });
-  check(iEntry.data.data.custom !== undefined && typeof iEntry.data.data.custom === 'object' && !Array.isArray(iEntry.data.data.custom), '写回: comp-add 自定义组件生成 custom 键');
-  iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.custom', 'data-sf-type': 'kv' }, 'foo: {"bar": 1}\n') });
-  check(iEntry.data.data.custom.foo && iEntry.data.data.custom.foo.bar === 1, '写回: 自定义组件 kv 嵌套值');
+  check(iEntry.data['client-bound-data'].custom !== undefined && typeof iEntry.data['client-bound-data'].custom === 'object' && !Array.isArray(iEntry.data['client-bound-data'].custom), '写回: comp-add 自定义键生成 custom 键');
+  iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'client-bound-data.custom', 'data-sf-type': 'kv' }, 'foo: {"bar": 1}\n') });
+  check(iEntry.data['client-bound-data'].custom.foo && iEntry.data['client-bound-data'].custom.foo.bar === 1, '写回: 自定义键 kv 嵌套值');
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, '__custom__') });
-  check(iEntry.data.data.custom_2 !== undefined && typeof iEntry.data.data.custom_2 === 'object', '写回: 重复添加自定义组件 → custom_2');
+  check(iEntry.data['client-bound-data'].custom_2 !== undefined && typeof iEntry.data['client-bound-data'].custom_2 === 'object', '写回: 重复添加自定义键 → custom_2');
 }
+
+// v1.0.27: 根级键风格检测 (kebab 文件 → kebab 键名, snake 文件 → snake 键名)
+check(h.includes('data-sf-path="custom-model-data"'), 'kebab 文件检测 → 渲染 kebab 键名 (custom-model-data)');
+const snYaml = `
+items:
+  default:test:
+    material: paper
+    custom_model_data: 5
+`;
+const snH = renderCap(snYaml).el.innerHTML;
+check(snH.includes('data-sf-path="custom_model_data"'), 'snake 文件检测 → 渲染 snake 键名 (custom_model_data)');
 
 // model-mode: 切换 item_model 为树模式 (原值 undefined → 补 type)
 const modelUidRe = /data-sf-action="model-mode" data-sf-path="item_model" data-sf-uid="([^"]+)"/;

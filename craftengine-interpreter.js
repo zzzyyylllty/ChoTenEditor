@@ -780,7 +780,7 @@
   }
 
   // ---- 布局: 两栏 (行) / 堆叠 ----
-  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1, popup: 1 };
+  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1, popup: 1, tabs: 1 };
   function _sfIsStack(t) { return _SF_STACK_TYPES[t] === 1; }
 
   // ---- 控件 (无标签) ----
@@ -901,6 +901,7 @@
     if (t === 'components') return _sfComponentsHtml(def, path, value, opts);
     if (t === 'model') return _sfModelHtml(def, path, value, opts);
     if (t === 'popup') return _sfPopupHtml(def, path, value, opts);
+    if (t === 'tabs') return _sfTabsWidgetHtml(def, path, value, opts);
     return _sfControl(def, path, value);
   }
   function _sfListHtml(def, path, value, opts) {
@@ -990,7 +991,7 @@
       var ks2 = Object.keys(types2);
       for (var m = 0; m < ks2.length; m++) {
         var w3 = (types2[ks2[m]].widget || {}).type;
-        if (w3 === 'text' || w3 === 'textarea' || w3 === 'miniText' || w3 === 'linesScalar') return { key: ks2[m], neg: false };
+        if (w3 === 'text' || w3 === 'textarea' || w3 === 'miniText' || w3 === 'linesScalar' || w3 === 'bool') return { key: ks2[m], neg: false };
       }
       return { key: ks2.length ? ks2[0] : '', neg: false };
     }
@@ -1069,7 +1070,7 @@
   }
   function _sfObjectHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'object', def, opts);
-    var html = '<div class="ce-sf-object" data-sf-uid="' + uid + '">';
+    var html = '<div class="ce-sf-object" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
     var modeled = {};
     (def.fields || []).forEach(function (fld) {
       modeled[fld.key] = 1;
@@ -1128,6 +1129,87 @@
     addSel += '</select>';
     html += '<div class="ce-sf-map-add">' + addSel + '</div>';
     return html + '</div>';
+  }
+  // ---- 子选项卡 (tabs widget): 面板纯 CSS 切换, 字段写回走现有 field 委托 ----
+  function _sfTabsWidgetHtml(def, path, value, opts) {
+    var uid = (opts && opts.uid) || _sfUidAlloc(path, 'tabs', def, opts);
+    var tabs = def.tabs || [];
+    // 汇总所有面板已建模的键: 未建模键只在一个面板折叠一次, 避免重复 kv 编辑器
+    var tabModeled = {};
+    for (var ti = 0; ti < tabs.length; ti++) {
+      var tflds = tabs[ti].fields;
+      if (tflds) for (var tf = 0; tf < tflds.length; tf++) tabModeled[tflds[tf].key] = 1;
+    }
+    var html = '<div class="ce-sf-subtabs" data-sf-kind="tabs" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '"><div class="ce-sf-subtab-bar">';
+    for (var i = 0; i < tabs.length; i++) {
+      html += '<button type="button" class="cv-btn cv-btn-sm ce-sf-subtab-btn' + (i === 0 ? ' active' : '') + '" data-sf-action="subtab" data-sf-subtab="' + _escHtml(tabs[i].key) + '" data-sf-uid="' + uid + '">' +
+        _escHtml(_labelOf(tabs[i]) || tabs[i].key) + '</button>';
+    }
+    html += '</div>';
+    for (var j = 0; j < tabs.length; j++) {
+      html += '<div class="ce-sf-subtab-panel' + (j === 0 ? ' active' : '') + '" data-sf-subtabpanel="' + _escHtml(tabs[j].key) + '" data-sf-uid="' + uid + '">' +
+        _sfTabPanelHtml(tabs[j], path, value, opts, tabModeled) + '</div>';
+    }
+    return html + '</div>';
+  }
+  function _sfTabPanelHtml(panel, path, value, opts, tabModeled) {
+    if (panel.bind) {
+      var bkey = _sfFldKey({ key: panel.bind }, opts && opts.keyStyle);
+      var bv = (opts && opts.entryData) ? opts.entryData[bkey] : undefined;
+      return _sfItemHtml(panel.widget, bkey, bv, opts);
+    }
+    var modeled = {};
+    var html = '';
+    (panel.fields || []).forEach(function (fld) {
+      modeled[fld.key] = 1;
+      html += _sfFieldHtml(fld, _sfKeyPath(path, fld.key), value ? value[fld.key] : undefined, opts);
+    });
+    var rest = [];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      var ks = Object.keys(value);
+      for (var i = 0; i < ks.length; i++) {
+        if (!modeled[ks[i]] && !(tabModeled && tabModeled[ks[i]])) rest.push(ks[i]);
+      }
+    }
+    if (rest.length) {
+      html += '<details class="ce-sf-collapse"><summary>' + _escHtml(_t('craftengine.otherFields') + ' (' + rest.length + ')') + '</summary>';
+      for (var r = 0; r < rest.length; r++) {
+        var k = rest[r];
+        var v = value[k];
+        var p = _sfKeyPath(path, k);
+        var editor = (v !== null && typeof v === 'object' && !Array.isArray(v))
+          ? _sfKvTextarea({ type: 'kv' }, p, v)
+          : _sfScalarInput({}, p, v);
+        html += '<div class="ce-stack ce-sf-rest"><label class="ce-field-label">' + _escHtml(k) + '</label>' + editor + '</div>';
+      }
+      html += '</details>';
+    }
+    return html;
+  }
+  // ---- item 根级键风格: 检测文件已有写法 (snake 新版 / kebab 旧版), 新建用设置默认 ----
+  function _sfItemKeyStyle(entryData) {
+    var t = (_sfSchemas && _sfSchemas.itemKeyStyle) || null;
+    if (t && entryData && typeof entryData === 'object') {
+      for (var k in entryData) {
+        if (!Object.prototype.hasOwnProperty.call(entryData, k)) continue;
+        if (t[k]) return 'snake';
+        for (var s in t) {
+          if (Object.prototype.hasOwnProperty.call(t, s) && t[s].kebab === k) return 'kebab';
+        }
+      }
+    }
+    return _sfDefaultKeyStyle();
+  }
+  function _sfDefaultKeyStyle() {
+    try {
+      var cfg = JSON.parse(ROOT.localStorage.getItem('editorConfig') || '{}');
+      return cfg.itemKeyStyle === 'kebab' ? 'kebab' : 'snake';
+    } catch (e) { return 'snake'; }
+  }
+  function _sfFldKey(fld, style) {
+    var t = (_sfSchemas && _sfSchemas.itemKeyStyle) || null;
+    if (t && t[fld.key] && style === 'kebab') return t[fld.key].kebab;
+    return fld.key;
   }
   // ---- item 模型编辑器: 简化 / 模型树 / 路径 三种模式 ----
   function _sfModelForms() {
@@ -1319,6 +1401,20 @@
     if (!section || !entry) return;
     var uid = el.getAttribute('data-sf-uid');
     var rec = uid ? _sfUidMap[uid] : null;
+    if (action === 'subtab') {
+      // 子选项卡切换: 仅切 CSS 类, 不改数据
+      var root = el.closest ? el.closest('.ce-sf-subtabs') : null;
+      if (root && root.querySelectorAll) {
+        var key = el.getAttribute('data-sf-subtab');
+        var btns = root.querySelectorAll('[data-sf-action="subtab"]');
+        for (var b = 0; b < btns.length; b++) btns[b].classList.toggle('active', btns[b] === el);
+        var panels = root.querySelectorAll('[data-sf-subtabpanel]');
+        for (var p = 0; p < panels.length; p++) {
+          panels[p].classList.toggle('active', panels[p].getAttribute('data-sf-subtabpanel') === key);
+        }
+      }
+      return;
+    }
     _sfMarkDirty(parsed); // 所有 schema 动作都会修改数据
 
     if (action === 'union-set') {
@@ -1580,11 +1676,13 @@
       tabs = { other: '' };
       for (var t = 0; t < schema.tabs.length; t++) tabs[schema.tabs[t].key] = '';
     }
+    var keyStyle = _sfItemKeyStyle(entry.data);
     (schema.fields || []).forEach(function (fld) {
-      modeled[fld.key] = 1;
+      var fk = _sfFldKey(fld, keyStyle);
+      modeled[fk] = 1;
       var fhtml;
       if (fld.custom === 'events') fhtml = _eventsPanel(entry, evKey);
-      else fhtml = _sfFieldHtml(fld, fld.key, entry.data ? entry.data[fld.key] : undefined);
+      else fhtml = _sfFieldHtml(fld, fk, entry.data ? entry.data[fk] : undefined, { entryData: entry.data, keyStyle: keyStyle });
       if (tabs) {
         var tk = fld.tab || 'other';
         if (tabs[tk] === undefined) tabs[tk] = '';

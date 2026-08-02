@@ -1,4 +1,23 @@
 // ============================================
+// 弹窗模式（嵌入主窗口 iframe）
+// ============================================
+
+const IS_EMBEDDED = window.self !== window.top;
+
+if (IS_EMBEDDED) {
+  document.body.classList.add('embedded');
+  // 父页面关闭弹窗前会通知保存（弹窗关闭不触发 beforeunload）
+  // 保存完成后回复父页面，等它关闭弹窗，避免异步操作（如密码哈希）未完成
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'saveSettings') {
+      Promise.resolve(saveSettings()).catch(() => {}).then(() => {
+        window.parent.postMessage({ type: 'settingsSaved' }, '*');
+      });
+    }
+  });
+}
+
+// ============================================
 // 延迟初始化DOM元素
 // ============================================
 
@@ -20,6 +39,9 @@ let editorLineWrapping;
 let editorTheme;
 let editorAutoSync;
 let editorDevtools;
+let itemKeyStyle;
+let uiFont;
+let editorFontFamily;
 let prewarmFiles;
 let prewarmFilesMax;
 let prewarmKether;
@@ -66,6 +88,8 @@ let bgImages = [];
 // 默认配置
 const defaultConfig = {
   theme: 'dark',
+  itemKeyStyle: 'snake',
+  uiFont: '',
   colors: {
     primary: '#0098ff',
     success: '#00c853',
@@ -90,6 +114,7 @@ const defaultConfig = {
     lineNumbers: true,
     lineWrapping: true,
     theme: 'dracula',
+    fontFamily: '',
   },
   autoSync: false,
   blockFontSize: '11',
@@ -254,17 +279,22 @@ const presetThemes = {
 // DOM加载完成后初始化
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('[SETTINGS] DOMContentLoaded fired');
-  
+
+  await I18N.ready;
+
   // 初始化DOM元素
   initializeDOMElements();
-  
-  
+
+
   // 设置事件监听
   setupEventListeners();
-  
-  
+
+  // 选项卡导航
+  initTabNavigation();
+
+
   console.log('[SETTINGS] 初始化完成?');
 });
 
@@ -313,6 +343,9 @@ function initializeDOMElements() {
   editorLineWrapping = document.getElementById('editor-line-wrapping');
   editorTheme = document.getElementById('editor-theme');
   editorAutoSync = document.getElementById('editor-auto-sync');
+  itemKeyStyle = document.getElementById('item-key-style');
+  uiFont = document.getElementById('ui-font');
+  editorFontFamily = document.getElementById('editor-font-family');
 
   // 积木块显示
   blockFontSize = document.getElementById('block-font-size');
@@ -387,6 +420,41 @@ function initializeDOMElements() {
 }
 
 // ============================================
+// 选项卡导航
+// ============================================
+
+function initTabNavigation() {
+  const navItems = document.querySelectorAll('.settings-nav-item');
+  const panels = document.querySelectorAll('.settings-panel');
+  const panelsContainer = document.querySelector('.settings-panels');
+  if (!navItems.length || !panels.length) return;
+
+  function switchTab(tab) {
+    navItems.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    panels.forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.panel === tab);
+    });
+    if (panelsContainer) panelsContainer.scrollTop = 0;
+    sessionStorage.setItem('settingsActiveTab', tab);
+  }
+
+  navItems.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      playSound('click');
+      switchTab(btn.dataset.tab);
+    });
+  });
+
+  // 恢复上次打开的选项卡
+  const saved = sessionStorage.getItem('settingsActiveTab');
+  if (saved && document.querySelector('.settings-nav-item[data-tab="' + saved + '"]')) {
+    switchTab(saved);
+  }
+}
+
+// ============================================
 // 事件监听设置
 // ============================================
 
@@ -403,12 +471,25 @@ function setupEventListeners() {
     });
   }
 
+  // 字体选择（实时预览）
+  if (uiFont) {
+    uiFont.addEventListener('change', () => { playSound('click'); applyFonts(); });
+  }
+  if (editorFontFamily) {
+    editorFontFamily.addEventListener('change', () => { playSound('click'); applyFonts(); });
+  }
+
   // 返回按钮
   if (backBtn) {
     backBtn.addEventListener('click', () => {
       playSound('back');
       console.log('[SETTINGS] 返回到编辑器');
-      window.location.href = 'index.html?fromSettings=1';
+      if (IS_EMBEDDED) {
+        // 弹窗模式：通知父页面关闭弹窗
+        window.parent.postMessage({ type: 'closeSettings' }, '*');
+      } else {
+        window.location.href = 'index.html?fromSettings=1';
+      }
     });
   }
 
@@ -563,15 +644,15 @@ function setupEventListeners() {
     aiSavePromptBtn.addEventListener('click', function() {
       var name = aiNewPromptName ? aiNewPromptName.value.trim() : '';
       var content = aiCustomPrompt ? aiCustomPrompt.value.trim() : '';
-      if (!name) { showNotification('请输入提示词名称', 'error'); return; }
-      if (!content) { showNotification('请输入提示词内容', 'error'); return; }
+      if (!name) { showNotification(I18N.t('settings.promptNameRequired'), 'error'); return; }
+      if (!content) { showNotification(I18N.t('settings.promptContentRequired'), 'error'); return; }
       if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.saveUserPrompt) {
         window.electronAPI.ai.saveUserPrompt(name, content).then(function(result) {
           if (result.success) {
-            showNotification('提示词已保存', 'success');
+            showNotification(I18N.t('settings.promptSaved'), 'success');
             loadAiPromptList();
           } else {
-            showNotification('保存失败: ' + (result.error || ''), 'error');
+            showNotification(I18N.t('settings.promptSaveFailed', {msg: result.error || ''}), 'error');
           }
         });
       } else {
@@ -581,7 +662,7 @@ function setupEventListeners() {
         cfg.ai.customPrompts = cfg.ai.customPrompts || {};
         cfg.ai.customPrompts[name] = { desc: aiNewPromptDesc ? aiNewPromptDesc.value.trim() : '', content: content };
         localStorage.setItem('editorConfig', JSON.stringify(cfg));
-        showNotification('提示词已保存（本地）', 'success');
+        showNotification(I18N.t('settings.promptSavedLocal'), 'success');
         loadAiPromptList();
       }
     });
@@ -591,20 +672,31 @@ function setupEventListeners() {
   if (aiAddKeyBtn) {
     aiAddKeyBtn.addEventListener('click', function() {
       var key = aiNewKey ? aiNewKey.value.trim() : '';
-      if (!key) { showNotification('请输入密钥', 'error'); return; }
+      if (!key) { showNotification(I18N.t('settings.keyRequired'), 'error'); return; }
       var config = getFullConfig();
       var keys = config.ai && config.ai.keys ? config.ai.keys : [];
-      if (keys.includes(key)) { showNotification('密钥已存在', 'error'); return; }
+      if (keys.includes(key)) { showNotification(I18N.t('settings.keyExists'), 'error'); return; }
       keys.push(key);
       if (!config.ai) config.ai = {};
       config.ai.keys = keys;
       localStorage.setItem('editorConfig', JSON.stringify(config));
       if (aiNewKey) aiNewKey.value = '';
       renderAiKeys(keys);
-      showNotification('密钥已添加', 'success');
+      showNotification(I18N.t('settings.keyAdded'), 'success');
     });
     aiNewKey && aiNewKey.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && aiAddKeyBtn) aiAddKeyBtn.click();
+    });
+  }
+
+  // 语言切换
+  var langSelect = document.getElementById('language');
+  if (langSelect) {
+    langSelect.value = I18N.lang;
+    langSelect.addEventListener('change', function() {
+      playSound('click');
+      I18N.setLang(this.value);
+      location.reload();
     });
   }
 
@@ -698,9 +790,27 @@ function updateColorValues() {
 }
 
 function updateColorInputs() {
-  // 根据主题更新输入框颜色
-  const theme = themeSelect ? themeSelect.value : 'dark';
-  console.log('[SETTINGS] 更新颜色输入，当前主题', theme);
+  // 根据主题更新颜色输入框：清除自定义覆盖，恢复当前主题默认色，
+  // 避免保存的 colors 里残留旧主题色值（否则重启后被锁死导致主题切换失效）
+  Object.entries(colorInputs).forEach(([key, input]) => {
+    if (!input) return;
+    const cssVarName = `--color-${camelToKebab(key)}`;
+    document.documentElement.style.removeProperty(cssVarName);
+    const val = getComputedStyle(document.body).getPropertyValue(cssVarName).trim();
+    if (val) {
+      input.value = val;
+      updateColorValue(input.id);
+    }
+  });
+  console.log('[SETTINGS] 更新颜色输入，当前主题', themeSelect ? themeSelect.value : 'dark');
+}
+
+// 应用字体（实时预览，读取选择框当前值）
+function applyFonts() {
+  var ui = uiFont ? uiFont.value : '';
+  document.body.style.fontFamily = ui;
+  var ed = editorFontFamily ? editorFontFamily.value : '';
+  document.documentElement.style.setProperty('--editor-font', ed || "'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace");
 }
 
 // ============================================
@@ -845,7 +955,7 @@ async function uploadBackground() {
     const paths = await window.electronAPI.openFile({
       properties: ['openFile'],
       filters: [
-        { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'] }
+        { name: I18N.t('settings.imageFilter'), extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'] }
       ]
     });
 
@@ -862,13 +972,13 @@ async function uploadBackground() {
       // 刷新列表并选中
       await loadBackgroundList();
       selectBackground(filename);
-      showNotification('背景上传成功', 'success');
+      showNotification(I18N.t('settings.bgUploadSuccess'), 'success');
     } else {
-      showNotification('上传失败: ' + result.error, 'error');
+      showNotification(I18N.t('settings.bgUploadFailed', {msg: result.error}), 'error');
     }
   } catch (e) {
     console.error('[SETTINGS] 上传背景错误:', e);
-    showNotification('上传背景失败', 'error');
+    showNotification(I18N.t('settings.bgUploadError'), 'error');
   }
 }
 
@@ -892,6 +1002,7 @@ async function saveSettings() {
 
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
+    uiFont: uiFont ? uiFont.value : '',
     colors: {},
     editor: {
       fontSize: editorFontSize ? editorFontSize.value : defaultConfig.editor.fontSize,
@@ -899,9 +1010,11 @@ async function saveSettings() {
       lineNumbers: editorLineNumbers ? editorLineNumbers.value === 'true' : defaultConfig.editor.lineNumbers,
       lineWrapping: editorLineWrapping ? editorLineWrapping.value === 'true' : defaultConfig.editor.lineWrapping,
       theme: editorTheme ? editorTheme.value : defaultConfig.editor.theme,
+      fontFamily: editorFontFamily ? editorFontFamily.value : '',
     },
     autoSync: editorAutoSync ? editorAutoSync.value === 'true' : defaultConfig.autoSync,
     devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
+    itemKeyStyle: itemKeyStyle ? itemKeyStyle.value : defaultConfig.itemKeyStyle,
     prewarm: {
       files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
       filesMaxMb: prewarmFilesMax ? parseInt(prewarmFilesMax.value) || defaultConfig.prewarm.filesMaxMb : defaultConfig.prewarm.filesMaxMb,
@@ -962,8 +1075,14 @@ async function saveSettings() {
   }
 
   console.log('[SETTINGS] 配置对象:', config);
+
+  // 保留语言设置（由 i18n.js 管理，不在此表单范围内）
+  if (existing && existing.language) {
+    config.language = existing.language;
+  }
+
   localStorage.setItem('editorConfig', JSON.stringify(config));
-  showNotification('设置已经保存', 'success');
+  showNotification(I18N.t('settings.saved'), 'success');
 }
 
 function getFullConfig() {
@@ -975,7 +1094,7 @@ function getFullConfig() {
 
 function loadAiPromptList() {
   if (!aiPromptList) return;
-  aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">加载中...</div>';
+  aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">' + escHtml(I18N.t('settings.loading')) + '</div>';
 
   // 从 localStorage 加载自定义提示词（fallback）
   var cfg = getFullConfig();
@@ -1006,13 +1125,13 @@ function renderPromptList(diskPrompts, localCustom) {
   if (diskPrompts) {
     for (var key in diskPrompts) {
       var p = diskPrompts[key];
-      var badge = p.builtIn ? '<span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-bg-tertiary);padding:1px 6px;border-radius:3px;">内置</span>' : '<span style="font-size:10px;color:var(--color-warning);background:rgba(255,214,0,0.1);padding:1px 6px;border-radius:3px;">用户</span>';
-      var delBtn = p.builtIn ? '' : '<button class="ai-prompt-del" data-name="' + key + '" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>';
+      var badge = p.builtIn ? '<span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-bg-tertiary);padding:1px 6px;border-radius:3px;">' + escHtml(I18N.t('settings.badgeBuiltIn')) + '</span>' : '<span style="font-size:10px;color:var(--color-warning);background:rgba(255,214,0,0.1);padding:1px 6px;border-radius:3px;">' + escHtml(I18N.t('settings.badgeUser')) + '</span>';
+      var delBtn = p.builtIn ? '' : '<button class="ai-prompt-del cv-btn-icon-danger" data-name="' + key + '" style="width:auto;height:auto;padding:0 4px;font-size:13px;">✕</button>';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:2px;background:var(--color-bg-tertiary);border-radius:4px;">' +
         '<div style="display:flex;align-items:center;gap:6px;overflow:hidden;">' +
         '<span style="font-weight:500;font-size:12px;">' + escHtml(key) + '</span>' +
         badge +
-        (p.overridden ? '<span style="font-size:10px;color:var(--color-warning);">(已覆盖)</span>' : '') +
+        (p.overridden ? '<span style="font-size:10px;color:var(--color-warning);">' + escHtml(I18N.t('settings.badgeOverridden')) + '</span>' : '') +
         '</div>' +
         '<div style="display:flex;gap:4px;flex-shrink:0;">' +
         delBtn +
@@ -1029,7 +1148,7 @@ function renderPromptList(diskPrompts, localCustom) {
       html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:2px;background:var(--color-bg-tertiary);border-radius:4px;">' +
         '<div style="display:flex;align-items:center;gap:6px;">' +
         '<span style="font-weight:500;font-size:12px;">' + escHtml(ck) + '</span>' +
-        '<span style="font-size:10px;color:var(--color-text-tertiary);">本地</span>' +
+        '<span style="font-size:10px;color:var(--color-text-tertiary);">' + escHtml(I18N.t('settings.badgeLocal')) + '</span>' +
         (cd.desc ? '<span style="font-size:10px;color:var(--color-text-tertiary);">' + escHtml(cd.desc) + '</span>' : '') +
         '</div></div>';
       count++;
@@ -1037,21 +1156,21 @@ function renderPromptList(diskPrompts, localCustom) {
   }
 
   if (count === 0) {
-    aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">暂无提示词</div>';
+    aiPromptList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">' + escHtml(I18N.t('settings.noPrompts')) + '</div>';
   } else {
     aiPromptList.innerHTML = html;
     // 绑定删除事件
     aiPromptList.querySelectorAll('.ai-prompt-del').forEach(function(btn) {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', async function() {
         var name = this.dataset.name;
-        if (!confirm('删除提示词 "' + name + '" ？')) return;
+        if (!(await UI.confirm({ message: I18N.t('settings.deletePromptConfirm', {name: name}) }))) return;
         if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.deleteUserPrompt) {
           window.electronAPI.ai.deleteUserPrompt(name).then(function(r) {
             if (r.success) {
-              showNotification('提示词已删除', 'success');
+              showNotification(I18N.t('settings.promptDeleted'), 'success');
               loadAiPromptList();
             } else {
-              showNotification('删除失败: ' + (r.error || ''), 'error');
+              showNotification(I18N.t('settings.promptDeleteFailed', {msg: r.error || ''}), 'error');
             }
           });
         }
@@ -1063,12 +1182,12 @@ function renderPromptList(diskPrompts, localCustom) {
 function populatePromptSelect(diskPrompts, localCustom) {
   if (!aiSystemPrompt) return;
   var currentVal = aiSystemPrompt.value;
-  var html = '<option value="custom">自定义</option>';
+  var html = '<option value="custom">' + escHtml(I18N.t('settings.aiPromptCustom')) + '</option>';
   if (diskPrompts) {
     var keys = Object.keys(diskPrompts).sort();
     for (var i = 0; i < keys.length; i++) {
       var sel = keys[i] === currentVal ? ' selected' : '';
-      var label = diskPrompts[keys[i]].builtIn ? keys[i] : keys[i] + ' (用户)';
+      var label = diskPrompts[keys[i]].builtIn ? keys[i] : I18N.t('settings.promptNameUser', {name: keys[i]});
       html += '<option value="' + keys[i] + '"' + sel + '>' + escHtml(label) + '</option>';
     }
   }
@@ -1076,7 +1195,7 @@ function populatePromptSelect(diskPrompts, localCustom) {
     for (var ck in localCustom) {
       if (diskPrompts && diskPrompts[ck]) continue;
       var sel2 = ck === currentVal ? ' selected' : '';
-      html += '<option value="' + ck + '"' + sel2 + '>' + escHtml(ck) + ' (本地)</option>';
+      html += '<option value="' + ck + '"' + sel2 + '>' + escHtml(I18N.t('settings.promptNameLocal', {name: ck})) + '</option>';
     }
   }
   aiSystemPrompt.innerHTML = html;
@@ -1089,14 +1208,14 @@ function populatePromptSelect(diskPrompts, localCustom) {
 function updatePromptInfo(selected, diskPrompts, localCustom) {
   if (!aiPromptInfo) return;
   if (selected === 'custom') {
-    aiPromptInfo.textContent = '使用下方自定义输入框中的内容作为系统提示词';
+    aiPromptInfo.textContent = I18N.t('settings.promptInfoCustom');
     return;
   }
   var p = diskPrompts ? diskPrompts[selected] : null;
   if (p) {
-    aiPromptInfo.textContent = (p.builtIn ? '内置提示词' : '用户自定义提示词') + (p.overridden ? ' (已被用户版本覆盖)' : '');
+    aiPromptInfo.textContent = (p.builtIn ? I18N.t('settings.promptInfoBuiltin') : I18N.t('settings.promptInfoUser')) + (p.overridden ? I18N.t('settings.promptInfoOverridden') : '');
   } else if (localCustom && localCustom[selected]) {
-    aiPromptInfo.textContent = '本地自定义提示词' + (localCustom[selected].desc ? ': ' + localCustom[selected].desc : '');
+    aiPromptInfo.textContent = I18N.t('settings.promptInfoLocal') + (localCustom[selected].desc ? ': ' + localCustom[selected].desc : '');
   } else {
     aiPromptInfo.textContent = '';
   }
@@ -1106,14 +1225,14 @@ function renderAiKeys(keys) {
   if (!aiKeysList) return;
   aiKeysList.innerHTML = '';
   if (!keys || keys.length === 0) {
-    aiKeysList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">暂未添加密钥</div>';
+    aiKeysList.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0;">' + escHtml(I18N.t('settings.aiNoKeys')) + '</div>';
     return;
   }
   keys.forEach(function(key, i) {
     var masked = key.length > 12 ? key.slice(0, 6) + '...' + key.slice(-4) : key.slice(0, 4) + '...';
     var div = document.createElement('div');
     div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:4px;background:var(--color-bg-tertiary);border-radius:4px;font-size:12px;';
-    div.innerHTML = '<span style="color:var(--color-text-secondary);">' + escHtml(masked) + '</span><button class="ai-key-del" data-idx="' + i + '" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>';
+    div.innerHTML = '<span style="color:var(--color-text-secondary);">' + escHtml(masked) + '</span><button class="ai-key-del cv-btn-icon-danger" data-idx="' + i + '" style="width:auto;height:auto;padding:2px 6px;font-size:14px;">✕</button>';
     div.querySelector('.ai-key-del').addEventListener('click', function() {
       var idx = parseInt(this.dataset.idx);
       var cfg = getFullConfig();
@@ -1122,7 +1241,7 @@ function renderAiKeys(keys) {
       cfg.ai.keys = keys;
       localStorage.setItem('editorConfig', JSON.stringify(cfg));
       renderAiKeys(keys);
-      showNotification('密钥已删除', 'success');
+      showNotification(I18N.t('settings.keyDeleted'), 'success');
     });
     aiKeysList.appendChild(div);
   });
@@ -1145,6 +1264,11 @@ function loadSettings() {
     themeSelect.value = config.theme || defaultConfig.theme;
   }
   applyTheme(config.theme || defaultConfig.theme);
+
+  // 应用字体
+  if (uiFont) uiFont.value = config.uiFont || '';
+  if (editorFontFamily) editorFontFamily.value = (config.editor && config.editor.fontFamily) || '';
+  applyFonts();
 
   // 应用颜色
   const colors = config.colors || defaultConfig.colors;
@@ -1169,6 +1293,7 @@ function loadSettings() {
   if (editorTheme) editorTheme.value = editorConfig.theme;
   if (editorAutoSync) editorAutoSync.value = String(config.autoSync === true);
   if (editorDevtools) editorDevtools.checked = config.devTools === true;
+  if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';
 
   // 启动预热设置
   var pw = config.prewarm || defaultConfig.prewarm;
@@ -1235,12 +1360,12 @@ function loadSettings() {
   // 远程设置 - 不显示明文，只通过 placeholder 提示是否已设置
   if (remotePassword) {
     remotePassword.value = '';
-    remotePassword.placeholder = config.remotePasswordHash ? '已设置密码' : '设置远程连接密码';
+    remotePassword.placeholder = config.remotePasswordHash ? I18N.t('settings.remotePasswordSet') : I18N.t('settings.remotePasswordPlaceholder');
   }
   // 如 sessionStorage 有明文（同会话），加载到输入框方便确认
   if (remotePassword && sessionStorage.getItem('remotePassword')) {
     remotePassword.value = sessionStorage.getItem('remotePassword');
-    remotePassword.placeholder = '已设置密码';
+    remotePassword.placeholder = I18N.t('settings.remotePasswordSet');
   }
   if (remoteAllowDifferentVersions) {
     remoteAllowDifferentVersions.checked = config.allowDifferentVersions === true;
@@ -1249,12 +1374,13 @@ function loadSettings() {
 
 function resetSettings() {
   console.log('[SETTINGS] 重置设置');
-  
-  if (confirm('确定要重置为默认设置吗？')) {
+
+  UI.confirm({ message: I18N.t('settings.resetConfirm'), danger: true }).then(function(ok) {
+    if (!ok) return;
     localStorage.removeItem('editorConfig');
     loadSettings(); applyTheme(defaultConfig.theme);
-    showNotification('已经重置设置', 'success');
-  }
+    showNotification(I18N.t('settings.resetDone'), 'success');
+  });
 }
 
 
@@ -1281,7 +1407,7 @@ function exportSettings() {
   link.click();
   URL.revokeObjectURL(url);
 
-  showNotification('设置已经成功导出', 'success');
+  showNotification(I18N.t('settings.exportDone'), 'success');
 }
 
 function importSettings(e) {
@@ -1301,7 +1427,7 @@ function importSettings(e) {
 
       // 验证配置结构
       if (!config.theme || !config.colors) {
-        throw new Error('无效的配置文件');
+        throw new Error(I18N.t('settings.invalidConfig'));
       }
 
       // 应用导入   
@@ -1321,10 +1447,10 @@ function importSettings(e) {
         }
       });
 
-      showNotification('设置已经导入', 'success');
+      showNotification(I18N.t('settings.importDone'), 'success');
     } catch (error) {
       console.error('[SETTINGS] 导入错误:', error);
-      showNotification(`导入失败: ${error.message}`, 'error');
+      showNotification(I18N.t('settings.importFailed', {msg: error.message}), 'error');
     }
   };
 
@@ -1420,9 +1546,32 @@ window.addEventListener('beforeunload', () => {
   saveSettings();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('[SETTINGS] 页面 DOMContentLoaded');
+  await I18N.ready;
   loadSettings();
+  I18N.applyDOM();
+
+  // 预览区：示例对话框
+  var pvDemo = document.getElementById('pv-demo-dialog');
+  if (pvDemo) {
+    pvDemo.addEventListener('click', function() {
+      UI.confirm({
+        title: I18N.t('settings.previewDialogTitle'),
+        message: I18N.t('settings.previewDialogBody')
+      }).then(function(ok) {
+        if (!ok) return;
+        UI.prompt({
+          title: I18N.t('settings.previewDialogTitle'),
+          message: I18N.t('settings.previewDialogInput'),
+          defaultValue: 'example'
+        }).then(function(v) {
+          if (v === null) return;
+          UI.alert({ title: I18N.t('settings.previewDialogTitle'), message: I18N.t('settings.previewDialogResult', { value: v }) });
+        });
+      });
+    });
+  }
 });
 
 console.log('[SETTINGS] settings.js 已加载');

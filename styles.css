@@ -3046,6 +3046,37 @@ body {
   gap: 14px;
 }
 
+/* 子选项卡 (tabs widget, 如 item data 六类) */
+.ce-sf-subtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ce-sf-subtab-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.ce-sf-subtab-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.ce-sf-subtab-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+.ce-sf-subtab-panel {
+  display: none;
+}
+.ce-sf-subtab-panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* 事件选项卡 */
 .ce-events-header {
   display: flex;
