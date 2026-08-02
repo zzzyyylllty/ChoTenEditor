@@ -6,22 +6,22 @@
   if (root.MiniMessageEditor) return;
 
   var NAMED_COLORS = [
-    { hex: '#000000', name: 'black', zh: '黑色' },
-    { hex: '#0000aa', name: 'dark_blue', zh: '深蓝' },
-    { hex: '#00aa00', name: 'dark_green', zh: '深绿' },
-    { hex: '#00aaaa', name: 'dark_aqua', zh: '深青' },
-    { hex: '#aa0000', name: 'dark_red', zh: '深红' },
-    { hex: '#aa00aa', name: 'dark_purple', zh: '深紫' },
-    { hex: '#ffaa00', name: 'gold', zh: '金色' },
-    { hex: '#aaaaaa', name: 'gray', zh: '灰色' },
-    { hex: '#555555', name: 'dark_gray', zh: '深灰' },
-    { hex: '#5555ff', name: 'blue', zh: '蓝色' },
-    { hex: '#55ff55', name: 'green', zh: '绿色' },
-    { hex: '#55ffff', name: 'aqua', zh: '青色' },
-    { hex: '#ff5555', name: 'red', zh: '红色' },
-    { hex: '#ff55ff', name: 'light_purple', zh: '粉紫' },
-    { hex: '#ffff55', name: 'yellow', zh: '黄色' },
-    { hex: '#ffffff', name: 'white', zh: '白色' },
+    { hex: '#000000', name: 'black' },
+    { hex: '#0000aa', name: 'dark_blue' },
+    { hex: '#00aa00', name: 'dark_green' },
+    { hex: '#00aaaa', name: 'dark_aqua' },
+    { hex: '#aa0000', name: 'dark_red' },
+    { hex: '#aa00aa', name: 'dark_purple' },
+    { hex: '#ffaa00', name: 'gold' },
+    { hex: '#aaaaaa', name: 'gray' },
+    { hex: '#555555', name: 'dark_gray' },
+    { hex: '#5555ff', name: 'blue' },
+    { hex: '#55ff55', name: 'green' },
+    { hex: '#55ffff', name: 'aqua' },
+    { hex: '#ff5555', name: 'red' },
+    { hex: '#ff55ff', name: 'light_purple' },
+    { hex: '#ffff55', name: 'yellow' },
+    { hex: '#ffffff', name: 'white' },
   ];
 
   function t(key, fb) {
@@ -56,21 +56,21 @@
   function param(open, placeholder, mid, close) { return { before: open, placeholder: placeholder, after: mid, suffix: close }; }
 
   var TAGS = [
-    { id: 'bold', label: '粗体', btn: '<b>B</b>', tag: wrap('<b>', '</b>') },
-    { id: 'italic', label: '斜体', btn: '<i>I</i>', tag: wrap('<i>', '</i>') },
-    { id: 'underline', label: '下划线', btn: '<u>U</u>', tag: wrap('<u>', '</u>') },
-    { id: 'strikethrough', label: '删除线', btn: '<s>S̶</s>', tag: wrap('<st>', '</st>') },
-    { id: 'obfuscated', label: '随机混淆', btn: '<b>◼◼</b>', tag: wrap('<obf>', '</obf>') },
-    { id: 'reset', label: '重置格式', btn: '<b>R</b>', tag: wrap('<reset>', '') },
-    { id: 'newline', label: '换行', btn: '⏎', tag: wrap('<newline>', '') },
-    { id: 'rainbow', label: '彩虹', btn: '🌈', tag: wrap('<rainbow>', '</rainbow>') },
-    { id: 'gradient', label: '渐变', btn: '🌈2', tag: param('<gradient:#a:#b>', '#a:#b', '', '</gradient>') },
-    { id: 'color', label: '颜色', btn: '🎨', colorPicker: true },
-    { id: 'font', label: '字体', btn: '🅵', tag: param('<font:', 'minecraft:textname', '>', '</font>') },
-    { id: 'open_url', label: '点击打开链接', btn: '🔗', tag: param("<click:open_url:'", 'url', "'>", '</click>'), restricted: true },
-    { id: 'run_command', label: '点击执行命令', btn: '⌘', tag: param("<click:run_command:'", '/command', "'>", '</click>'), restricted: true },
-    { id: 'suggest_command', label: '点击填入命令', btn: '💬', tag: param("<click:suggest_command:'", '/command', "'>", '</click>'), restricted: true },
-    { id: 'hover_text', label: '悬停显示文本', btn: '👁', tag: param("<hover:show_text:'", 'text', "'>", '</hover>'), restricted: true },
+    { id: 'bold', label: t('minimessage.tag_bold', '粗体'), btn: '<b>B</b>', tag: wrap('<b>', '</b>') },
+    { id: 'italic', label: t('minimessage.tag_italic', '斜体'), btn: '<i>I</i>', tag: wrap('<i>', '</i>') },
+    { id: 'underline', label: t('minimessage.tag_underline', '下划线'), btn: '<u>U</u>', tag: wrap('<u>', '</u>') },
+    { id: 'strikethrough', label: t('minimessage.tag_strikethrough', '删除线'), btn: '<s>S̶</s>', tag: wrap('<st>', '</st>') },
+    { id: 'obfuscated', label: t('minimessage.tag_obfuscated', '随机混淆'), btn: '<b>◼◼</b>', tag: wrap('<obf>', '</obf>') },
+    { id: 'reset', label: t('minimessage.tag_reset', '重置格式'), btn: '<b>R</b>', tag: wrap('<reset>', '') },
+    { id: 'newline', label: t('minimessage.tag_newline', '换行'), btn: '⏎', tag: wrap('<newline>', '') },
+    { id: 'rainbow', label: t('minimessage.tag_rainbow', '彩虹'), btn: '🌈', tag: wrap('<rainbow>', '</rainbow>') },
+    { id: 'gradient', label: t('minimessage.tag_gradient', '渐变'), btn: '🌈2', tag: param('<gradient:#a:#b>', '#a:#b', '', '</gradient>') },
+    { id: 'color', label: t('minimessage.tag_color', '颜色'), btn: '🎨', colorPicker: true },
+    { id: 'font', label: t('minimessage.tag_font', '字体'), btn: '🅵', tag: param('<font:', 'minecraft:textname', '>', '</font>') },
+    { id: 'open_url', label: t('minimessage.tag_open_url', '点击打开链接'), btn: '🔗', tag: param("<click:open_url:'", 'url', "'>", '</click>'), restricted: true },
+    { id: 'run_command', label: t('minimessage.tag_run_command', '点击执行命令'), btn: '⌘', tag: param("<click:run_command:'", '/command', "'>", '</click>'), restricted: true },
+    { id: 'suggest_command', label: t('minimessage.tag_suggest_command', '点击填入命令'), btn: '💬', tag: param("<click:suggest_command:'", '/command', "'>", '</click>'), restricted: true },
+    { id: 'hover_text', label: t('minimessage.tag_hover_text', '悬停显示文本'), btn: '👁', tag: param("<hover:show_text:'", 'text', "'>", '</hover>'), restricted: true },
   ];
   // 插入型标签 (非包裹): 重置/换行 用「在光标处插入」描述
   var INSERT_TAGS = { reset: 1, newline: 1 };
@@ -217,7 +217,8 @@
       var sw = document.createElement('div');
       sw.className = 'mini-color-swatch';
       sw.style.background = c.hex;
-      sw.title = c.name + ' (' + c.zh + ')';
+      var colorZh = t('minimessage.color_' + c.name, c.name);
+      sw.title = c.name + (colorZh !== c.name ? ' (' + colorZh + ')' : '');
       sw.addEventListener('click', function (hex) { return function () { applyColor(hex); }; }(c.hex));
       grid.appendChild(sw);
     }
