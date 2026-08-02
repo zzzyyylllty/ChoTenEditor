@@ -520,6 +520,42 @@ mmBtn.closest = () => mmBtn;
 miR.listeners['click'][0]({ target: mmBtn });
 check(miEntry.data.data && miEntry.data.data.item_name === 'Hello', 'mini-edit: 无 MiniMessageEditor 时静默跳过不修改数据');
 
+// v1.0.47: simple lore (全字符串数组) 支持 MiniMessage 编辑按钮
+const slYaml = `
+items:
+  default:test:
+    material: paper
+    data:
+      lore:
+        - "line1"
+        - "line2"
+`;
+const slR = renderCap(slYaml);
+const slH = slR.el.innerHTML;
+const slLi = slH.indexOf('<textarea class="ce-input ce-lines-field" data-sf-kind="field" data-sf-path="data.lore"');
+check(slLi >= 0 && slH.slice(slLi, slLi + 500).includes('data-sf-action="mini-edit"'), 'simple lore lines 带 mini 按钮');
+
+// v1.0.47: 容器字段标签分类标题 (INSERT LORE / LEGACY MODEL 等)
+const catLoreYaml = `
+items:
+  default:test:
+    material: paper
+    lore:
+      - insert_lore:
+          position: 0
+          lore:
+            - "l1"
+    legacy_model:
+      model: "a"
+`;
+const catR = renderCap(catLoreYaml);
+const catH = catR.el.innerHTML;
+check(catH.includes('class="ce-field-label ce-cat-label"'), '容器字段标签带 ce-cat-label 分类样式');
+check(catH.includes('class="ce-field-label ce-cat-label">插入 Lore (insert_lore)'), 'insert_lore 标签为分类标题');
+check(catH.includes('class="ce-field-label ce-cat-label">旧版模型'), 'legacy_model 标签为分类标题');
+// 叶子字段 (material) 标签不加分类样式
+check(catH.includes('class="ce-field-label">材质') || catH.includes('class="ce-field-label"'), '叶子字段标签不带 ce-cat-label');
+
 // v1.0.28: 自定义选项卡 (warning + kv-rest 折叠未建模键)
 check(miH.includes('data-ce-tab="custom"'), 'item 自定义选项卡存在');
 check(h2.includes('data-ce-tab="custom"'), 'block 自定义选项卡存在');

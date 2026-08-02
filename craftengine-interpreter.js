@@ -857,8 +857,14 @@
     if (t === 'bool') return _sfCheckbox(def, path, value);
     if (t === 'select') return _sfSelect(def, path, value);
     if (t === 'textarea' || t === 'miniText') return _sfTextarea(def, path, value, t === 'miniText' ? 2 : 0);
-    if (t === 'lines') return _sfLines(def, path, value, false);
-    if (t === 'linesScalar') return _sfLines(def, path, value, true);
+    if (t === 'lines') {
+      var lh = _sfLines(def, path, value, false);
+      return def.mini ? _sfMiniWrap(lh) : lh;
+    }
+    if (t === 'linesScalar') {
+      var ls = _sfLines(def, path, value, true);
+      return def.mini ? _sfMiniWrap(ls) : ls;
+    }
     if (t === 'kv' || t === 'kvRest') return _sfKvTextarea(def, path, value);
     if (t === 'scalar') return _sfScalarInput(def, path, value);
     var html = _sfInput(def, path, value, 'text');
@@ -882,12 +888,15 @@
     });
     return html;
   }
+  // 容器类字段 (内含子字段): 标签作为分类标题加大加深, 与子字段区分 (如 INSERT LORE / LEGACY MODEL)
+  var _SF_CAT_TYPES = { union: 1, object: 1, listOf: 1, mapOf: 1, components: 1, model: 1, popup: 1, tabs: 1 };
   function _sfWrap(def, html, path) {
     var label = _labelOf(def);
     var icon = _sfHintIcon(def, path);
     var hint = def.hint ? '<div class="ce-sf-hint">' + _escHtml(_labelOf(def.hint)) + '</div>' : '';
     if (_sfIsStack(def.type) || def.layout === 'stack') {
-      return '<div class="ce-stack"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' + hint + html + '</div>';
+      var lblCls = _SF_CAT_TYPES[def.type] ? 'ce-field-label ce-cat-label' : 'ce-field-label';
+      return '<div class="ce-stack"><label class="' + lblCls + '">' + _escHtml(label) + icon + '</label>' + hint + html + '</div>';
     }
     return '<div class="ce-row"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' +
       '<div class="ce-row-ctrl">' + html + hint + '</div></div>';

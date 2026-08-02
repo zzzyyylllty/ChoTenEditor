@@ -3343,6 +3343,12 @@ textarea.ce-input {
   display: block;
   margin-bottom: 4px;
 }
+/* 容器类字段标签 (object/union/listOf 等): 分类标题加大加深, 子字段字号不变 */
+.ce-stack > .ce-field-label.ce-cat-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
 .ce-sf-hint {
   font-size: 11px;
   color: var(--color-text-tertiary);

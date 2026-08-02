@@ -56,30 +56,33 @@
   function param(open, placeholder, mid, close) { return { before: open, placeholder: placeholder, after: mid, suffix: close }; }
 
   var TAGS = [
-    { id: 'bold', label: t('minimessage.tag_bold', '粗体'), btn: '<b>B</b>', tag: wrap('<b>', '</b>') },
-    { id: 'italic', label: t('minimessage.tag_italic', '斜体'), btn: '<i>I</i>', tag: wrap('<i>', '</i>') },
-    { id: 'underline', label: t('minimessage.tag_underline', '下划线'), btn: '<u>U</u>', tag: wrap('<u>', '</u>') },
-    { id: 'strikethrough', label: t('minimessage.tag_strikethrough', '删除线'), btn: '<s>S̶</s>', tag: wrap('<st>', '</st>') },
-    { id: 'obfuscated', label: t('minimessage.tag_obfuscated', '随机混淆'), btn: '<b>◼◼</b>', tag: wrap('<obf>', '</obf>') },
-    { id: 'reset', label: t('minimessage.tag_reset', '重置格式'), btn: '<b>R</b>', tag: wrap('<reset>', '') },
-    { id: 'newline', label: t('minimessage.tag_newline', '换行'), btn: '⏎', tag: wrap('<newline>', '') },
-    { id: 'rainbow', label: t('minimessage.tag_rainbow', '彩虹'), btn: '🌈', tag: wrap('<rainbow>', '</rainbow>') },
-    { id: 'gradient', label: t('minimessage.tag_gradient', '渐变'), btn: '🌈2', tag: param('<gradient:#a:#b>', '#a:#b', '', '</gradient>') },
-    { id: 'color', label: t('minimessage.tag_color', '颜色'), btn: '🎨', colorPicker: true },
-    { id: 'font', label: t('minimessage.tag_font', '字体'), btn: '🅵', tag: param('<font:', 'minecraft:textname', '>', '</font>') },
-    { id: 'open_url', label: t('minimessage.tag_open_url', '点击打开链接'), btn: '🔗', tag: param("<click:open_url:'", 'url', "'>", '</click>'), restricted: true },
-    { id: 'run_command', label: t('minimessage.tag_run_command', '点击执行命令'), btn: '⌘', tag: param("<click:run_command:'", '/command', "'>", '</click>'), restricted: true },
-    { id: 'suggest_command', label: t('minimessage.tag_suggest_command', '点击填入命令'), btn: '💬', tag: param("<click:suggest_command:'", '/command', "'>", '</click>'), restricted: true },
-    { id: 'hover_text', label: t('minimessage.tag_hover_text', '悬停显示文本'), btn: '👁', tag: param("<hover:show_text:'", 'text', "'>", '</hover>'), restricted: true },
+    { id: 'bold', labelKey: 'minimessage.tag_bold', labelFb: '粗体', btn: '<b>B</b>', tag: wrap('<b>', '</b>') },
+    { id: 'italic', labelKey: 'minimessage.tag_italic', labelFb: '斜体', btn: '<i>I</i>', tag: wrap('<i>', '</i>') },
+    { id: 'underline', labelKey: 'minimessage.tag_underline', labelFb: '下划线', btn: '<u>U</u>', tag: wrap('<u>', '</u>') },
+    { id: 'strikethrough', labelKey: 'minimessage.tag_strikethrough', labelFb: '删除线', btn: '<s>S̶</s>', tag: wrap('<st>', '</st>') },
+    { id: 'obfuscated', labelKey: 'minimessage.tag_obfuscated', labelFb: '随机混淆', btn: '<b>◼◼</b>', tag: wrap('<obf>', '</obf>') },
+    { id: 'reset', labelKey: 'minimessage.tag_reset', labelFb: '重置格式', btn: '<b>R</b>', tag: wrap('<reset>', '') },
+    { id: 'newline', labelKey: 'minimessage.tag_newline', labelFb: '换行', btn: '⏎', tag: wrap('<newline>', '') },
+    { id: 'rainbow', labelKey: 'minimessage.tag_rainbow', labelFb: '彩虹', btn: '🌈', tag: wrap('<rainbow>', '</rainbow>') },
+    { id: 'gradient', labelKey: 'minimessage.tag_gradient', labelFb: '渐变', btn: '🌈2', tag: param('<gradient:#a:#b>', '#a:#b', '', '</gradient>') },
+    { id: 'color', labelKey: 'minimessage.tag_color', labelFb: '颜色', btn: '🎨', colorPicker: true },
+    { id: 'font', labelKey: 'minimessage.tag_font', labelFb: '字体', btn: '🅵', tag: param('<font:', 'minecraft:textname', '>', '</font>') },
+    { id: 'open_url', labelKey: 'minimessage.tag_open_url', labelFb: '点击打开链接', btn: '🔗', tag: param("<click:open_url:'", 'url', "'>", '</click>'), restricted: true },
+    { id: 'run_command', labelKey: 'minimessage.tag_run_command', labelFb: '点击执行命令', btn: '⌘', tag: param("<click:run_command:'", '/command', "'>", '</click>'), restricted: true },
+    { id: 'suggest_command', labelKey: 'minimessage.tag_suggest_command', labelFb: '点击填入命令', btn: '💬', tag: param("<click:suggest_command:'", '/command', "'>", '</click>'), restricted: true },
+    { id: 'hover_text', labelKey: 'minimessage.tag_hover_text', labelFb: '悬停显示文本', btn: '👁', tag: param("<hover:show_text:'", 'text', "'>", '</hover>'), restricted: true },
   ];
+  // 标签名按需翻译 (I18N 字典异步加载, 加载时捕获会拿到回退文本导致中英混杂)
+  function tagLabel(def) {
+    return t(def.labelKey, def.labelFb);
+  }
   // 插入型标签 (非包裹): 重置/换行 用「在光标处插入」描述
   var INSERT_TAGS = { reset: 1, newline: 1 };
   function tagDesc(def) {
-    var op = INSERT_TAGS[def.id] ? t('minimessage.tooltipInsert', '在光标处插入') : t('minimessage.tooltipWrap', '给选定的文字添加');
-    return op + def.label;
+    return INSERT_TAGS[def.id] ? t('minimessage.tooltipInsert', '在光标处插入') : t('minimessage.tooltipWrap', '给选定的文字添加');
   }
   function tagTooltipHtml(def) {
-    var html = '<b class="rt-strong">' + esc(def.label) + '</b> — ' + esc(tagDesc(def)) + '<br>' +
+    var html = '<b class="rt-strong">' + esc(tagLabel(def)) + '</b> — ' + esc(tagDesc(def)) + '<br>' +
       '<code>' + esc((def.tag ? def.tag.before + def.tag.placeholder + def.tag.after + def.tag.suffix : '')) + '</code><br>' +
       '<span class="rt-dim">' + esc(t('minimessage.editBtnTip', '左键: 详细添加 · 右键: 快速添加')) + '</span>';
     if (def.restricted) html += '<br><span class="rt-restricted">⚠ ' + esc(t('minimessage.restrictedTip', '受限的标签，可能不能用在全部地方')) + '</span>';
@@ -439,7 +442,7 @@
     for (var i = 0; i < TAGS.length; i++) {
       var o = document.createElement('option');
       o.value = TAGS[i].id;
-      o.textContent = TAGS[i].label;
+      o.textContent = tagLabel(TAGS[i]);
       typeSel.appendChild(o);
     }
     typeSel.value = def.id;
@@ -447,7 +450,7 @@
     function refresh() {
       var d = detailTypeById(typeSel.value);
       if (!d) return;
-      titleEl.textContent = '✏️ ' + t('minimessage.detailTitle', '详细添加') + ' — ' + d.label;
+      titleEl.textContent = '✏️ ' + t('minimessage.detailTitle', '详细添加') + ' — ' + tagLabel(d);
       extraBox.innerHTML = detailExtraHtml(d.id);
       var tag = buildDetailTag(d.id, detailFields(d.id));
       tagHint.textContent = tag.before + contentTa.value + tag.suffix;
