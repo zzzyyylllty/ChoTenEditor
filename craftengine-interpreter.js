@@ -900,7 +900,10 @@
 
   // ---- 字段提示 (ℹ 图标 + RichTooltip) ----
   // CEHints (craftengine-hints.js): 文档原文提示数据库, key = 字段完整路径
-  var _sfCeHints = (typeof CEHints !== 'undefined') ? CEHints : null;
+  // 注意: interpreter 先于 hints 加载 (index.html), 必须按需读取, 不能加载时捕获
+  function _sfCeHints() {
+    return (typeof CEHints !== 'undefined') ? CEHints : null;
+  }
   function _sfHintKey(path) {
     return String(path || '').replace(/^__popup__\.?/, '');
   }
@@ -915,10 +918,11 @@
     return String(t || '').replace(/\*\*/g, '').replace(/`/g, '').replace(/§[0-9a-fk-orlmn]/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ');
   }
   function _sfTipText(def, path) {
+    var db = _sfCeHints();
     var k = _sfHintKey(path);
     var h = null;
-    if (_sfCeHints && k) h = _sfCeHints[k];
-    if (!h && _sfCeHints && def && def.key) h = _sfCeHints[def.key];
+    if (db && k) h = db[k];
+    if (!h && db && def && def.key) h = db[def.key];
     if (!h && def) h = def.hint;
     return _sfTipOf(h);
   }
