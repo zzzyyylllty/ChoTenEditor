@@ -163,22 +163,86 @@ check(h2.includes('data-sf-kind="list"') && h2.includes('data-sf-path="loot.pool
 check(h2.includes('data-ce-tabpanel="events"') && h2.includes('data-ce-ev="0"'), 'block 事件面板渲染');
 check(!h2.includes('data-ce-field-json'), 'block 表单无 JSON 字段编辑器');
 
-// 3. legacy 非选项卡类型 (recipe) 仍为单页 + key 在顶部
+// 3. recipe schema 表单 (Phase 5)
 const recipeYaml = `
 recipes:
   default:sword:
     type: shaped
+    category: building
+    group: swords
     pattern:
       - "a"
+      - "b"
     ingredients:
       a: default:item
+      b:
+        items: minecraft:stick
+        count: 2
     result:
       id: default:sword
       count: 1
+    transform_processors:
+      - type: keep_components
+        components:
+          - enchantments
+    unlock_on_join: true
+    conditions:
+      - type: permission
+        permission: recipe.unlock.bench
+    functions:
+      - type: command
+        command: say crafted
+  default:brew:
+    type: brewing
+    ingredient: tea_art:tea_leaf
+    container: tea_art:cup
+    result:
+      id: tea_art:cup_of_tea
+      count: 1
+  default:shapeless:
+    type: shapeless
+    ingredients:
+      - "#default:palm_logs"
+      - - test:ingredient1
+        - test:ingredient2
+    result:
+      id: default:palm_planks
+      count: 4
 `;
 const h3 = render(recipeYaml).innerHTML;
-check(!h3.includes('data-action="ce-tab"'), 'recipe 无选项卡');
+check(h3.includes('data-action="ce-tab"'), 'recipe 选项卡存在');
+check(h3.includes('data-ce-tab="basic"') && h3.includes('data-ce-tab="result"'), 'recipe 基础/结果选项卡');
+check(h3.includes('data-ce-tab="advanced"') && h3.includes('data-ce-tab="other"'), 'recipe 高级/其他选项卡');
 check(h3.includes('data-ce-field="__key__"'), 'recipe 有 key 输入框');
+check(h3.includes('data-sf-kind="field"') && h3.includes('data-sf-path="type"') && h3.includes('data-sf-type="select"'), 'type select');
+check(h3.includes('data-sf-type="lines-scalar"') && h3.includes('data-sf-path="pattern"'), 'pattern linesScalar (网格/修饰图案)');
+check(h3.includes('data-sf-action="union-set"') && h3.includes('data-sf-path="ingredients"'), 'ingredients 形状 union (map/list)');
+check(h3.includes('data-sf-kind="map"') && h3.includes('data-sf-path="ingredients"'), 'shaped: ingredients map');
+check(h3.includes('data-sf-kind="field"') && h3.includes('data-sf-path="ingredients.a"'), '网格值标量');
+check(h3.includes('data-sf-path="ingredients.b.items"') && h3.includes('data-sf-path="ingredients.b.count"'), '网格值详细对象 (items/count)');
+check(h3.includes('data-sf-path="result.id"') && h3.includes('data-sf-path="result.count"'), 'result id/count');
+check(h3.includes('data-sf-kind="list"') && h3.includes('data-sf-path="transform_processors"'), 'transform_processors listOf');
+check(h3.includes('data-sf-path="transform_processors.0"') && h3.includes('data-sf-action="union-set"'), '处理器 union (type-keyed)');
+check(h3.includes('data-sf-path="transform_processors.0.components"') && h3.includes('data-sf-type="lines"'), 'keep_components 类型体 components');
+check(h3.includes('data-sf-type="bool"') && h3.includes('data-sf-path="unlock_on_join"'), 'unlock_on_join bool');
+check(h3.includes('data-sf-kind="list"') && h3.includes('data-sf-path="conditions"'), 'conditions listOf');
+check(h3.includes('data-sf-kind="list"') && h3.includes('data-sf-path="functions"'), 'functions listOf');
+check(!h3.includes('data-ce-field-json'), 'recipe 表单无 JSON 字段编辑器');
+
+// brewing 条目 (entry 1)
+const elR1 = { innerHTML: '', _ceUi: { section: 0, entry: 1 }, addEventListener: () => {}, removeEventListener: () => {}, querySelector: () => null, querySelectorAll: () => [], isConnected: false };
+CEI.render('test.yml', recipeYaml, elR1, {});
+const hR1 = elR1.innerHTML;
+check(hR1.includes('data-sf-path="ingredient"') && hR1.includes('data-sf-action="union-set"'), 'brewing: ingredient union');
+check(hR1.includes('data-sf-path="container"') && hR1.includes('data-sf-action="union-set"'), 'brewing: container union');
+check(hR1.includes('data-sf-path="result.id"'), 'brewing: result');
+
+// shapeless 条目 (entry 2): ingredients 列表 + 嵌套列表
+const elR2 = { innerHTML: '', _ceUi: { section: 0, entry: 2 }, addEventListener: () => {}, removeEventListener: () => {}, querySelector: () => null, querySelectorAll: () => [], isConnected: false };
+CEI.render('test.yml', recipeYaml, elR2, {});
+const hR2 = elR2.innerHTML;
+check(hR2.includes('data-sf-kind="list"') && hR2.includes('data-sf-path="ingredients"'), 'shapeless: ingredients list');
+check(hR2.includes('data-sf-kind="list"') && hR2.includes('data-sf-path="ingredients.1"'), '嵌套材料列表渲染');
 
 // ---------- 2. schema 简单 section ----------
 const eqYaml = `
@@ -405,6 +469,24 @@ if (asUid) {
   bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.auto_state', 'data-sf-uid': asUid[1] }, 'expanded') });
   check(bEntry.data.state.auto_state !== null && typeof bEntry.data.state.auto_state === 'object' && !Array.isArray(bEntry.data.state.auto_state), '写回: auto_state → expanded 对象');
 }
+
+// ---------- 2.5 recipe 写回 (Phase 5) ----------
+const rR = renderCap(recipeYaml);
+const rEntry = rR.el._ceParsed.sections[0].entries[0];
+const rCh = rR.listeners['change'][0];
+
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'ingredients.a', 'data-sf-type': 'text' }, 'default:topaz') });
+check(rEntry.data.ingredients.a === 'default:topaz', 'recipe 写回: 网格标量材料');
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'ingredients.b.count', 'data-sf-type': 'number' }, '3') });
+check(rEntry.data.ingredients.b.count === 3, 'recipe 写回: 网格详细材料 count');
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'result.count', 'data-sf-type': 'number' }, '2') });
+check(rEntry.data.result.count === 2, 'recipe 写回: result.count');
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'pattern', 'data-sf-type': 'lines-scalar' }, 'a\nb\nc') });
+check(Array.isArray(rEntry.data.pattern) && rEntry.data.pattern.length === 3, 'recipe 写回: pattern 多行 → 数组');
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'pattern', 'data-sf-type': 'lines-scalar' }, 'minecraft:bolt') });
+check(rEntry.data.pattern === 'minecraft:bolt', 'recipe 写回: pattern 单行 → 字符串 (smithing_trim)');
+rCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'transform_processors.0.components', 'data-sf-type': 'lines' }, 'enchantments\nattribute_modifiers') });
+check(Array.isArray(rEntry.data.transform_processors[0].components) && rEntry.data.transform_processors[0].components.length === 2, 'recipe 写回: keep_components components');
 
 // ---------- 2.4 furniture schema 表单 (Phase 4) ----------
 const furnYaml = `

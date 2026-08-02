@@ -1695,6 +1695,97 @@
     ],
   };
 
+  // ---- recipe section (wiki recipe.mdx) ----
+  var RECIPE_TYPE_OPTIONS = ['shaped', 'shaped_transform', 'shapeless', 'shapeless_transform', 'smelting', 'blasting', 'smoking', 'campfire_cooking', 'stonecutting', 'smithing_transform', 'smithing_trim', 'brewing'];
+  var RECIPE_CATEGORY_OPTIONS = ['building', 'redstone', 'equipment', 'misc', 'food', 'blocks'];
+  // 材料谓词 (额外条件)
+  var RECIPE_PREDICATE_TYPES = {
+    enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), fields: [
+      f('enchantments', '附魔映射', 'Enchantments', 'kv', { hint: l('键: 附魔 ID, 值: 等级', 'Key: enchantment id, value: level') }),
+    ] },
+    exact: { label: l('精确组件 (exact)', 'Exact Component'), fields: [
+      f('component', '组件', 'Component', 'text', { hint: l('如 minecraft:custom_name', 'e.g. minecraft:custom_name') }),
+      f('value', '值 (NBT)', 'Value', 'text', { hint: l('NBT 标签值', 'NBT tag value') }),
+    ] },
+  };
+  // 变换处理器 / 结果后处理器 (wiki recipe.mdx#transform-processors)
+  var TRANSFORM_PROCESSOR_TYPES = {
+    apply_data: { label: l('应用数据 (apply_data)', 'Apply Data'), fields: [
+      f('data', '数据', 'Data', 'kv'),
+    ] },
+    merge_enchantments: { label: l('合并附魔 (merge_enchantments)', 'Merge Enchantments') },
+    keep_custom_data: { label: l('保留自定义数据 (keep_custom_data)', 'Keep Custom Data'), fields: [
+      f('paths', '路径', 'Paths', 'lines', { hint: l('如 weapon / energy.fly (每行一个)', 'e.g. weapon / energy.fly (one per line)') }),
+    ] },
+    keep_components: { label: l('保留组件 (keep_components)', 'Keep Components'), fields: [
+      f('components', '组件', 'Components', 'lines', { hint: l('如 minecraft:enchantments (每行一个)', 'e.g. minecraft:enchantments (one per line)') }),
+    ] },
+    keep_tags: { label: l('保留 NBT 标签 (keep_tags)', 'Keep Tags'), fields: [
+      f('tags', '标签', 'Tags', 'lines', { hint: l('如 display.Name (每行一个)', 'e.g. display.Name (one per line)') }),
+    ] },
+  };
+  // 材料详细对象 (item/items 别名, count, source, predicate)
+  var RECIPE_INGREDIENT_DETAILS = { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+    f('item', '物品 (item)', 'Item (item)', 'text', { datalist: 'items' }),
+    f('items', '物品 (items)', 'Items (items)', 'text', { datalist: 'items' }),
+    f('count', '数量', 'Count', 'number'),
+    f('source', '源物品', 'Source', 'bool', { hint: l('标记为源物品, 其数据合并到结果', 'Mark as source; data merges into result') }),
+    f('predicate', '谓词', 'Predicate', 'listOf', { itemType: { type: 'union', types: RECIPE_PREDICATE_TYPES, label: l('谓词', 'Predicate') }, label: l('谓词', 'Predicates'), hint: l('额外条件, 如附魔等级要求', 'Extra conditions, e.g. enchantment requirements') }),
+  ], label: l('材料', 'Ingredient') } };
+  // 材料值: 字符串/标签 或 详细 (含嵌套列表, shapeless 条目用)
+  var RECIPE_INGREDIENT_TYPES = {
+    details: RECIPE_INGREDIENT_DETAILS,
+    nested: { label: l('嵌套列表', 'Nested List'), widget: { type: 'listOf', label: l('材料', 'Ingredients'), itemType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('材料', 'Ingredient'), types: RECIPE_INGREDIENT_TYPES_REF } } },
+  };
+  function RECIPE_INGREDIENT_TYPES_REF() { return RECIPE_INGREDIENT_TYPES; }
+  // 材料值: 字符串/标签 或 详细 (无嵌套, shaped 网格与单材料字段用)
+  var RECIPE_INGREDIENT_TYPES_SIMPLE = { details: RECIPE_INGREDIENT_DETAILS };
+  // ingredients 形状: shaped 网格 map / shapeless 列表
+  var RECIPE_INGREDIENTS_SHAPE_TYPES = {
+    map: { label: l('网格 (shaped)', 'Grid (shaped)'), widget: { type: 'mapOf', label: l('材料', 'Ingredients'), valueType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('材料', 'Ingredient'), types: RECIPE_INGREDIENT_TYPES_SIMPLE }, hint: l('键: 网格字符 (A/B/C...)', 'Key: grid char (A/B/C...)') } },
+    list: { label: l('列表 (shapeless)', 'List (shapeless)'), widget: { type: 'listOf', label: l('材料', 'Ingredients'), itemType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('材料', 'Ingredient'), types: RECIPE_INGREDIENT_TYPES } } },
+  };
+  function recipeIngredientField(key, zh, en, opts) {
+    var o = { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('default:topaz 或 #minecraft:planks', 'default:topaz or #minecraft:planks') }, label: l('材料', 'Ingredient'), types: RECIPE_INGREDIENT_TYPES_SIMPLE };
+    if (opts) Object.keys(opts).forEach(function (k) { o[k] = opts[k]; });
+    return f(key, zh, en, 'union', o);
+  }
+  var RECIPE_RESULT_FIELDS = [
+    f('id', '结果物品', 'Result Item', 'text', { datalist: 'items' }),
+    f('count', '数量', 'Count', 'number'),
+    f('post_processors', '结果后处理器', 'Post Processors', 'listOf', { itemType: { type: 'union', types: TRANSFORM_PROCESSOR_TYPES, label: l('处理器', 'Processor') }, label: l('结果后处理器', 'Post Processors'), hint: l('对最终产物额外处理 (如附魔)', 'Extra processing on the final product') }),
+  ];
+  SECTIONS.recipe = {
+    tabs: [
+      { key: 'basic', label: l('基础', 'Basic') },
+      { key: 'result', label: l('结果', 'Result') },
+      { key: 'advanced', label: l('高级', 'Advanced') },
+      { key: 'other', label: l('其他', 'Other') },
+    ],
+    fields: [
+      f('type', '类型', 'Type', 'select', { options: RECIPE_TYPE_OPTIONS, tab: 'basic' }),
+      f('pattern', '图案', 'Pattern', 'linesScalar', { hint: l('shaped: 每行一个网格行; smithing_trim: 修饰图案 ID', 'Shaped: one grid row per line; smithing_trim: trim pattern id'), tab: 'basic' }),
+      f('ingredients', '材料', 'Ingredients', 'union', { noTypeKey: true, label: l('材料', 'Ingredients'), tab: 'basic', types: RECIPE_INGREDIENTS_SHAPE_TYPES }),
+      recipeIngredientField('ingredient', '材料', 'Ingredient', { tab: 'basic', hint: l('烹饪/切石/酿造: 单个材料', 'Cooking/stonecutting/brewing: single ingredient') }),
+      f('experience', '经验', 'Experience', 'number', { tab: 'basic', hint: l('烹饪配方 (smelting 系)', 'Cooking recipes (smelting family)') }),
+      f('time', '时间 (tick)', 'Time', 'number', { tab: 'basic', hint: l('烹饪时间, 默认 200', 'Cooking time, default 200') }),
+      f('template_type', '模板', 'Template Type', 'text', { tab: 'basic', hint: l('smithing: 槽位 1 (可选)', 'Smithing slot 1 (optional)') }),
+      recipeIngredientField('base', '基底', 'Base', { tab: 'basic', hint: l('smithing: 槽位 2 (必需)', 'Smithing slot 2 (required)') }),
+      recipeIngredientField('addition', '附加', 'Addition', { tab: 'basic', hint: l('smithing: 槽位 3 (可选)', 'Smithing slot 3 (optional)') }),
+      recipeIngredientField('container', '容器', 'Container', { tab: 'basic', hint: l('酿造: 药水瓶/水瓶', 'Brewing: bottle') }),
+      f('result', '结果', 'Result', 'object', { fields: RECIPE_RESULT_FIELDS, label: l('结果', 'Result'), tab: 'result' }),
+      f('visual_result', '视觉结果', 'Visual Result', 'object', { fields: RECIPE_RESULT_FIELDS, label: l('视觉结果', 'Visual Result'), tab: 'result', hint: l('隐藏真实产物 (随机产物配方用)', 'Hides the real outcome (randomized recipes)') }),
+      f('transform_processors', '变换处理器', 'Transform Processors', 'listOf', { itemType: { type: 'union', types: TRANSFORM_PROCESSOR_TYPES, label: l('处理器', 'Processor') }, label: l('变换处理器', 'Transform Processors'), tab: 'advanced', hint: l('变换配方: 控制源物品数据合并到结果', 'Transform recipes: control source data merging') }),
+      f('merge_components', '合并组件', 'Merge Components', 'bool', { tab: 'advanced', hint: l('合并源物品组件 (默认 true)', 'Merge source components (default true)') }),
+      f('category', '分类', 'Category', 'select', { options: RECIPE_CATEGORY_OPTIONS, tab: 'advanced', hint: l('烹饪: food/blocks/misc; 合成: building/redstone/equipment/misc', 'Cooking: food/blocks/misc; Crafting: building/redstone/equipment/misc') }),
+      f('group', '组', 'Group', 'text', { tab: 'advanced', hint: l('客户端解锁后同组归并显示', 'Same group shows together after unlock') }),
+      f('unlock_on_ingredient_obtained', '获得材料解锁', 'Unlock on Ingredient', 'bool', { tab: 'advanced' }),
+      f('unlock_on_join', '入服解锁', 'Unlock on Join', 'bool', { tab: 'advanced' }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions'), tab: 'other', hint: l('不满足条件的玩家无法使用', 'Players failing these cannot use the recipe') }),
+      f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: FN_TYPES }, label: l('函数', 'Functions'), tab: 'other', hint: l('成功合成/锻造时运行', 'Run when crafted/smithed successfully') }),
+    ],
+  };
+
   // ---- item section ----
   SECTIONS.item = {
     tabs: [
@@ -2102,6 +2193,10 @@
     specialModels: SPECIAL_MODEL_TYPES,
     updaterSteps: UPDATER_STEP_TYPES,
     updaterValues: UPDATER_VALUE_TYPES,
+    // recipe (Phase 5)
+    recipeIngredients: RECIPE_INGREDIENT_TYPES,
+    transformProcessors: TRANSFORM_PROCESSOR_TYPES,
+    recipePredicates: RECIPE_PREDICATE_TYPES,
   };
 
   S.sections = SECTIONS;
