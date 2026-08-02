@@ -50,9 +50,9 @@ if (!gotLock) {
     dialog.showMessageBoxSync({
       type: 'warning',
       title: 'ChoTenEditor',
-      message: '检测到另一个编辑器实例正在运行',
-      detail: '请先关闭所有正在运行的编辑器实例，再重新启动编辑器。多个实例同时运行可能导致数据异常。',
-      buttons: ['确定'],
+      message: '检测到另一个编辑器实例正在运行\nAnother editor instance is already running',
+      detail: '请先关闭所有正在运行的编辑器实例，再重新启动编辑器。多个实例同时运行可能导致数据异常。\nPlease close all running editor instances before restarting. Running multiple instances may cause data corruption.',
+      buttons: ['确定 / OK'],
       defaultId: 0,
       cancelId: 0,
     });
