@@ -787,7 +787,7 @@
       f('strings', '字符串', 'Strings', 'lines'),
     ] } },
   };
-  var CUSTOM_MODEL_DATA_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('Custom Model Data', 'Custom Model Data'), types: CUSTOM_MODEL_DATA_TYPES };
+  var CUSTOM_MODEL_DATA_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'scalar' }, label: l('Custom Model Data', 'Custom Model Data'), types: CUSTOM_MODEL_DATA_TYPES };
   var PROFILE_TYPES = {
     map: { label: l('字段', 'Fields'), widget: { type: 'object', fields: [
       f('name', '玩家名', 'Player Name', 'text'),
@@ -1799,7 +1799,7 @@
     fields: [
       // 基础
       f('material', '材质', 'Material', 'text', { datalist: 'items', tab: 'basic' }),
-      f('custom-model-data', 'Custom Model Data', 'Custom Model Data', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, types: CUSTOM_MODEL_DATA_TYPES, tab: 'basic', label: l('Custom Model Data', 'Custom Model Data') }),
+      f('custom-model-data', 'Custom Model Data', 'Custom Model Data', 'union', { noTypeKey: true, allowScalar: { type: 'scalar' }, types: CUSTOM_MODEL_DATA_TYPES, tab: 'basic', label: l('Custom Model Data', 'Custom Model Data') }),
       f('texture', '纹理', 'Texture', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx'), tab: 'basic', layout: 'stack' }),
       f('textures', '纹理列表 (模型简写)', 'Textures (model shorthand)', 'linesScalar', { hint: l('多个纹理 = 动画帧/部位 (每行一个)', 'One texture per line; multiple = animation frames/parts'), tab: 'basic' }),
       f('category', '分类', 'Category', 'linesScalar', { hint: l('多行 = 多个分类', 'Multiple lines = several categories'), tab: 'basic' }),

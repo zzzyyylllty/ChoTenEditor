@@ -795,7 +795,7 @@ craftengine:
   mapAdd: "+ Add key"
   unionEmpty: "Not set — choose a type from the dropdown"
   unionClear: "Clear"
-  customValue: "Custom value…"
+  customValue: "Simple value…"
   componentAdd: "Add component…"
   componentCustom: "Custom (key-value)"
   componentsEmpty: "No data components yet — choose one from the dropdown below"

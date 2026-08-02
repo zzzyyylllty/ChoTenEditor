@@ -795,7 +795,7 @@ craftengine:
   mapAdd: "+ 添加键值"
   unionEmpty: "未设置 — 从下拉框选择类型"
   unionClear: "清除"
-  customValue: "自定义值…"
+  customValue: "简单值…"
   componentAdd: "添加组件…"
   componentCustom: "自定义 (键值对)"
   componentsEmpty: "此条目还没有 data 组件 — 从下方下拉框选择添加"

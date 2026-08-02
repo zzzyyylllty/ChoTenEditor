@@ -905,9 +905,9 @@
     for (var i = 0; i < arr.length; i++) {
       html += '<div class="ce-sf-list-item" data-sf-idx="' + i + '">' +
         '<div class="ce-sf-list-ops">' +
-        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="up" data-sf-idx="' + i + '" title="↑">↑</button>' +
-        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="down" data-sf-idx="' + i + '" title="↓">↓</button>' +
-        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="list-del" data-sf-idx="' + i + '" title="✕">✕</button>' +
+        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="up" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="↑">↑</button>' +
+        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="down" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="↓">↓</button>' +
+        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="list-del" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="✕">✕</button>' +
         '</div>' +
         '<div class="ce-sf-list-body">' + _sfItemHtml(itemDef, path + '.' + i, arr[i], { inList: true }) + '</div>' +
         '</div>';
@@ -1019,6 +1019,9 @@
     var cur = _sfUnionCurrent(def, value);
     var optHtml = '';
     if (!cur.key) optHtml += '<option value="">-- ' + _escHtml(_t('craftengine.unionEmpty')) + ' --</option>';
+    if (def.allowScalar) {
+      optHtml += '<option value="__scalar"' + (cur.key === '__scalar' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.customValue')) + '</option>';
+    }
     var keys = Object.keys(types);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
@@ -1027,9 +1030,6 @@
       if (def.negatable) {
         optHtml += '<option value="!' + _escHtml(k) + '"' + (cur.key === k && cur.neg ? ' selected' : '') + '>' + _escHtml('!' + lb) + '</option>';
       }
-    }
-    if (def.allowScalar) {
-      optHtml += '<option value="__scalar"' + (cur.key === '__scalar' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.customValue')) + '</option>';
     }
     var body = '';
     if (cur.key && cur.key !== '__scalar') {
@@ -1123,12 +1123,16 @@
     var isStr = typeof value === 'string';
     var isObj = !isStr && value !== null && typeof value === 'object' && !Array.isArray(value);
     var mode = isStr ? 'path' : (isObj && value.type !== undefined && value.type !== null && value.type !== '' ? 'tree' : 'simplified');
+    var clear = '';
+    if (value !== undefined && value !== null) {
+      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="model-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
+    }
     var html = '<div class="ce-sf-union-head" data-sf-uid="' + uid + '">' +
       '<select class="ce-input" data-sf-action="model-mode" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' +
       '<option value="simplified"' + (mode === 'simplified' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelSimplified')) + '</option>' +
       '<option value="tree"' + (mode === 'tree' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelTree')) + '</option>' +
       '<option value="path"' + (mode === 'path' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelPath')) + '</option>' +
-      '</select></div>';
+      '</select>' + clear + '</div>';
     var forms = _sfModelForms();
     var body;
     if (mode === 'path') {
@@ -1182,7 +1186,7 @@
         // 形状推断 union: 切换类型时若当前值不匹配目标形状, 创建默认值
         var curShape = _sfUnionCurrent(rec.def, cur);
         if (v === '__scalar') {
-          if (curShape.key !== '__scalar') { if (path) _applyValue(entry, path, '', parsed, section); }
+          if (curShape.key !== '__scalar' && path) _sfSetScalar(entry, path);
         } else if (curShape.key !== v) {
           var td = _sfTypesOf(rec.def)[v];
           var defVal = {};
@@ -1221,7 +1225,10 @@
           });
         }
       }
-      if (path) _applyValue(entry, path, newVal, parsed, section);
+      if (path) {
+        if (newVal === '') _sfSetScalar(entry, path);
+        else _applyValue(entry, path, newVal, parsed, section);
+      }
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
       return;
@@ -1299,6 +1306,13 @@
       if (!rec || rec.kind !== 'union') return;
       var path3 = el.getAttribute('data-sf-path') || rec.path;
       if (path3) _applyValue(entry, path3, undefined, parsed, section);
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+    }
+    if (action === 'model-clear') {
+      if (!rec || rec.kind !== 'model') return;
+      var mp = el.getAttribute('data-sf-path') || rec.path;
+      if (mp) _applyValue(entry, mp, undefined, parsed, section);
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
     }
@@ -2136,6 +2150,14 @@
       if (entry._rawOrder.indexOf(topKey) === -1) entry._rawOrder.push(topKey);
     }
     _setNested(entry.data, path, value);
+  }
+  // union 切到简单值: 存空串 (不走 _applyValue 的空值删除), 让输入框出现
+  function _sfSetScalar(entry, path) {
+    if (_getNested(entry.data, path) === undefined) {
+      var tk = _pathParts(path)[0];
+      if (entry._rawOrder.indexOf(tk) === -1) entry._rawOrder.push(tk);
+    }
+    _setNested(entry.data, path, '');
   }
 
   function _bindEvents(containerEl) {
