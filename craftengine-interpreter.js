@@ -954,7 +954,7 @@
   }
   function _sfUnionCurrent(def, value) {
     if (value === undefined || value === null) return { key: '', neg: false };
-    if (typeof value === 'object' && !Array.isArray(value)) {
+    if (typeof value === 'object') {
       if (def.noTypeKey) {
         var types = _sfTypesOf(def);
         var ks = Object.keys(types);
@@ -1184,7 +1184,21 @@
         } else if (curShape.key !== v) {
           var td = _sfTypesOf(rec.def)[v];
           var defVal = {};
-          if (td && td.widget) defVal = _sfDefaultOf(td.widget);
+          if (td && td.widget) {
+            // 形状切换时尽量保留数据:
+            // 目标为 list/lines 且当前为对象/标量 → 包裹为 [cur]
+            // 目标为对象值 widget 且当前为单元素数组 → 解包 cur[0]
+            var wt = td.widget.type;
+            var listLike = wt === 'listOf' || wt === 'lines' || wt === 'linesScalar';
+            var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model';
+            if (listLike && cur !== undefined && cur !== null) {
+              defVal = Array.isArray(cur) ? cur : [cur];
+            } else if (objLike && Array.isArray(cur) && cur.length === 1) {
+              defVal = cur[0];
+            } else {
+              defVal = _sfDefaultOf(td.widget);
+            }
+          }
           if (path) _applyValue(entry, path, defVal, parsed, section);
         }
         _sfRerender(uid, containerEl);

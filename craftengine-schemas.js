@@ -127,7 +127,7 @@
     lootOverwrites: ['none', 'items', 'experience', 'all'],
     recipeTypes: ['shaped', 'shapeless', 'shaped_transform', 'shapeless_transform', 'smelting', 'blasting', 'smoking', 'campfire_cooking', 'stonecutting', 'smithing_transform', 'smithing_trim', 'brewing'],
     autoStateGroups: ['solid', 'note_block', 'mushroom_stem', 'red_mushroom_block', 'brown_mushroom_block', 'mushroom', 'tintable_leaves', 'waterlogged_tintable_leaves', 'non_tintable_leaves', 'waterlogged_non_tintable_leaves', 'leaves', 'waterlogged_leaves', 'lower_tripwire', 'higher_tripwire', 'tripwire', 'sapling', 'pressure_plate', 'cactus', 'sugar_cane', 'weeping_vine', 'twisting_vine', 'cave_vine', 'kelp', 'chorus'],
-    blockPropertyTypes: ['boolean', 'int', 'axis', 'direction', 'horizontal_direction', 'half', 'hinge', 'slab_type', 'stairs_shape', 'string', 'rotation'],
+    blockPropertyTypes: ['boolean', 'int', 'string', 'direction', 'horizontal_direction', 'axis', 'single_block_half', 'double_block_half', 'hinge', 'slab_type', 'stairs_shape', 'sofa_shape', 'anchor_type'],
     // 特殊属性名 → 自动旋转等硬编码行为
     specialPropertyNames: ['axis', 'facing', 'facing_clockwise', 'rotation', 'waterlogged'],
     instruments: ['BASEDRUM', 'SNARE', 'HAT', 'BASS', 'FLUTE', 'BELL', 'GUITAR', 'CHIME', 'XYLOPHONE', 'IRON_XYLOPHONE', 'COW_BELL', 'DIDGERIDOO', 'BIT', 'BANJO', 'PLING', 'HARP'],
@@ -1224,6 +1224,328 @@
   var UPDATER_VALUE_TYPES = {
     step: { label: l('单个步骤', 'Single Step'), widget: { type: 'union', types: UPDATER_STEP_TYPES, label: l('步骤', 'Step') } },
     steps: { label: l('步骤列表', 'Steps'), widget: { type: 'listOf', itemType: { type: 'union', types: UPDATER_STEP_TYPES, label: l('步骤', 'Step') }, label: l('步骤', 'Steps') } },
+  };
+
+  // ============ Block 编辑器 ============
+  // 数据源: wiki block/states.mdx + settings.mdx + states/properties.mdx + states/entity_renderer.mdx + reference/loot_table.mdx
+
+  // ---- 通用小块 ----
+  // 音效值: 字符串 或 详细 {id, pitch, volume}
+  var SOUND_REF_TYPES = {
+    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+      f('id', '音效 ID', 'Sound ID', 'text'),
+      f('pitch', '音调', 'Pitch', 'number'),
+      f('volume', '音量', 'Volume', 'text', { hint: l('支持 0.25~0.3 区间', 'Ranged values supported, e.g. 0.25~0.3') }),
+    ], label: l('音效', 'Sound') } },
+  };
+  function soundRefField(key, zh, en) {
+    return f(key, zh, en, 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:block.deepslate.break', 'minecraft:block.deepslate.break') }, label: l('音效', 'Sound'), types: SOUND_REF_TYPES });
+  }
+  // 实体剔除: 布尔 或 详细参数
+  var ENTITY_CULLING_TYPES = {
+    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+      f('aabb', '包围盒', 'AABB', 'text', { hint: l('minX,minY,minZ,maxX,maxY,maxZ', 'minX,minY,minZ,maxX,maxY,maxZ') }),
+      f('view_distance', '可视距离', 'View Distance', 'number', { hint: l('-1 = 无限', '-1 = unlimited') }),
+      f('aabb_expansion', '包围盒扩展', 'AABB Expansion', 'number', { hint: l('默认 0.5', 'Default 0.5') }),
+      f('ray_tracing', '射线检测', 'Ray Tracing', 'bool', { hint: l('默认 true', 'Default true') }),
+    ], label: l('实体剔除', 'Entity Culling') } },
+  };
+  // 色调源: 字符串 / 详细对象 / 组件列表 (家具 items 元素使用列表形式)
+  var TINT_SOURCE_TYPES = {
+    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+      f('type', '类型', 'Type', 'select', { options: ['default'] }),
+      f('components', '组件', 'Components', 'lines', { hint: l('如 minecraft:dyed_color (每行一个)', 'e.g. minecraft:dyed_color (one per line)') }),
+      f('index', '索引', 'Index', 'number', { hint: l('默认 0', 'Default 0') }),
+    ], label: l('色调源', 'Tint Source') } },
+    list: { label: l('组件列表', 'Component List'), widget: { type: 'listOf', label: l('组件', 'Components'), itemType: { type: 'text', hint: l('如 dyed_color', 'e.g. dyed_color') } } },
+  };
+  function tintSourceField() {
+    return f('tint_source', '色调源', 'Tint Source', 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:dyed_color', 'minecraft:dyed_color') }, label: l('色调源', 'Tint Source'), types: TINT_SOURCE_TYPES });
+  }
+  // 显示参数 (item_display/text_display/block_display 元素共用)
+  var DISPLAY_PARAMS_FIELDS = [
+    f('translation', '平移', 'Translation', 'text', { hint: l('相对偏移 x,y,z (推荐)', 'Offset x,y,z (recommended)') }),
+    f('position', '位置', 'Position', 'text', { hint: l('绝对位置 x,y,z', 'Absolute position x,y,z') }),
+    f('scale', '缩放', 'Scale', 'text', { hint: l('x,y,z 或单个数如 1.5', 'x,y,z or a single number') }),
+    f('rotation', '旋转', 'Rotation', 'text', { hint: l('单个数=绕Y轴 / 3个数=欧拉角 / 4个数=四元数', 'Single=Y axis / 3=Euler angles / 4=Quaternion') }),
+    f('yaw', '偏航角', 'Yaw', 'number', { hint: l('绕 Y 轴', 'Around Y axis') }),
+    f('pitch', '俯仰角', 'Pitch', 'number', { hint: l('绕 X 轴', 'Around X axis') }),
+    f('billboard', '朝向', 'Billboard', 'select', { options: S.constants.billboards }),
+    f('glow_color', '发光颜色', 'Glow Color', 'text', { placeholder: l('255,200,100', '255,200,100') }),
+    f('brightness', '亮度覆盖', 'Brightness', 'object', { fields: [
+      f('block_light', '方块光', 'Block Light', 'number'),
+      f('sky_light', '天空光', 'Sky Light', 'number'),
+    ], label: l('亮度覆盖', 'Brightness') }),
+    f('view_range', '可视系数', 'View Range', 'number'),
+    f('shadow_radius', '阴影半径', 'Shadow Radius', 'number'),
+    f('shadow_strength', '阴影强度', 'Shadow Strength', 'number'),
+  ];
+  // 实体渲染器元素 (7 种, type 键选择; 省略 type 时由 item/text/block 自动推断)
+  var ENTITY_RENDERER_ELEMENT_TYPES = {
+    item_display: { label: l('物品显示 (item_display)', 'Item Display'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('display_transform', '显示变换', 'Display Transform', 'select', { options: S.constants.displayTransforms }),
+      tintSourceField(),
+    ].concat(DISPLAY_PARAMS_FIELDS, [f('conditions', '条件', 'Conditions', 'listOf', conditionsList())]) },
+    text_display: { label: l('文本显示 (text_display)', 'Text Display'), fields: [
+      f('text', '文本', 'Text', 'textarea', { rows: 2, hint: l('支持 MiniMessage 与 PAPI 占位符', 'Supports MiniMessage & PAPI placeholders') }),
+      f('line_width', '行宽 (像素)', 'Line Width', 'number', { hint: l('默认 200', 'Default 200') }),
+      f('background_color', '背景色 (ARGB)', 'Background Color', 'text', { placeholder: l('64,0,0,0', '64,0,0,0') }),
+      f('text_opacity', '文本透明度', 'Text Opacity', 'number', { hint: l('0-255, -1 = 默认', '0-255, -1 = default') }),
+      f('has_shadow', '阴影', 'Has Shadow', 'bool'),
+      f('is_see_through', '透视背面', 'Is See Through', 'bool'),
+      f('use_default_background_color', '默认背景色', 'Use Default Background Color', 'bool'),
+      f('alignment', '对齐', 'Alignment', 'select', { options: ['center', 'left', 'right'] }),
+    ].concat(DISPLAY_PARAMS_FIELDS, [f('conditions', '条件', 'Conditions', 'listOf', conditionsList())]) },
+    block_display: { label: l('方块显示 (block_display)', 'Block Display'), fields: [
+      f('block', '方块', 'Block', 'text', { hint: l('方块 ID 或完整状态, 如 minecraft:chest[facing=north]', 'Block ID or full state, e.g. minecraft:chest[facing=north]') }),
+    ].concat(DISPLAY_PARAMS_FIELDS, [f('conditions', '条件', 'Conditions', 'listOf', conditionsList())]) },
+    item: { label: l('掉落物品 (item)', 'Dropped Item'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('position', '位置', 'Position', 'text', { hint: l('x,y,z (默认方块中心)', 'x,y,z (default block center)') }),
+      tintSourceField(),
+      f('conditions', '条件', 'Conditions', 'listOf', conditionsList()),
+    ] },
+    armor_stand: { label: l('盔甲架 (armor_stand)', 'Armor Stand'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('scale', '缩放', 'Scale', 'number'),
+      f('small', '小型', 'Small', 'bool'),
+      f('glow_color', '发光颜色', 'Glow Color', 'select', { options: S.constants.glowColors }),
+      tintSourceField(),
+      f('conditions', '条件', 'Conditions', 'listOf', conditionsList()),
+    ] },
+    better_model: { label: l('BetterModel', 'BetterModel'), fields: [
+      f('model', '模型名', 'Model', 'text'),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('sight_trace', '参与射线', 'Sight Trace', 'bool', { hint: l('默认 true', 'Default true') }),
+      f('conditions', '条件', 'Conditions', 'listOf', conditionsList()),
+    ] },
+    model_engine: { label: l('ModelEngine', 'ModelEngine'), fields: [
+      f('model', '模型名', 'Model', 'text'),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('conditions', '条件', 'Conditions', 'listOf', conditionsList()),
+    ] },
+  };
+  // entity_renderer: 单元素对象 或 元素列表
+  var ENTITY_RENDERER_UNION = { type: 'union', noTypeKey: true, label: l('实体渲染器', 'Entity Renderer'), types: {
+    single: { label: l('单个元素', 'Single Element'), widget: { type: 'union', types: ENTITY_RENDERER_ELEMENT_TYPES, label: l('元素', 'Element') } },
+    list: { label: l('元素列表', 'Element List'), widget: { type: 'listOf', label: l('元素', 'Elements'), itemType: { type: 'union', types: ENTITY_RENDERER_ELEMENT_TYPES, label: l('元素', 'Element') } } },
+  } };
+  // 模型纹理: 字符串 或 列表 (^ 前缀 = 粒子纹理)
+  var MODEL_TEXTURES_TYPES = {
+    list: { label: l('列表', 'List'), widget: { type: 'lines', label: l('纹理', 'Textures') } },
+  };
+  function modelTexturesField(key) {
+    return f(key, '纹理', 'Textures', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, label: l('纹理', 'Textures'), types: MODEL_TEXTURES_TYPES });
+  }
+  // 模型: 路径字符串 或 详细对象 (7 种互斥组合)
+  var BLOCK_MODEL_TYPES = {
+    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+      f('path', '模型路径', 'Model Path', 'text', { hint: l('如 minecraft:block/custom/xxx', 'e.g. minecraft:block/custom/xxx') }),
+      modelTexturesField('textures'),
+      f('texture', '单纹理 (等价别名)', 'Texture (alias)', 'text', { hint: l('等价于 textures 单元素', 'Equivalent to a single-element textures list') }),
+      f('generation', '模型生成', 'Generation', 'object', { fields: [
+        f('parent', '父模型', 'Parent', 'text', { hint: l('如 minecraft:block/cube_column', 'e.g. minecraft:block/cube_column') }),
+        f('textures', '纹理映射', 'Textures', 'mapOf', { valueType: { type: 'text' }, label: l('纹理映射', 'Textures') }),
+      ], label: l('模型生成', 'Generation') }),
+      f('blueprint', '蓝图', 'Blueprint', 'text', { hint: l('.bbmodel 源文件 (实验性)', '.bbmodel source (experimental)') }),
+      f('x', 'X 旋转', 'X Rotation', 'number', { hint: l('90 的倍数', 'Multiple of 90') }),
+      f('y', 'Y 旋转', 'Y Rotation', 'number', { hint: l('90 的倍数', 'Multiple of 90') }),
+      f('z', 'Z 旋转', 'Z Rotation', 'number', { hint: l('90 的倍数 (需 1.21.11+)', 'Multiple of 90 (1.21.11+)') }),
+      f('uvlock', '锁定纹理方向', 'UV Lock', 'bool'),
+      f('weight', '权重', 'Weight', 'number', { hint: l('仅 models 列表中使用', 'Used in models lists only') }),
+    ], label: l('模型', 'Model') } },
+  };
+  function stateModelField() {
+    return f('model', '模型', 'Model', 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:block/custom/xxx', 'minecraft:block/custom/xxx') }, label: l('模型', 'Model'), types: BLOCK_MODEL_TYPES });
+  }
+  // 加权模型列表条目
+  var MODELS_ENTRY_FIELDS = [
+    f('path', '模型路径', 'Model Path', 'text'),
+    modelTexturesField('textures'),
+    f('x', 'X 旋转', 'X Rotation', 'number'),
+    f('y', 'Y 旋转', 'Y Rotation', 'number'),
+    f('z', 'Z 旋转', 'Z Rotation', 'number'),
+    f('uvlock', '锁定纹理方向', 'UV Lock', 'bool'),
+    f('weight', '权重', 'Weight', 'number', { hint: l('默认 1', 'Default 1') }),
+  ];
+  // 自动状态组: 组名 或 展开 {type, id}
+  var AUTO_STATE_TYPES = {
+    expanded: { label: l('展开 (共享状态)', 'Expanded (shared)'), widget: { type: 'object', fields: [
+      f('type', '组', 'Group', 'select', { options: S.constants.autoStateGroups }),
+      f('id', '共享 ID', 'Shared ID', 'text', { hint: l('相同 id 共享同一个原版方块状态', 'Same id = same shared vanilla state') }),
+    ], label: l('自动状态', 'Auto State') } },
+  };
+  function autoStateField() {
+    return f('auto_state', '自动状态', 'Auto State', 'union', { noTypeKey: true, allowScalar: { type: 'select', options: S.constants.autoStateGroups }, label: l('自动状态', 'Auto State'), types: AUTO_STATE_TYPES });
+  }
+  // 外观字段 (单状态 state 与 appearances 值共用; 单状态额外有 id)
+  function blockAppearanceFields(withId) {
+    var fields = [];
+    if (withId) fields.push(f('id', '内部 ID', 'Internal ID', 'number', { hint: l('固定内部 ID (通常不需要)', 'Fixed internal ID (usually unnecessary)') }));
+    return fields.concat([
+      autoStateField(),
+      f('state', '原版状态', 'Vanilla State', 'text', { hint: l('如 minecraft:note_block[instrument=hat,note=0,powered=false]', 'e.g. minecraft:note_block[instrument=hat,note=0,powered=false]') }),
+      stateModelField(),
+      f('models', '加权模型', 'Weighted Models', 'listOf', { itemType: { type: 'object', fields: MODELS_ENTRY_FIELDS, label: l('模型', 'Model') }, label: l('加权模型', 'Weighted Models'), hint: l('多模型加权随机', 'Multi-model weighted random') }),
+      f('transparent', '透明', 'Transparent', 'bool', { hint: l('移除原版模型 (配合实体渲染器使用)', 'Removes the original model (use with entity_renderer)') }),
+      f('blueprint', '蓝图', 'Blueprint', 'text', { hint: l('.bbmodel 源文件', '.bbmodel source') }),
+      f('entity_renderer', '实体渲染器', 'Entity Renderer', 'union', ENTITY_RENDERER_UNION),
+      f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
+    ]);
+  }
+  // 属性类型 (wiki block/states/properties.mdx)
+  var PROPERTY_TYPES = {
+    boolean: { label: l('布尔 (boolean)', 'Boolean'), fields: [f('default', '默认值', 'Default', 'bool')] },
+    int: { label: l('整数 (int)', 'Int'), fields: [
+      f('default', '默认值', 'Default', 'number'),
+      f('range', '范围', 'Range', 'text', { hint: l('如 1~7', 'e.g. 1~7') }),
+    ] },
+    string: { label: l('字符串 (string)', 'String'), fields: [
+      f('default', '默认值', 'Default', 'text'),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    direction: { label: l('方向 (direction)', 'Direction'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['east', 'south', 'west', 'north', 'up', 'down'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    horizontal_direction: { label: l('水平方向 (horizontal_direction)', 'Horizontal Direction'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['north', 'south', 'west', 'east'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    axis: { label: l('轴 (axis)', 'Axis'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['x', 'y', 'z'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    single_block_half: { label: l('单方块半区 (single_block_half)', 'Single Block Half'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['top', 'bottom'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    double_block_half: { label: l('双方块半区 (double_block_half)', 'Double Block Half'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['upper', 'lower'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    hinge: { label: l('铰链 (hinge)', 'Hinge'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['left', 'right'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    slab_type: { label: l('台阶类型 (slab_type)', 'Slab Type'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['top', 'bottom', 'double'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    stairs_shape: { label: l('楼梯形状 (stairs_shape)', 'Stairs Shape'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['straight', 'inner_left', 'inner_right', 'outer_left', 'outer_right'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    sofa_shape: { label: l('沙发形状 (sofa_shape)', 'Sofa Shape'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['straight', 'inner_left', 'inner_right'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+    anchor_type: { label: l('锚点类型 (anchor_type)', 'Anchor Type'), fields: [
+      f('default', '默认值', 'Default', 'select', { options: ['floor', 'wall', 'ceiling'] }),
+      f('values', '可选值', 'Values', 'lines'),
+    ] },
+  };
+  // 方块设置全部字段 (wiki block/settings.mdx)
+  var BLOCK_SETTINGS_FIELDS = [
+    f('hardness', '硬度', 'Hardness', 'number', { hint: l('默认 2.0', 'Default 2.0') }),
+    f('resistance', '抗性', 'Resistance', 'number', { hint: l('默认 2.0', 'Default 2.0') }),
+    f('push_reaction', '活塞反应', 'Push Reaction', 'select', { options: S.constants.pushReactions }),
+    f('map_color', '地图颜色', 'Map Color', 'number', { hint: l('默认 0', 'Default 0') }),
+    f('burnable', '可燃', 'Burnable', 'bool'),
+    f('fire_spread_chance', '火焰蔓延概率', 'Fire Spread Chance', 'number', { hint: l('0-100', '0-100') }),
+    f('burn_chance', '点燃概率', 'Burn Chance', 'number', { hint: l('0-100', '0-100') }),
+    f('item', '对应物品', 'Item', 'text', { hint: l('创造模式中键拾取用', 'Used for creative middle-click'), datalist: 'items' }),
+    f('replaceable', '可替换', 'Replaceable', 'bool'),
+    f('is_redstone_conductor', '红石导体', 'Is Redstone Conductor', 'bool'),
+    f('is_suffocating', '窒息判定', 'Is Suffocating', 'bool'),
+    f('is_view_blocking', '阻挡视线', 'Is View Blocking', 'bool'),
+    f('sounds', '音效', 'Sounds', 'object', { fields: [
+      soundRefField('break', '破坏', 'Break'),
+      soundRefField('step', '踩踏', 'Step'),
+      soundRefField('place', '放置', 'Place'),
+      soundRefField('hit', '挖掘', 'Hit'),
+      soundRefField('fall', '坠落', 'Fall'),
+    ], label: l('音效', 'Sounds') }),
+    f('require_correct_tools', '需要正确工具', 'Require Correct Tools', 'bool', { hint: l('设置 correct_tools 时自动为 true', 'Automatically true when correct_tools is set') }),
+    f('respect_tool_component', '尊重工具组件', 'Respect Tool Component', 'bool'),
+    f('correct_tools', '正确工具', 'Correct Tools', 'lines'),
+    f('incorrect_tool_dig_speed', '错误工具挖掘速度', 'Incorrect Tool Dig Speed', 'number', { hint: l('0~1, 默认 0.3', '0~1, default 0.3') }),
+    f('tags', '标签', 'Tags', 'lines', { hint: l('如 minecraft:mineable/axe (每行一个)', 'e.g. minecraft:mineable/axe (one per line)') }),
+    f('client_bound_tags', '客户端标签', 'Client Bound Tags', 'lines', { hint: l('仅原版方块生效', 'Only works for vanilla blocks') }),
+    f('instrument', '音符盒乐器', 'Instrument', 'select', { options: S.constants.instruments }),
+    f('fluid_state', '流体状态', 'Fluid State', 'select', { options: S.constants.fluidStates }),
+    f('support_shape', '支撑形状', 'Support Shape', 'text', { hint: l('如 minecraft:stone', 'e.g. minecraft:stone') }),
+    f('destroy_stages', '破坏阶段', 'Destroy Stages', 'object', { fields: [
+      f('items', '物品', 'Items', 'lines', { hint: l('如 minecraft:destroy_stage_0 (每行一个)', 'e.g. minecraft:destroy_stage_0 (one per line)') }),
+      f('translation', '偏移', 'Translation', 'text', { hint: l('x,y,z', 'x,y,z') }),
+      f('position', '位置', 'Position', 'text', { hint: l('x,y,z (默认方块中心)', 'x,y,z (default block center)') }),
+      f('scale', '缩放', 'Scale', 'text', { hint: l('x,y,z 或单个数', 'x,y,z or single') }),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('rotation', '旋转', 'Rotation', 'text', { hint: l('单个数/欧拉角/四元数', 'Single/Euler/Quaternion') }),
+      f('display_transform', '显示变换', 'Display Transform', 'select', { options: S.constants.displayTransforms }),
+      f('billboard', '朝向', 'Billboard', 'select', { options: S.constants.billboards }),
+      f('view_range', '可视系数', 'View Range', 'number'),
+      f('brightness', '亮度', 'Brightness', 'object', { fields: [
+        f('block_light', '方块光', 'Block Light', 'number'),
+        f('sky_light', '天空光', 'Sky Light', 'number'),
+      ], label: l('亮度', 'Brightness') }),
+    ], label: l('破坏阶段', 'Destroy Stages') }),
+    f('bounce_restitution', '弹跳恢复', 'Bounce Restitution', 'number', { hint: l('仅非玩家实体 (Slime: 1.0, 床: 0.75)', 'Non-player entities only (Slime: 1.0, Bed: 0.75)') }),
+    f('friction', '摩擦力', 'Friction', 'number', { hint: l('冰: 0.98, 默认 0.6', 'Ice: 0.98, default 0.6') }),
+    f('jump_factor', '跳跃系数', 'Jump Factor', 'number', { hint: l('默认 1.0', 'Default 1.0') }),
+    f('speed_factor', '移动系数', 'Speed Factor', 'number', { hint: l('默认 1.0', 'Default 1.0') }),
+    f('luminance', '亮度', 'Luminance', 'number', { hint: l('发光强度', 'Light level') }),
+    f('can_occlude', '可遮光', 'Can Occlude', 'bool', { hint: l('仅影响方块光', 'Affects block-emitted light only') }),
+    f('block_light', '阻挡亮度', 'Block Light', 'number'),
+    f('propagate_skylight', '透射天空光', 'Propagate Skylight', 'bool'),
+  ];
+  // 方块掉落: template+arguments 或 pools+functions (loot 无 type 键, 不用 union 避免形状误判丢数据)
+  var BLOCK_LOOT_FIELDS = [
+    f('template', '模板', 'Template', 'text', { hint: l('如 default:loot_table/furniture', 'e.g. default:loot_table/furniture') }),
+    f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments') }),
+    f('pools', '战利品池', 'Pools', 'listOf', { itemType: LOOT_POOL, label: l('战利品池', 'Pools') }),
+    f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES }, label: l('函数', 'Functions') }),
+  ];
+
+  // ---- block section ----
+  SECTIONS.block = {
+    tabs: [
+      { key: 'state', label: l('状态', 'State') },
+      { key: 'settings', label: l('设置', 'Settings') },
+      { key: 'behavior', label: l('行为', 'Behavior') },
+      { key: 'loot', label: l('掉落', 'Loot') },
+      { key: 'events', label: l('事件', 'Events') },
+    ],
+    fields: [
+      f('state', '单状态', 'State', 'object', { fields: blockAppearanceFields(true), label: l('单状态', 'State'), tab: 'state' }),
+      f('states', '多状态', 'States', 'object', { fields: [
+        f('id', '起始 ID', 'Start ID', 'number', { hint: l('固定内部 ID, 变体占用连续区间', 'Fixed internal ID; variants occupy a continuous range') }),
+        f('properties', '属性', 'Properties', 'mapOf', { valueType: { type: 'union', types: PROPERTY_TYPES, label: l('属性', 'Property') }, label: l('属性', 'Properties'), hint: l('属性类型与特殊名称 (axis/facing/waterlogged...) 见 Wiki', 'Property types & special names (axis/facing/waterlogged...) per Wiki') }),
+        f('appearances', '外观', 'Appearances', 'mapOf', { valueType: { type: 'object', fields: blockAppearanceFields(false), label: l('外观', 'Appearance') }, label: l('外观', 'Appearances'), hint: l('第一个外观为默认回退', 'First appearance is the default fallback') }),
+        f('variants', '变体映射', 'Variants', 'mapOf', { valueType: { type: 'object', fields: [
+          f('appearance', '外观', 'Appearance', 'text', { hint: l('对应 appearances 中的名称', 'A name from appearances') }),
+          f('settings', '设置覆盖', 'Settings Override', 'object', { fields: BLOCK_SETTINGS_FIELDS, label: l('设置覆盖', 'Settings Override') }),
+        ], label: l('变体', 'Variant') }, label: l('变体映射', 'Variants'), hint: l('键: 如 waterlogged=true,facing=north (未列出属性通配)', 'Key: e.g. waterlogged=true,facing=north (unlisted = wildcard)') }),
+        f('entity_renderer', '实体渲染器', 'Entity Renderer', 'union', ENTITY_RENDERER_UNION),
+        f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
+      ], label: l('多状态', 'States'), tab: 'state' }),
+      f('settings', '设置', 'Settings', 'object', { fields: BLOCK_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
+      f('behavior', '行为', 'Behavior', 'union', { types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behavior' }),
+      f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behavior' }),
+      f('loot', '掉落', 'Loot', 'object', { fields: BLOCK_LOOT_FIELDS, label: l('掉落', 'Loot'), tab: 'loot' }),
+      f('events', '事件', 'Events', 'events', { tab: 'events', custom: 'events' }),
+      f('merges', '合并', 'Merges', 'kv', { tab: 'events' }),
+      f('overrides', '覆盖', 'Overrides', 'kv', { tab: 'events' }),
+    ],
   };
 
   // ---- item section ----

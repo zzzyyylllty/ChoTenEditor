@@ -95,10 +95,41 @@ check(h.includes('data-sf-path="custom-model-data"') && h.includes('data-sf-type
 check(!h.includes('data-ce-field-json'), 'item 表单无 JSON 字段编辑器');
 check(h.includes('unknown_field'), '未知字段进入其他选项卡');
 
-// 2. legacy 事件子页面 (map 形式 + array 形式)
+// 2. block schema 表单 (Phase 3)
 const blockYaml = `
 blocks:
   default:flower:
+    state:
+      auto_state: minecraft:flower
+      entity_renderer:
+        type: item_display
+        translation: '1 2 3'
+    states:
+      properties:
+        facing:
+          type: direction
+          default: east
+      appearances:
+        default:
+          state: '{facing=east}'
+      variants:
+        '{facing=west}':
+          appearance: default
+          settings:
+            hardness: 1.5
+    settings:
+      hardness: 1.5
+      sounds:
+        place:
+          id: minecraft:block.wool.place
+          pitch: 1.2
+    behavior:
+      type: bouncing_block
+      bounce_height: 2
+    loot:
+      template: default:loot
+      arguments:
+        seed: 42
     events:
       - on:
           - break
@@ -107,9 +138,30 @@ blocks:
           - type: particle
             x: 1
 `;
-const h2 = render(blockYaml).innerHTML;
-check(h2.includes('data-ce-field="behavior.type"'), 'block 选项卡渲染');
-check(h2.includes('data-ce-tabpanel="basic"'), 'block basic 面板');
+const el2 = render(blockYaml);
+const h2 = el2.innerHTML;
+check(h2.includes('data-ce-tab="state"'), 'block 选项卡 state');
+check(h2.includes('data-ce-tab="settings"'), 'block 选项卡 settings');
+check(h2.includes('data-ce-tab="behavior"'), 'block 选项卡 behavior');
+check(h2.includes('data-ce-tab="loot"'), 'block 选项卡 loot');
+check(h2.includes('data-ce-tab="events"'), 'block 选项卡 events');
+check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="state.auto_state"'), 'auto_state union (noTypeKey 标量)');
+check(h2.includes('data-sf-kind="map"') && h2.includes('data-sf-path="states.properties"'), 'states.properties mapOf');
+check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="states.properties.facing"'), '属性 union (regular, type-keyed)');
+check(h2.includes('data-sf-path="states.properties.facing.default"') && h2.includes('data-sf-type="select"'), 'direction 类型体 default select');
+check(h2.includes('data-sf-path="states.appearances.default.state"'), 'appearances mapOf 值渲染');
+check(h2.includes('data-sf-path="states.variants.{facing=west}.settings.hardness"'), 'variants 嵌套 settings 字段');
+check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="state.entity_renderer"'), 'entity_renderer union (single/list)');
+check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="settings.sounds.place"'), 'settings.sounds.place union (音效引用)');
+check(h2.includes('data-sf-path="settings.sounds.place.id"'), '音效 map 形式 id 字段');
+check(h2.includes('data-sf-path="settings.hardness"') && h2.includes('data-sf-type="number"'), 'settings.hardness number');
+check(h2.includes('data-sf-path="behavior"') && h2.includes('data-sf-action="union-set"'), 'behavior union 渲染');
+check(h2.includes('data-sf-path="behavior.bounce_height"') && h2.includes('data-sf-type="number"'), 'bouncing_block 类型体字段 (union)');
+check(h2.includes('data-sf-path="loot.template"'), 'loot template 字段');
+check(h2.includes('data-sf-kind="map"') && h2.includes('data-sf-path="loot.arguments"'), 'loot arguments mapOf');
+check(h2.includes('data-sf-kind="list"') && h2.includes('data-sf-path="loot.pools"'), 'loot pools listOf');
+check(h2.includes('data-ce-tabpanel="events"') && h2.includes('data-ce-ev="0"'), 'block 事件面板渲染');
+check(!h2.includes('data-ce-field-json'), 'block 表单无 JSON 字段编辑器');
 
 // 3. legacy 非选项卡类型 (recipe) 仍为单页 + key 在顶部
 const recipeYaml = `
@@ -308,6 +360,50 @@ if (blkUid) {
   check(iEntry.data.behavior.block !== null && typeof iEntry.data.behavior.block === 'object' && !Array.isArray(iEntry.data.behavior.block), '写回: noTypeKey union-set → inline 默认对象');
   iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, '__scalar') });
   check(iEntry.data.behavior.block === undefined, '写回: noTypeKey union-set → __scalar 删除字段');
+}
+
+// ---------- 2.3 block 写回 (Phase 3) ----------
+const bR = renderCap(blockYaml);
+const bEntry = bR.el._ceParsed.sections[0].entries[0];
+const bCh = bR.listeners['change'][0];
+const bh = bR.el.innerHTML;
+
+bCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'settings.hardness', 'data-sf-type': 'number' }, '2.5') });
+check(bEntry.data.settings.hardness === 2.5, 'block 写回: number');
+bCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'loot.arguments.seed', 'data-sf-type': 'scalar' }, '99') });
+check(bEntry.data.loot.arguments.seed === 99, 'block 写回: scalar 数字解析');
+
+// entity_renderer: single → list 包裹 / list → single 解包
+const erUidRe = /data-sf-action="union-set" data-sf-path="state\.entity_renderer" data-sf-uid="([^"]+)"/;
+const erUid = bh.match(erUidRe);
+check(!!erUid, 'entity_renderer union-set uid 可定位');
+if (erUid) {
+  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.entity_renderer', 'data-sf-uid': erUid[1] }, 'list') });
+  check(Array.isArray(bEntry.data.state.entity_renderer) && bEntry.data.state.entity_renderer.length === 1 &&
+    bEntry.data.state.entity_renderer[0].type === 'item_display' && bEntry.data.state.entity_renderer[0].translation === '1 2 3',
+    '写回: entity_renderer single→list 包裹保留数据');
+  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.entity_renderer', 'data-sf-uid': erUid[1] }, 'single') });
+  check(!Array.isArray(bEntry.data.state.entity_renderer) && bEntry.data.state.entity_renderer.type === 'item_display' &&
+    bEntry.data.state.entity_renderer.translation === '1 2 3',
+    '写回: entity_renderer list→single 解包保留数据');
+}
+
+// 属性 union-set: direction → boolean
+const propUidRe = /data-sf-action="union-set" data-sf-path="states\.properties\.facing" data-sf-uid="([^"]+)"/;
+const propUid = bh.match(propUidRe);
+check(!!propUid, '属性 union-set uid 可定位');
+if (propUid) {
+  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'states.properties.facing', 'data-sf-uid': propUid[1] }, 'boolean') });
+  check(bEntry.data.states.properties.facing.type === 'boolean', '写回: 属性切换类型 (丢弃非共享键)');
+}
+
+// auto_state: 标量 → expanded 对象
+const asUidRe = /data-sf-action="union-set" data-sf-path="state\.auto_state" data-sf-uid="([^"]+)"/;
+const asUid = bh.match(asUidRe);
+check(!!asUid, 'auto_state union-set uid 可定位');
+if (asUid) {
+  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.auto_state', 'data-sf-uid': asUid[1] }, 'expanded') });
+  check(bEntry.data.state.auto_state !== null && typeof bEntry.data.state.auto_state === 'object' && !Array.isArray(bEntry.data.state.auto_state), '写回: auto_state → expanded 对象');
 }
 
 // updater: map 版本 → 步骤列表/单个步骤
