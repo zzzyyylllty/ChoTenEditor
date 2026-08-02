@@ -334,6 +334,9 @@ fire(mk({ 'data-sf-kind': 'field', 'data-sf-path': 'conditions.0.value', 'data-s
 check(wEntry.data.conditions[0].value === 0.8, '写回: number');
 fire(mk({ 'data-sf-kind': 'field', 'data-sf-path': 'unknown_field', 'data-sf-type': 'scalar' }, 'true'));
 check(wEntry.data.unknown_field === true, '写回: scalar 智能解析 true');
+check(wParsed._visualDirty === true, '可视化编辑后 _visualDirty 置位 (未同步标记)');
+CEI.syncToSource(wParsed);
+check(wParsed._visualDirty === false, 'syncToSource 后 _visualDirty 清除');
 
 // union-set: 切换条件类型 (random → permission)
 const uidRe = /data-sf-action="union-set" data-sf-path="conditions\.0" data-sf-uid="([^"]+)"/;

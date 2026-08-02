@@ -7,631 +7,766 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="settings-styles.css">
 </head>
-<body>
+<body data-title-key="settings.title">
     <div class="settings-container">
         <div class="title-bar" id="title-bar">
             <div class="title-bar-drag">
                 <span class="title-bar-icon">⚙️</span>
-                <span class="title-bar-text">设置</span>
+                <span class="title-bar-text" data-i18n="settings.title">设置</span>
             </div>
             <div class="title-bar-controls">
-                <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化">─</button>
-                <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化">□</button>
-                <button class="tb-btn tb-btn-close" id="tb-close" title="关闭">✕</button>
+                <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化" data-i18n-title="titlebar.minimize">─</button>
+                <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化" data-i18n-title="titlebar.maximize">□</button>
+                <button class="tb-btn tb-btn-close" id="tb-close" title="关闭" data-i18n-title="titlebar.close">✕</button>
             </div>
         </div>
         <div class="settings-header">
-            <h1>⚙️ 设置</h1>
-            <button id="back-btn" class="btn-secondary" title="返回编辑器">
-                ← 返回编辑器
+            <h1 data-i18n="settings.titlePage">⚙️ 设置</h1>
+            <button id="back-btn" class="btn-secondary" title="返回编辑器" data-i18n-title="settings.backToEditor">
+                ← <span data-i18n="settings.backToEditor">返回编辑器</span>
             </button>
         </div>
 
-        <div class="settings-content">
-            <!-- 主题设置 -->
-            <section class="settings-section">
-                <h2>🎨 主题设置</h2>
-                <div class="setting-group">
-                    <label for="theme">选择主题</label>
-                    <div class="select-wrapper">
-                        <select id="theme">
-                            <option value="dark">深色 (Dark)</option>
-                            <option value="light">浅色 (Light)</option>
-                            <option value="auto">自动 (Auto)</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-            </section>
+        <div class="settings-body">
+            <!-- 左侧选项卡 -->
+            <nav class="settings-nav" id="settings-nav">
+                <button class="settings-nav-item active" data-tab="general">
+                    <span class="nav-icon">⚙️</span><span data-i18n="settings.tabGeneral">通用</span>
+                </button>
+                <button class="settings-nav-item" data-tab="appearance">
+                    <span class="nav-icon">🎨</span><span data-i18n="settings.tabAppearance">个性化</span>
+                </button>
+                <button class="settings-nav-item" data-tab="editor">
+                    <span class="nav-icon">📝</span><span data-i18n="settings.tabEditor">编辑器</span>
+                </button>
+                <button class="settings-nav-item" data-tab="ai">
+                    <span class="nav-icon">🤖</span><span data-i18n="settings.tabAI">AI 制作</span>
+                </button>
+                <button class="settings-nav-item" data-tab="remote">
+                    <span class="nav-icon">🌐</span><span data-i18n="settings.tabRemote">远程设置</span>
+                </button>
+                <button class="settings-nav-item" data-tab="shortcuts">
+                    <span class="nav-icon">⌨️</span><span data-i18n="settings.tabShortcuts">快捷键</span>
+                </button>
+                <button class="settings-nav-item" data-tab="about">
+                    <span class="nav-icon">💬</span><span data-i18n="settings.tabAbout">关于</span>
+                </button>
+            </nav>
 
-            <!-- 背景图片 -->
-            <section class="settings-section">
-                <h2>🖼️ 背景图片</h2>
-                <div class="bg-disclaimer" style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:var(--spacing-lg);padding:8px 12px;background:var(--color-bg-tertiary);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                    背景图片来自网络，仅供预览，侵权请联系删除
-                </div>
-                <div class="setting-group">
-                    <label>选择背景</label>
-                    <div class="bg-grid" id="bg-grid">
-                        <div class="bg-grid-item bg-none-item" data-bg="">
-                            <div class="bg-thumb bg-thumb-none">无</div>
-                            <span class="bg-name">无背景</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="setting-group" style="margin-top:var(--spacing-md);">
-                    <label for="bg-opacity">背景透明度</label>
-                    <div class="bg-opacity-row">
-                        <input type="range" id="bg-opacity" min="0.05" max="0.8" step="0.05" value="0.3">
-                        <span id="bg-opacity-value" class="bg-opacity-value">0.30</span>
-                    </div>
-                </div>
-                <div class="setting-group" style="margin-top:var(--spacing-md);">
-                    <button id="bg-upload-btn" class="btn">📤 上传背景</button>
-                </div>
-            </section>
+            <!-- 右侧设置内容 -->
+            <div class="settings-panels">
 
-            <!-- 颜色自定义 -->
-            <section class="settings-section">
-                <h2>🎭 颜色自定义</h2>
+                <!-- ═══ 通用 ═══ -->
+                <div class="settings-panel active" data-panel="general">
+                    <!-- 语言 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionLanguage">🌐 语言</h2>
+                        <div class="setting-group">
+                            <label for="language" data-i18n="settings.language">语言</label>
+                            <div class="select-wrapper">
+                                <select id="language">
+                                    <option value="zh_cn">简体中文</option>
+                                    <option value="en_us">English</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                            <div class="setting-hint" data-i18n="settings.languageRestartHint">您可能需要重新启动软件，或是刷新才能看到语言更改。</div>
+                        </div>
+                    </section>
 
-                <!-- 主颜色 -->
-                <div class="color-group">
-                    <h3>主要颜色</h3>
-                    <div class="color-items">
-                        <div class="color-item">
-                            <label for="color-primary">主色</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-primary" class="color-input" value="#0098ff">
-                                <span class="color-value" id="color-primary-value">#0098FF</span>
-                            </div>
+                    <!-- 操作按钮 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionSave">💾 保存和重置</h2>
+                        <div class="button-group">
+                            <button id="save-settings" class="btn" data-i18n="settings.saveSettings">✓ 保存设置</button>
+                            <button id="reset-settings" class="btn btn-secondary" data-i18n="settings.resetSettings">↻ 恢复默认</button>
+                            <button id="export-settings" class="btn btn-secondary" data-i18n="settings.exportSettings">⬇ 导出设置</button>
+                            <button id="import-settings" class="btn btn-secondary" data-i18n="settings.importSettings">⬆ 导入设置</button>
                         </div>
-                        <div class="color-item">
-                            <label for="color-success">成功色</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-success" class="color-input" value="#00c853">
-                                <span class="color-value" id="color-success-value">#00C853</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-warning">警告色</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-warning" class="color-input" value="#ffd600">
-                                <span class="color-value" id="color-warning-value">#FFD600</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-error">错误色</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-error" class="color-input" value="#ff1744">
-                                <span class="color-value" id="color-error-value">#FF1744</span>
-                            </div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
 
-                <!-- 背景颜色 -->
-                <div class="color-group">
-                    <h3>背景颜色</h3>
-                    <div class="color-items">
-                        <div class="color-item">
-                            <label for="color-bg-primary">主背景</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-bg-primary" class="color-input" value="#000000">
-                                <span class="color-value" id="color-bg-primary-value">#000000</span>
+                <!-- ═══ 个性化 ═══ -->
+                <div class="settings-panel" data-panel="appearance">
+                    <!-- 主题设置 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionTheme">🎨 主题设置</h2>
+                        <div class="setting-group">
+                            <label for="theme" data-i18n="settings.themeSelect">选择主题</label>
+                            <div class="select-wrapper">
+                                <select id="theme">
+                                    <option value="dark" data-i18n="settings.themeDark">深色 (Dark)</option>
+                                    <option value="light" data-i18n="settings.themeLight">浅色 (Light)</option>
+                                    <option value="auto" data-i18n="settings.themeAuto">自动 (Auto)</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label for="color-bg-secondary">次背景</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-bg-secondary" class="color-input" value="#080808">
-                                <span class="color-value" id="color-bg-secondary-value">#080808</span>
+                    </section>
+
+                    <!-- 字体设置 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionFonts">🔤 字体设置</h2>
+                        <div class="setting-group">
+                            <label for="ui-font" data-i18n="settings.uiFont">界面字体</label>
+                            <div class="select-wrapper">
+                                <select id="ui-font">
+                                    <option value="" data-i18n="settings.fontSystemDefault">系统默认</option>
+                                    <option value="'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif">微软雅黑 (Microsoft YaHei)</option>
+                                    <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif">思源黑体 (Noto Sans SC)</option>
+                                    <option value="'PingFang SC', 'Microsoft YaHei', sans-serif">苹方 (PingFang SC)</option>
+                                    <option value="'HarmonyOS Sans SC', 'Microsoft YaHei', sans-serif">HarmonyOS Sans</option>
+                                    <option value="'Segoe UI', 'Microsoft YaHei', sans-serif">Segoe UI</option>
+                                    <option value="'Arial', 'Microsoft YaHei', sans-serif">Arial</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                    </div>
+                        <div class="setting-group">
+                            <label for="editor-font-family" data-i18n="settings.editorFontFamily">编辑器字体</label>
+                            <div class="select-wrapper">
+                                <select id="editor-font-family">
+                                    <option value="" data-i18n="settings.editorFontDefault">默认 (Fira Code)</option>
+                                    <option value="'JetBrains Mono', Consolas, monospace">JetBrains Mono</option>
+                                    <option value="'Fira Code', Consolas, monospace">Fira Code</option>
+                                    <option value="Consolas, monospace">Consolas</option>
+                                    <option value="'Source Code Pro', Consolas, monospace">Source Code Pro</option>
+                                    <option value="'Cascadia Code', Consolas, monospace">Cascadia Code</option>
+                                    <option value="'Ubuntu Mono', Consolas, monospace">Ubuntu Mono</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 背景图片 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionBackground">🖼️ 背景图片</h2>
+                        <div class="bg-disclaimer" data-i18n="settings.bgDisclaimer">
+                            背景图片来自网络，仅供预览，侵权请联系删除
+                        </div>
+                        <div class="setting-group">
+                            <label data-i18n="settings.bgSelect">选择背景</label>
+                            <div class="bg-grid" id="bg-grid">
+                                <div class="bg-grid-item bg-none-item" data-bg="">
+                                    <div class="bg-thumb bg-thumb-none" data-i18n="settings.bgNoneThumb">无</div>
+                                    <span class="bg-name" data-i18n="settings.bgNoneName">无背景</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-group setting-group-spaced">
+                            <label for="bg-opacity" data-i18n="settings.bgOpacity">背景透明度</label>
+                            <div class="bg-opacity-row">
+                                <input type="range" id="bg-opacity" min="0.05" max="0.8" step="0.05" value="0.3">
+                                <span id="bg-opacity-value" class="bg-opacity-value">0.30</span>
+                            </div>
+                        </div>
+                        <div class="setting-group setting-group-spaced">
+                            <button id="bg-upload-btn" class="btn" data-i18n="settings.bgUpload">📤 上传背景</button>
+                        </div>
+                    </section>
+
+                    <!-- 颜色自定义 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionColors">🎭 颜色自定义</h2>
+
+                        <!-- 主颜色 -->
+                        <div class="color-group">
+                            <h3 data-i18n="settings.colorGroupMain">主要颜色</h3>
+                            <div class="color-items">
+                                <div class="color-item">
+                                    <label for="color-primary" data-i18n="settings.colorPrimary">主色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-primary" class="color-input" value="#0098ff">
+                                        <span class="color-value" id="color-primary-value">#0098FF</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-success" data-i18n="settings.colorSuccess">成功色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-success" class="color-input" value="#00c853">
+                                        <span class="color-value" id="color-success-value">#00C853</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-warning" data-i18n="settings.colorWarning">警告色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-warning" class="color-input" value="#ffd600">
+                                        <span class="color-value" id="color-warning-value">#FFD600</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-error" data-i18n="settings.colorError">错误色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-error" class="color-input" value="#ff1744">
+                                        <span class="color-value" id="color-error-value">#FF1744</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 背景颜色 -->
+                        <div class="color-group">
+                            <h3 data-i18n="settings.colorGroupBg">背景颜色</h3>
+                            <div class="color-items">
+                                <div class="color-item">
+                                    <label for="color-bg-primary" data-i18n="settings.colorBgPrimary">主背景</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-bg-primary" class="color-input" value="#000000">
+                                        <span class="color-value" id="color-bg-primary-value">#000000</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-bg-secondary" data-i18n="settings.colorBgSecondary">次背景</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-bg-secondary" class="color-input" value="#080808">
+                                        <span class="color-value" id="color-bg-secondary-value">#080808</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 文字颜色 -->
+                        <div class="color-group">
+                            <h3 data-i18n="settings.colorGroupText">文字颜色</h3>
+                            <div class="color-items">
+                                <div class="color-item">
+                                    <label for="color-text-primary" data-i18n="settings.colorTextPrimary">主文字</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-text-primary" class="color-input" value="#e0e0e0">
+                                        <span class="color-value" id="color-text-primary-value">#E0E0E0</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-text-secondary" data-i18n="settings.colorTextSecondary">次文字</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-text-secondary" class="color-input" value="#9e9e9e">
+                                        <span class="color-value" id="color-text-secondary-value">#9E9E9E</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 语法高亮颜色 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionSyntax">📝 语法高亮颜色</h2>
+
+                        <!-- 语法高亮颜色 -->
+                        <div class="color-group">
+                            <h3 data-i18n="settings.syntaxGroup">语法标记颜色</h3>
+                            <div class="color-items">
+                                <div class="color-item">
+                                    <label for="color-syntax-keyword" data-i18n="settings.syntaxKeyword">关键字</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-keyword" class="color-input">
+                                        <span class="color-value" id="color-syntax-keyword-value">#569cd6</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-string" data-i18n="settings.syntaxString">字符串</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-string" class="color-input">
+                                        <span class="color-value" id="color-syntax-string-value">#ce9178</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-number" data-i18n="settings.syntaxNumber">数字</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-number" class="color-input">
+                                        <span class="color-value" id="color-syntax-number-value">#b5cea8</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-comment" data-i18n="settings.syntaxComment">注释</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-comment" class="color-input">
+                                        <span class="color-value" id="color-syntax-comment-value">#6a9955</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-function" data-i18n="settings.syntaxFunction">函数</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-function" class="color-input">
+                                        <span class="color-value" id="color-syntax-function-value">#dcdcaa</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-operator" data-i18n="settings.syntaxOperator">操作符</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-operator" class="color-input">
+                                        <span class="color-value" id="color-syntax-operator-value">#d4d4d4</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-punctuation" data-i18n="settings.syntaxPunctuation">标点符号</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-punctuation" class="color-input">
+                                        <span class="color-value" id="color-syntax-punctuation-value">#d4d4d4</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-syntax-property" data-i18n="settings.syntaxProperty">属性名</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-syntax-property" class="color-input">
+                                        <span class="color-value" id="color-syntax-property-value">#9cdcfe</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 分类颜色自定义 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionCategories">🎯 分类颜色</h2>
+                        <div class="color-group">
+                            <h3 data-i18n="settings.categoriesGroup">Kether 积木分类颜色</h3>
+                            <div class="color-items cat-color-items" id="cat-colors">
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.实体操作">实体操作</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="实体操作" value="#c06262">
+                                        <span class="color-value" id="cat-实体操作-value">#C06262</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.数据与变量">数据与变量</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="数据与变量" value="#5edf85">
+                                        <span class="color-value" id="cat-数据与变量-value">#5EDF85</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.文本与运算">文本与运算</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="文本与运算" value="#437a32">
+                                        <span class="color-value" id="cat-文本与运算-value">#437A32</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.游戏机制">游戏机制</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="游戏机制" value="#1566d1">
+                                        <span class="color-value" id="cat-游戏机制-value">#1566D1</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.系统管理">系统管理</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="系统管理" value="#430000">
+                                        <span class="color-value" id="cat-系统管理-value">#430000</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.逻辑判断">逻辑判断</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="逻辑判断" value="#ddb271">
+                                        <span class="color-value" id="cat-逻辑判断-value">#DDB271</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.世界与坐标">世界与坐标</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="世界与坐标" value="#59745d">
+                                        <span class="color-value" id="cat-世界与坐标-value">#59745D</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.物品管理">物品管理</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="物品管理" value="#615432">
+                                        <span class="color-value" id="cat-物品管理-value">#615432</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.脚本控制">脚本控制</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="脚本控制" value="#d115a8">
+                                        <span class="color-value" id="cat-脚本控制-value">#D115A8</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.界面与显示">界面与显示</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="界面与显示" value="#3e5255">
+                                        <span class="color-value" id="cat-界面与显示-value">#3E5255</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.时间与日期">时间与日期</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="时间与日期" value="#1a182c">
+                                        <span class="color-value" id="cat-时间与日期-value">#1A182C</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label data-i18n="content.categories.基本">基本</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" class="color-input cat-color" data-cat="基本" value="#6b7475">
+                                        <span class="color-value" id="cat-基本-value">#6B7475</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 预设主题 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionPresets">🎪 预设主题</h2>
+                        <div class="preset-themes">
+                            <button class="preset-btn" data-preset="dark-default" data-i18n="settings.presetDarkDefault">深色经典</button>
+                            <button class="preset-btn" data-preset="light-clean" data-i18n="settings.presetLightClean">浅色清爽</button>
+                            <button class="preset-btn" data-preset="dracula">Dracula</button>
+                            <button class="preset-btn" data-preset="nord">Nord</button>
+                            <button class="preset-btn" data-preset="solarized">Solarized</button>
+                        </div>
+                    </section>
+
+                    <!-- 设置预览 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionPreview">👁️ 预览</h2>
+                        <div class="preview-area">
+                            <div class="preview-buttons">
+                                <button class="btn" data-i18n="settings.previewPrimary">主按钮</button>
+                                <button class="btn btn-secondary" data-i18n="settings.previewSecondary">次按钮</button>
+                                <button class="btn btn-danger" data-i18n="settings.previewDanger">危险按钮</button>
+                                <button class="btn btn-accent" data-i18n="settings.previewAccent">强调按钮</button>
+                            </div>
+                            <div class="preview-controls">
+                                <label class="checkbox-row">
+                                    <input type="checkbox" checked>
+                                    <span data-i18n="settings.previewCheckbox">复选框示例</span>
+                                </label>
+                                <input type="text" class="input-full" data-i18n-placeholder="settings.previewInputPlaceholder">
+                                <div class="select-wrapper">
+                                    <select class="input-full">
+                                        <option data-i18n="settings.previewSelect1">选项一</option>
+                                        <option data-i18n="settings.previewSelect2">选项二</option>
+                                        <option data-i18n="settings.previewSelect3">选项三</option>
+                                    </select>
+                                    <span class="select-icon">▼</span>
+                                </div>
+                            </div>
+                            <div class="preview-text">
+                                <p data-i18n="settings.previewMainText">这是主要文本的样式显示</p>
+                                <p class="secondary" data-i18n="settings.previewSecondaryText">这是次要文本的样式显示</p>
+                            </div>
+                            <div class="preview-buttons">
+                                <button class="btn btn-secondary" id="pv-demo-dialog" data-i18n="settings.previewDemoDialog">📦 打开示例对话框</button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
-                <!-- 文字颜色 -->
-                <div class="color-group">
-                    <h3>文字颜色</h3>
-                    <div class="color-items">
-                        <div class="color-item">
-                            <label for="color-text-primary">主文字</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-text-primary" class="color-input" value="#e0e0e0">
-                                <span class="color-value" id="color-text-primary-value">#E0E0E0</span>
+                <!-- ═══ 编辑器 ═══ -->
+                <div class="settings-panel" data-panel="editor">
+                    <!-- 编辑器设置 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionEditor">📝 编辑器设置</h2>
+                        <div class="setting-group">
+                            <label for="editor-font-size" data-i18n="settings.editorFontSize">字体大小 (px)</label>
+                            <div class="select-wrapper">
+                                <select id="editor-font-size">
+                                    <option value="12">12px</option>
+                                    <option value="13">13px</option>
+                                    <option value="14" selected>14px</option>
+                                    <option value="15">15px</option>
+                                    <option value="16">16px</option>
+                                    <option value="18">18px</option>
+                                    <option value="20">20px</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label for="color-text-secondary">次文字</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-text-secondary" class="color-input" value="#9e9e9e">
-                                <span class="color-value" id="color-text-secondary-value">#9E9E9E</span>
+                        <div class="setting-group">
+                            <label for="editor-tab-size" data-i18n="settings.editorTabSize">Tab 缩进大小</label>
+                            <div class="select-wrapper">
+                                <select id="editor-tab-size">
+                                    <option value="2" data-i18n="settings.tabSize2">2 空格</option>
+                                    <option value="4" selected data-i18n="settings.tabSize4">4 空格</option>
+                                    <option value="8" data-i18n="settings.tabSize8">8 空格</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </section>
+                        <div class="setting-group">
+                            <label for="editor-line-numbers" data-i18n="settings.editorLineNumbers">行号显示</label>
+                            <div class="select-wrapper">
+                                <select id="editor-line-numbers">
+                                    <option value="true" selected data-i18n="settings.show">显示</option>
+                                    <option value="false" data-i18n="settings.hide">隐藏</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label for="editor-line-wrapping" data-i18n="settings.editorLineWrapping">自动换行</label>
+                            <div class="select-wrapper">
+                                <select id="editor-line-wrapping">
+                                    <option value="true" selected data-i18n="settings.enable">启用</option>
+                                    <option value="false" data-i18n="settings.disable">禁用</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label for="editor-theme" data-i18n="settings.editorTheme">编辑器主题</label>
+                            <div class="select-wrapper">
+                                <select id="editor-theme">
+                                    <option value="default" data-i18n="settings.themeDefault">默认</option>
+                                    <option value="dracula">Dracula</option>
+                                    <option value="eclipse">Eclipse</option>
+                                    <option value="3024-day">3024 Day</option>
+                                    <option value="3024-night">3024 Night</option>
+                                    <option value="ambiance">Ambiance</option>
+                                    <option value="base16-dark">Base16 Dark</option>
+                                    <option value="base16-light">Base16 Light</option>
+                                    <option value="blackboard">Blackboard</option>
+                                    <option value="cobalt">Cobalt</option>
+                                    <option value="material">Material</option>
+                                    <option value="monokai">Monokai</option>
+                                    <option value="neat">Neat</option>
+                                    <option value="night">Night</option>
+                                    <option value="panda-syntax">Panda Syntax</option>
+                                    <option value="solarized">Solarized</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label for="editor-auto-sync" data-i18n="settings.editorAutoSync">自动同步更改</label>
+                            <div class="select-wrapper">
+                                <select id="editor-auto-sync">
+                                    <option value="false" data-i18n="settings.off">关闭</option>
+                                    <option value="true" data-i18n="settings.on">开启</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                            <div class="setting-hint" data-i18n="settings.autoSyncHint">开启后，编辑器内容将在每次修改后自动保存</div>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="editor-devtools">
+                                <span data-i18n="settings.editorDevtools">启动时打开 F12 调试屏幕</span>
+                            </label>
+                        </div>
+                    </section>
 
-            <!-- 语法高亮颜色 -->
-            <section class="settings-section">
-                <h2>📝 语法高亮颜色</h2>
+                    <!-- 启动预热 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.prewarmTitle">启动预热</h2>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="prewarm-files">
+                                <span data-i18n="settings.prewarmFiles">预热上次打开的项目文件</span>
+                            </label>
+                            <div class="field-row" style="margin-top:6px;">
+                                <span class="setting-hint" style="margin-top:0;" data-i18n="settings.prewarmMax">上限</span>
+                                <input type="number" id="prewarm-files-max" class="shortcut-input" value="50" min="0" max="1000" style="width:70px;text-align:center;flex:0;">
+                                <span class="setting-hint" style="margin-top:0;">MB</span>
+                            </div>
+                            <div class="setting-hint" data-i18n="settings.prewarmHint">启动时将上次打开的文件内容读入内存缓存，秒切标签页</div>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="prewarm-kether">
+                                <span data-i18n="settings.prewarmKether">预热 Kether 动作</span>
+                            </label>
+                            <div class="setting-hint" data-i18n="settings.prewarmKetherHint">启动时加载 Kether 动作定义文件，打开积木编辑器时无需等待</div>
+                        </div>
+                    </section>
 
-                <!-- 语法高亮颜色 -->
-                <div class="color-group">
-                    <h3>语法标记颜色</h3>
-                    <div class="color-items">
-                        <div class="color-item">
-                            <label for="color-syntax-keyword">关键字</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-keyword" class="color-input">
-                                <span class="color-value" id="color-syntax-keyword-value">#569cd6</span>
+                    <!-- 积木块显示 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.blockTitle">积木块显示</h2>
+                        <div class="setting-group">
+                            <label for="block-font-size" data-i18n="settings.blockFontSize">积木字体大小 (px)</label>
+                            <div class="select-wrapper">
+                                <select id="block-font-size">
+                                    <option value="9">9px</option>
+                                    <option value="10">10px</option>
+                                    <option value="11" selected>11px</option>
+                                    <option value="12">12px</option>
+                                    <option value="13">13px</option>
+                                    <option value="14">14px</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label for="color-syntax-string">字符串</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-string" class="color-input">
-                                <span class="color-value" id="color-syntax-string-value">#ce9178</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-number">数字</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-number" class="color-input">
-                                <span class="color-value" id="color-syntax-number-value">#b5cea8</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-comment">注释</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-comment" class="color-input">
-                                <span class="color-value" id="color-syntax-comment-value">#6a9955</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-function">函数</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-function" class="color-input">
-                                <span class="color-value" id="color-syntax-function-value">#dcdcaa</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-operator">操作符</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-operator" class="color-input">
-                                <span class="color-value" id="color-syntax-operator-value">#d4d4d4</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-punctuation">标点符号</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-punctuation" class="color-input">
-                                <span class="color-value" id="color-syntax-punctuation-value">#d4d4d4</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label for="color-syntax-property">属性名</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="color-syntax-property" class="color-input">
-                                <span class="color-value" id="color-syntax-property-value">#9cdcfe</span>
-                            </div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-            </section>
 
-            <!-- 分类颜色自定义 -->
-            <section class="settings-section">
-                <h2>🎯 分类颜色</h2>
-                <div class="color-group">
-                    <h3>Kether 积木分类颜色</h3>
-                    <div class="color-items cat-color-items" id="cat-colors">
-                        <div class="color-item">
-                            <label>实体操作</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="实体操作" value="#c06262">
-                                <span class="color-value" id="cat-实体操作-value">#C06262</span>
+                <!-- ═══ AI 制作 ═══ -->
+                <div class="settings-panel" data-panel="ai">
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.aiTitle">AI 制作</h2>
+                        <div class="setting-group">
+                            <label for="ai-endpoint" data-i18n="settings.aiEndpoint">API 地址</label>
+                            <input type="text" id="ai-endpoint" class="shortcut-input input-full" value="https://api.openai.com/v1/chat/completions">
+                            <div class="setting-hint" data-i18n="settings.aiEndpointHint">兼容 OpenAI 格式的 API 地址</div>
+                        </div>
+                        <div class="setting-group">
+                            <label for="ai-model" data-i18n="settings.aiModel">模型</label>
+                            <div class="select-wrapper">
+                                <select id="ai-model" style="width:100%;">
+                                    <option value="gpt-4o">GPT-4o</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="deepseek-chat">DeepSeek Chat</option>
+                                    <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                                    <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                                    <option value="claude-opus-4-7">Claude Opus 4.7</option>
+                                    <option value="custom" data-i18n="settings.aiModelCustom">自定义</option>
+                                </select>
+                                <span class="select-icon">▼</span>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label>数据与变量</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="数据与变量" value="#5edf85">
-                                <span class="color-value" id="cat-数据与变量-value">#5EDF85</span>
+                        <div class="setting-group" id="ai-custom-model-group" style="display:none;">
+                            <label for="ai-custom-model" data-i18n="settings.aiCustomModel">自定义模型名</label>
+                            <input type="text" id="ai-custom-model" class="shortcut-input input-full" placeholder="输入模型名称" data-i18n-placeholder="settings.aiCustomModelPlaceholder">
+                        </div>
+                        <div class="setting-group">
+                            <label data-i18n="settings.aiApiKey">API 密钥</label>
+                            <div id="ai-keys-list" style="margin-bottom:6px;"></div>
+                            <div class="field-row">
+                                <input type="password" id="ai-new-key" class="shortcut-input input-full" placeholder="输入新密钥" data-i18n-placeholder="settings.aiNewKeyPlaceholder">
+                                <button id="ai-add-key" class="btn btn-secondary btn-sm" data-i18n="settings.aiAddKey">添加</button>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label>文本与运算</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="文本与运算" value="#437a32">
-                                <span class="color-value" id="cat-文本与运算-value">#437A32</span>
+                        <div class="setting-group">
+                            <label for="ai-system-prompt" data-i18n="settings.aiSystemPrompt">系统提示词</label>
+                            <div class="select-wrapper">
+                                <select id="ai-system-prompt" style="width:100%;">
+                                    <option value="default" data-i18n="settings.aiPromptDefault">默认</option>
+                                    <option value="custom" data-i18n="settings.aiPromptCustom">自定义</option>
+                                </select>
+                                <span class="select-icon">▼</span>
+                            </div>
+                            <div id="ai-prompt-info" style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;"></div>
+                        </div>
+                        <div class="setting-group" id="ai-custom-prompt-group">
+                            <label for="ai-custom-prompt" data-i18n="settings.aiCustomPrompt">自定义提示词内容</label>
+                            <textarea id="ai-custom-prompt" class="shortcut-input input-full" rows="5" placeholder="输入自定义系统提示词..." style="resize:vertical;font-family:inherit;" data-i18n-placeholder="settings.aiCustomPromptPlaceholder"></textarea>
+                            <div class="field-row" style="margin-top:6px;">
+                                <button id="ai-save-prompt" class="btn btn-secondary btn-sm" data-i18n="settings.aiSavePrompt">保存为自定义提示词</button>
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label>游戏机制</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="游戏机制" value="#1566d1">
-                                <span class="color-value" id="cat-游戏机制-value">#1566D1</span>
+                        <div class="setting-group">
+                            <label data-i18n="settings.aiManagePrompts">管理提示词</label>
+                            <div id="ai-prompt-list" style="font-size:12px;"></div>
+                            <div class="field-row" style="margin-top:6px;">
+                                <input type="text" id="ai-new-prompt-name" class="shortcut-input input-full" placeholder="新提示词名称" data-i18n-placeholder="settings.aiNewPromptNamePlaceholder">
+                                <input type="text" id="ai-new-prompt-desc" class="shortcut-input input-full" placeholder="描述" data-i18n-placeholder="settings.aiNewPromptDescPlaceholder">
                             </div>
                         </div>
-                        <div class="color-item">
-                            <label>系统管理</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="系统管理" value="#430000">
-                                <span class="color-value" id="cat-系统管理-value">#430000</span>
-                            </div>
+                        <div class="setting-group">
+                            <label for="ai-max-tokens" data-i18n="settings.aiMaxTokens">最大输出 Token</label>
+                            <input type="number" id="ai-max-tokens" class="shortcut-input" value="4096" min="256" max="65536" style="width:100px;">
                         </div>
-                        <div class="color-item">
-                            <label>逻辑判断</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="逻辑判断" value="#ddb271">
-                                <span class="color-value" id="cat-逻辑判断-value">#DDB271</span>
-                            </div>
+                        <div class="setting-group">
+                            <label for="ai-temperature" data-i18n="settings.aiTemperature">温度 (Temperature)</label>
+                            <input type="number" id="ai-temperature" class="shortcut-input" value="0.7" min="0" max="2" step="0.1" style="width:80px;">
                         </div>
-                        <div class="color-item">
-                            <label>世界与坐标</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="世界与坐标" value="#59745d">
-                                <span class="color-value" id="cat-世界与坐标-value">#59745D</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label>物品管理</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="物品管理" value="#615432">
-                                <span class="color-value" id="cat-物品管理-value">#615432</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label>脚本控制</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="脚本控制" value="#d115a8">
-                                <span class="color-value" id="cat-脚本控制-value">#D115A8</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label>界面与显示</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="界面与显示" value="#3e5255">
-                                <span class="color-value" id="cat-界面与显示-value">#3E5255</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label>时间与日期</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="时间与日期" value="#1a182c">
-                                <span class="color-value" id="cat-时间与日期-value">#1A182C</span>
-                            </div>
-                        </div>
-                        <div class="color-item">
-                            <label>基本</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" class="color-input cat-color" data-cat="基本" value="#6b7475">
-                                <span class="color-value" id="cat-基本-value">#6B7475</span>
-                            </div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-            </section>
 
-            <!-- 预设主题 -->
-            <section class="settings-section">
-                <h2>🎪 预设主题</h2>
-                <div class="preset-themes">
-                    <button class="preset-btn" data-preset="dark-default">深色经典</button>
-                    <button class="preset-btn" data-preset="light-clean">浅色清爽</button>
-                    <button class="preset-btn" data-preset="dracula">Dracula</button>
-                    <button class="preset-btn" data-preset="nord">Nord</button>
-                    <button class="preset-btn" data-preset="solarized">Solarized</button>
-                </div>
-            </section>
-
-            <!-- 编辑器设置 -->
-            <section class="settings-section">
-                <h2>📝 编辑器设置</h2>
-                <div class="setting-group">
-                    <label for="editor-font-size">字体大小 (px)</label>
-                    <div class="select-wrapper">
-                        <select id="editor-font-size">
-                            <option value="12">12px</option>
-                            <option value="13">13px</option>
-                            <option value="14" selected>14px</option>
-                            <option value="15">15px</option>
-                            <option value="16">16px</option>
-                            <option value="18">18px</option>
-                            <option value="20">20px</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="editor-tab-size">Tab 缩进大小</label>
-                    <div class="select-wrapper">
-                        <select id="editor-tab-size">
-                            <option value="2">2 空格</option>
-                            <option value="4" selected>4 空格</option>
-                            <option value="8">8 空格</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="editor-line-numbers">行号显示</label>
-                    <div class="select-wrapper">
-                        <select id="editor-line-numbers">
-                            <option value="true" selected>显示</option>
-                            <option value="false">隐藏</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="editor-line-wrapping">自动换行</label>
-                    <div class="select-wrapper">
-                        <select id="editor-line-wrapping">
-                            <option value="true" selected>启用</option>
-                            <option value="false">禁用</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="editor-theme">编辑器主题</label>
-                    <div class="select-wrapper">
-                        <select id="editor-theme">
-                            <option value="default">默认</option>
-                            <option value="dracula">Dracula</option>
-                            <option value="eclipse">Eclipse</option>
-                            <option value="3024-day">3024 Day</option>
-                            <option value="3024-night">3024 Night</option>
-                            <option value="ambiance">Ambiance</option>
-                            <option value="base16-dark">Base16 Dark</option>
-                            <option value="base16-light">Base16 Light</option>
-                            <option value="blackboard">Blackboard</option>
-                            <option value="cobalt">Cobalt</option>
-                            <option value="material">Material</option>
-                            <option value="monokai">Monokai</option>
-                            <option value="neat">Neat</option>
-                            <option value="night">Night</option>
-                            <option value="panda-syntax">Panda Syntax</option>
-                            <option value="solarized">Solarized</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="editor-auto-sync">自动同步更改</label>
-                    <div class="select-wrapper">
-                        <select id="editor-auto-sync">
-                            <option value="false">关闭</option>
-                            <option value="true">开启</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">开启后，编辑器内容将在每次修改后自动保存</div>
-                </div>
-                <div class="setting-group">
-                    <label>
-                        <input type="checkbox" id="editor-devtools" style="vertical-align:middle;margin-right:6px;">
-                        启动时打开 F12 调试屏幕
-                    </label>
-                </div>
-                <div class="setting-section-divider"></div>
-                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">启动预热</h3>
-                <div class="setting-group">
-                    <label>
-                        <input type="checkbox" id="prewarm-files" style="vertical-align:middle;margin-right:6px;">
-                        预热上次打开的项目文件
-                    </label>
-                    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-                        <span style="font-size:12px;color:var(--color-text-tertiary);">上限</span>
-                        <input type="number" id="prewarm-files-max" class="shortcut-input" value="50" min="0" max="1000" style="width:70px;text-align:center;">
-                        <span style="font-size:12px;color:var(--color-text-tertiary);">MB</span>
-                    </div>
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">启动时将上次打开的文件内容读入内存缓存，秒切标签页</div>
-                </div>
-                <div class="setting-group">
-                    <label>
-                        <input type="checkbox" id="prewarm-kether" style="vertical-align:middle;margin-right:6px;">
-                        预热 Kether 动作
-                    </label>
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">启动时加载 Kether 动作定义文件，打开积木编辑器时无需等待</div>
-                </div>
-                <div class="setting-section-divider"></div>
-                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">AI 制作</h3>
-                <div class="setting-group">
-                    <label for="ai-endpoint">API 地址</label>
-                    <input type="text" id="ai-endpoint" class="shortcut-input" value="https://api.openai.com/v1/chat/completions" style="width:100%;box-sizing:border-box;font-size:12px;">
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">兼容 OpenAI 格式的 API 地址</div>
-                </div>
-                <div class="setting-group">
-                    <label for="ai-model">模型</label>
-                    <div class="select-wrapper">
-                        <select id="ai-model" style="width:100%;">
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini</option>
-                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="deepseek-chat">DeepSeek Chat</option>
-                            <option value="deepseek-reasoner">DeepSeek Reasoner</option>
-                            <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                            <option value="claude-opus-4-7">Claude Opus 4.7</option>
-                            <option value="custom">自定义</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-                <div class="setting-group" id="ai-custom-model-group" style="display:none;">
-                    <label for="ai-custom-model">自定义模型名</label>
-                    <input type="text" id="ai-custom-model" class="shortcut-input" placeholder="输入模型名称" style="width:100%;box-sizing:border-box;">
-                </div>
-                <div class="setting-group">
-                    <label>API 密钥</label>
-                    <div id="ai-keys-list" style="margin-bottom:6px;"></div>
-                    <div style="display:flex;gap:6px;">
-                        <input type="password" id="ai-new-key" class="shortcut-input" placeholder="输入新密钥" style="flex:1;font-size:12px;">
-                        <button id="ai-add-key" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">添加</button>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="ai-system-prompt">系统提示词</label>
-                    <div class="select-wrapper">
-                        <select id="ai-system-prompt" style="width:100%;">
-                            <option value="default">默认</option>
-                            <option value="custom">自定义</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                    <div id="ai-prompt-info" style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;"></div>
-                </div>
-                <div class="setting-group" id="ai-custom-prompt-group">
-                    <label for="ai-custom-prompt">自定义提示词内容</label>
-                    <textarea id="ai-custom-prompt" class="shortcut-input" rows="5" placeholder="输入自定义系统提示词..." style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;font-family:inherit;"></textarea>
-                    <div style="display:flex;gap:6px;margin-top:6px;">
-                        <button id="ai-save-prompt" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">保存为自定义提示词</button>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label>管理提示词</label>
-                    <div id="ai-prompt-list" style="font-size:12px;"></div>
-                    <div style="display:flex;gap:6px;margin-top:6px;">
-                        <input type="text" id="ai-new-prompt-name" class="shortcut-input" placeholder="新提示词名称" style="flex:1;font-size:12px;">
-                        <input type="text" id="ai-new-prompt-desc" class="shortcut-input" placeholder="描述" style="flex:1;font-size:12px;">
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label for="ai-max-tokens">最大输出 Token</label>
-                    <input type="number" id="ai-max-tokens" class="shortcut-input" value="4096" min="256" max="65536" style="width:100px;">
-                </div>
-                <div class="setting-group">
-                    <label for="ai-temperature">温度 (Temperature)</label>
-                    <input type="number" id="ai-temperature" class="shortcut-input" value="0.7" min="0" max="2" step="0.1" style="width:80px;">
-                </div>
-                <div class="setting-section-divider"></div>
-                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">远程模式</h3>
-                <div class="setting-group">
-                    <label for="remote-password">远程连接密码</label>
-                    <input type="password" id="remote-password" class="shortcut-input" placeholder="设置远程连接密码" style="width:100%;box-sizing:border-box;">
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">远程模式下启动服务器时默认使用的连接密码</div>
-                </div>
-                <div class="setting-group">
-                    <label>
-                        <input type="checkbox" id="remote-allow-different-versions" style="vertical-align:middle;margin-right:6px;">
-                        允许不同版本的客户端连接
-                    </label>
-                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">关闭后，只有版本匹配的客户端才能连接服务器</div>
-                </div>
-                <div class="setting-section-divider"></div>
-                <h3 style="margin:16px 0 8px;font-size:14px;color:var(--color-text-secondary);">积木块显示</h3>
-                <div class="setting-group">
-                    <label for="block-font-size">积木字体大小 (px)</label>
-                    <div class="select-wrapper">
-                        <select id="block-font-size">
-                            <option value="9">9px</option>
-                            <option value="10">10px</option>
-                            <option value="11" selected>11px</option>
-                            <option value="12">12px</option>
-                            <option value="13">13px</option>
-                            <option value="14">14px</option>
-                        </select>
-                        <span class="select-icon">▼</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 快捷键设置 -->
-            <section class="settings-section">
-                <h2>⌨️ 快捷键设置</h2>
-                <div class="setting-group">
-                    <label for="shortcut-save">保存文件</label>
-                    <input type="text" id="shortcut-save" class="shortcut-input" value="Ctrl+S" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-new-file">新建文件</label>
-                    <input type="text" id="shortcut-new-file" class="shortcut-input" value="Ctrl+N" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-open-project">打开项目</label>
-                    <input type="text" id="shortcut-open-project" class="shortcut-input" value="Ctrl+O" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-toggle-mode">切换编辑模式</label>
-                    <input type="text" id="shortcut-toggle-mode" class="shortcut-input" value="F2" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-find">查找</label>
-                    <input type="text" id="shortcut-find" class="shortcut-input" value="Ctrl+F" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-replace">替换</label>
-                    <input type="text" id="shortcut-replace" class="shortcut-input" value="Ctrl+H" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-comment">注释/取消注释</label>
-                    <input type="text" id="shortcut-comment" class="shortcut-input" value="Ctrl+/" readonly>
-                </div>
-                <div class="setting-group">
-                    <label for="shortcut-format">格式化代码</label>
-                    <input type="text" id="shortcut-format" class="shortcut-input" value="Shift+Alt+F" readonly>
-                </div>
-                <div class="setting-group">
-                    <button id="reset-shortcuts" class="btn btn-secondary">重置快捷键</button>
-                    <button id="edit-shortcuts" class="btn">编辑快捷键</button>
-                </div>
-            </section>
-
-            <!-- 反馈渠道 -->
-            <section class="settings-section">
-                <h2>💬 反馈渠道</h2>
-                <div class="setting-group">
-                    <label>如有任何问题、意见，欢迎通过以下渠道反馈：</label>
-                    <div style="background:var(--color-bg-tertiary);border-radius:8px;padding:14px 18px;margin-top:8px;font-size:13px;line-height:2;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;">
-                            <span>📢 QQ群：858827523</span>
-                            <button class="btn btn-secondary feedback-btn" data-url="https://qm.qq.com/q/f7l7qPlY60">加入群聊</button>
+                <!-- ═══ 远程设置 ═══ -->
+                <div class="settings-panel" data-panel="remote">
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.remoteTitle">远程模式</h2>
+                        <div class="setting-group">
+                            <label for="remote-password" data-i18n="settings.remotePassword">远程连接密码</label>
+                            <input type="password" id="remote-password" class="shortcut-input input-full" placeholder="设置远程连接密码" data-i18n-placeholder="settings.remotePasswordPlaceholder">
+                            <div class="setting-hint" data-i18n="settings.remotePasswordHint">远程模式下启动服务器时默认使用的连接密码</div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-                            <span>🌐 Discord</span>
-                            <button class="btn btn-secondary feedback-btn" data-url="https://discord.com/invite/VHs958jJXj">加入 Discord</button>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="remote-allow-different-versions">
+                                <span data-i18n="settings.remoteAllowDifferentVersions">允许不同版本的客户端连接</span>
+                            </label>
+                            <div class="setting-hint" data-i18n="settings.remoteAllowDifferentVersionsHint">关闭后，只有版本匹配的客户端才能连接服务器</div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-                            <span>💬 QQ：3631901756</span>
-                            <button class="btn btn-secondary feedback-btn" data-url="https://qm.qq.com/q/f7l7qPlY60">添加好友</button>
+                    </section>
+                </div>
+
+                <!-- ═══ 快捷键 ═══ -->
+                <div class="settings-panel" data-panel="shortcuts">
+                    <!-- 快捷键设置 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionShortcuts">⌨️ 快捷键设置</h2>
+                        <div class="setting-group">
+                            <label for="shortcut-save" data-i18n="settings.shortcutSave">保存文件</label>
+                            <input type="text" id="shortcut-save" class="shortcut-input" value="Ctrl+S" readonly>
                         </div>
-                    </div>
+                        <div class="setting-group">
+                            <label for="shortcut-new-file" data-i18n="settings.shortcutNewFile">新建文件</label>
+                            <input type="text" id="shortcut-new-file" class="shortcut-input" value="Ctrl+N" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-open-project" data-i18n="settings.shortcutOpenProject">打开项目</label>
+                            <input type="text" id="shortcut-open-project" class="shortcut-input" value="Ctrl+O" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-toggle-mode" data-i18n="settings.shortcutToggleMode">切换编辑模式</label>
+                            <input type="text" id="shortcut-toggle-mode" class="shortcut-input" value="F2" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-find" data-i18n="settings.shortcutFind">查找</label>
+                            <input type="text" id="shortcut-find" class="shortcut-input" value="Ctrl+F" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-replace" data-i18n="settings.shortcutReplace">替换</label>
+                            <input type="text" id="shortcut-replace" class="shortcut-input" value="Ctrl+H" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-comment" data-i18n="settings.shortcutComment">注释/取消注释</label>
+                            <input type="text" id="shortcut-comment" class="shortcut-input" value="Ctrl+/" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <label for="shortcut-format" data-i18n="settings.shortcutFormat">格式化代码</label>
+                            <input type="text" id="shortcut-format" class="shortcut-input" value="Shift+Alt+F" readonly>
+                        </div>
+                        <div class="setting-group">
+                            <button id="reset-shortcuts" class="btn btn-secondary" data-i18n="settings.resetShortcuts">重置快捷键</button>
+                            <button id="edit-shortcuts" class="btn" data-i18n="settings.editShortcuts">编辑快捷键</button>
+                        </div>
+                    </section>
                 </div>
-            </section>
 
-            <!-- 操作按钮 -->
-            <section class="settings-section">
-                <h2>💾 保存和重置</h2>
-                <div class="button-group">
-                    <button id="save-settings" class="btn">✓ 保存设置</button>
-                    <button id="reset-settings" class="btn btn-secondary">↻ 恢复默认</button>
-                    <button id="export-settings" class="btn btn-secondary">⬇ 导出设置</button>
-                    <button id="import-settings" class="btn btn-secondary">⬆ 导入设置</button>
+                <!-- ═══ 关于 ═══ -->
+                <div class="settings-panel" data-panel="about">
+                    <!-- 反馈渠道 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionFeedback">💬 反馈渠道</h2>
+                        <div class="setting-group">
+                            <label data-i18n="settings.feedbackIntro">如有任何问题、意见，欢迎通过以下渠道反馈：</label>
+                            <div style="background:var(--color-bg-tertiary);border-radius:8px;padding:14px 18px;margin-top:8px;font-size:13px;line-height:2;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <span><span data-i18n="settings.feedbackQqGroup">📢 QQ群：</span>858827523</span>
+                                    <button class="btn btn-secondary feedback-btn" data-url="https://qm.qq.com/q/f7l7qPlY60" data-i18n="settings.feedbackJoinQq">加入群聊</button>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                                    <span>🌐 Discord</span>
+                                    <button class="btn btn-secondary feedback-btn" data-url="https://discord.com/invite/VHs958jJXj" data-i18n="settings.feedbackJoinDiscord">加入 Discord</button>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                                    <span><span data-i18n="settings.feedbackQq">💬 QQ：</span>3631901756</span>
+                                    <button class="btn btn-secondary feedback-btn" data-url="https://qm.qq.com/q/f7l7qPlY60" data-i18n="settings.feedbackAddFriend">添加好友</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </section>
-
-            <!-- 设置预览 -->
-            <section class="settings-section">
-                <h2>👁️ 预览</h2>
-                <div class="preview-area">
-                    <div class="preview-buttons">
-                        <button class="btn">主按钮</button>
-                        <button class="btn btn-secondary">次按钮</button>
-                    </div>
-                    <div class="preview-text">
-                        <p>这是主要文本的样式显示</p>
-                        <p class="secondary">这是次要文本的样式显示</p>
-                    </div>
-                </div>
-            </section>
+            </div>
         </div>
     </div>
 
     <input type="file" id="import-file" accept=".json" style="display: none;">
+    <script src="node_modules/js-yaml/dist/js-yaml.min.js"></script>
+    <script src="i18n.js"></script>
     <script src="sound.js"></script>
+    <script src="ui.js"></script>
     <script src="settings.js"></script>
     <script>
       // 窗口控制

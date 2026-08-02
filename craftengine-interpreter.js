@@ -632,6 +632,7 @@
       ROOT.codeMirrorEditor.setValue(yaml);
       if (typeof ROOT.updateStatus === 'function') ROOT.updateStatus(_t('craftengine.syncedToSource'));
     }
+    if (parsed) parsed._visualDirty = false;
   }
 
   // ============ Schema 表单引擎 (craftengine-schemas.js) ============
@@ -642,6 +643,11 @@
   var _sfUidMap = {};
   var _sfL = function (zh, en) { return { zh: zh, en: en }; };
   var _sfNumRe = /^-?\d+(\.\d+)?$/;
+  var _sfLastParsed = null; // 最近一次 render 的 parsed, 用于标记"尚未同步到源码"的更改
+
+  function _sfMarkDirty(parsed) {
+    if (parsed && !parsed._visualDirty) parsed._visualDirty = true;
+  }
 
   function _sfInit() {
     if (_sfSchemas === null && typeof CESchemas !== 'undefined') _sfSchemas = CESchemas;
@@ -1174,6 +1180,7 @@
     if (!section || !entry) return;
     var uid = el.getAttribute('data-sf-uid');
     var rec = uid ? _sfUidMap[uid] : null;
+    _sfMarkDirty(parsed); // 所有 schema 动作都会修改数据
 
     if (action === 'union-set') {
       if (!rec || rec.kind !== 'union') return;
@@ -2142,11 +2149,15 @@
       entry.data = value;
       entry._rawOrder = (value && typeof value === 'object' && !Array.isArray(value)) ? Object.keys(value) : [];
       if (parsed && parsed._isConfig && section) parsed._fileLevelRaw[section.key] = value;
+      _sfMarkDirty(parsed || _sfLastParsed);
       return;
     }
     var existed = _getNested(entry.data, path) !== undefined;
     if (value === undefined || value === null || value === '') {
-      if (existed) _deleteNested(entry.data, path);
+      if (existed) {
+        _deleteNested(entry.data, path);
+        _sfMarkDirty(parsed || _sfLastParsed);
+      }
       return;
     }
     if (!existed) {
@@ -2155,6 +2166,7 @@
       if (entry._rawOrder.indexOf(topKey) === -1) entry._rawOrder.push(topKey);
     }
     _setNested(entry.data, path, value);
+    _sfMarkDirty(parsed || _sfLastParsed);
   }
   // union 切到简单值: 存空串 (不走 _applyValue 的空值删除), 让输入框出现
   function _sfSetScalar(entry, path) {
@@ -2163,6 +2175,7 @@
       if (entry._rawOrder.indexOf(tk) === -1) entry._rawOrder.push(tk);
     }
     _setNested(entry.data, path, '');
+    _sfMarkDirty(_sfLastParsed);
   }
 
   function _bindEvents(containerEl) {
@@ -2468,6 +2481,7 @@
       target.classList.remove('ce-invalid');
       if (entry.key !== newKey) {
         entry.key = newKey;
+        _sfMarkDirty(parsed);
         _ceRenderFn();
       }
     };
@@ -2559,6 +2573,7 @@
         if (target.entries[i].key === key) { showErr(_t('craftengine.entryExists', { key: key })); return; }
       }
       target.entries.push({ key: key, data: {}, _rawOrder: [] });
+      _sfMarkDirty(parsed);
       ui.section = secIdx;
       ui.entry = target.entries.length - 1;
       modal.remove();
@@ -2593,6 +2608,7 @@
 
     document.getElementById('ce-del-confirm').addEventListener('click', function () {
       section.entries.splice(ui.entry, 1);
+      _sfMarkDirty(parsed);
       if (ui.entry >= section.entries.length) ui.entry = Math.max(0, section.entries.length - 1);
       modal.remove();
       _ceRenderFn();
@@ -2654,6 +2670,7 @@
         evs[name] = [];
         ui.evKey = name;
       }
+      _sfMarkDirty(parsed);
       ui.formTab = 'events';
       modal.remove();
       _ceRenderFn();
@@ -2693,6 +2710,7 @@
       } else if (evs && typeof evs === 'object') {
         delete evs[evKey];
       }
+      _sfMarkDirty(parsed);
       ui.evKey = null;
       modal.remove();
       _ceRenderFn();
@@ -2720,6 +2738,8 @@
       parsed._isConfig = true;
       _projectConfigSections(parsed);
     }
+    parsed._visualDirty = false;
+    _sfLastParsed = parsed;
     containerEl._ceParsed = parsed;
     containerEl._ceFilePath = filePath;
     if (!containerEl._ceUi) containerEl._ceUi = { section: 0, entry: 0 };

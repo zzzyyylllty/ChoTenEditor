@@ -1011,6 +1011,40 @@ async function showDirtyConfirmDialog(fileName) {
     });
   });
 }
+async function showUnsyncedConfirmDialog(fileName) {
+  return await new Promise(function (resolve) {
+    var overlay = document.createElement('div');
+    overlay.className = 'cv-modal';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100001;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML =
+      '<div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;">' + I18N.t('tabs.unsynced') + '</h3>' +
+        '<p style="margin:0 0 20px;font-size:13px;color:var(--color-text-secondary);line-height:1.5;">' +
+          (fileName ? I18N.t('tabs.unsyncedMsg', { name: escapeHtml(fileName) }) : I18N.t('tabs.unsyncedMsgNoName')) +
+        '</p>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="cv-btn cv-btn-secondary" id="unsynced-discard">' + I18N.t('tabs.discard') + '</button>' +
+          '<button class="cv-btn cv-btn-secondary" id="unsynced-cancel">' + I18N.t('tabs.cancel') + '</button>' +
+          '<button class="cv-btn cv-btn-primary" id="unsynced-sync">' + I18N.t('tabs.syncAndContinue') + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#unsynced-sync').addEventListener('click', function () {
+      overlay.remove(); resolve('sync');
+    });
+    overlay.querySelector('#unsynced-discard').addEventListener('click', function () {
+      overlay.remove(); resolve('discard');
+    });
+    overlay.querySelector('#unsynced-cancel').addEventListener('click', function () {
+      overlay.remove(); resolve('cancel');
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === this) { this.remove(); resolve('cancel'); }
+    });
+  });
+}
+
 // 暴露给页面内脚本（如标题栏关闭按钮）
 window.__showDirtyConfirm = showDirtyConfirmDialog;
 window.__saveAllDirtyFiles = saveAllDirtyFiles;
@@ -1397,6 +1431,24 @@ async function switchEditorMode(visual) {
   }
 
   console.log('[RENDERER] 切换编辑器模式:', visual ? '可视化' : '源代码', 'currentFile=', currentFile, 'dirty=', dirtyTabs[currentFile] ? 'Y' : 'N');
+
+  // 可视化编辑器有尚未同步到源码的更改: 切到源代码模式前先弹确认
+  // (同步并继续 → 缓冲区更新后走保留+自动保存; 放弃 → 丢弃未同步的可视化更改)
+  if (!visual && isVisualMode && currentFile &&
+      visualEditor && visualEditor._ceParsed && visualEditor._ceParsed._visualDirty) {
+    var usResult = await showUnsyncedConfirmDialog(getFileName(currentFile));
+    if (usResult === 'cancel') {
+      console.log('[RENDERER] 用户取消模式切换 (未同步更改)');
+      return;
+    }
+    if (usResult === 'sync' && typeof CraftEngineInterpreter !== 'undefined') {
+      try {
+        CraftEngineInterpreter.syncToSource(visualEditor._ceParsed);
+      } catch (e) {
+        console.error('[RENDERER] 同步可视化状态失败:', e);
+      }
+    }
+  }
 
   // 可视化模式下缓冲区的改动均来自"同步到源码"写入, 即最新可视化状态:
   // 切到源代码模式时直接保留缓冲区, 不再弹"未保存更改"提示, 也不从磁盘重载
