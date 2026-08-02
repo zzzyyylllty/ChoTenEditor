@@ -1758,7 +1758,8 @@
         if (!modeled[customKeys[cr]]) customRest.push(customKeys[cr]);
       }
       var customText = _sfObjText((function () { var o = {}; customRest.forEach(function (k) { o[k] = cdata[k]; }); return o; })());
-      tabs.custom = '<div class="ce-stack"><textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="" data-sf-type="kv-rest"' +
+      tabs.custom = '<div class="ce-sf-custom-warn">⚠ ' + _escHtml(_t('craftengine.customTabWarning')) + '</div>' +
+        '<div class="ce-stack"><textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="" data-sf-type="kv-rest"' +
         ' data-sf-exclude="' + _escHtml(Object.keys(modeled).join(',')) + '"' +
         ' rows="' + Math.max(3, Math.min(customRest.length + 1, 10)) + '" spellcheck="false">' + _escHtml(customText) + '</textarea></div>';
     }

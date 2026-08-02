@@ -3380,6 +3380,19 @@ textarea.ce-input {
   color: var(--color-primary);
 }
 
+/* 自定义选项卡警告 */
+.ce-sf-custom-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
 
 /* RichTooltip 富文本提示 (tooltip.js) */
 .rt-tooltip {

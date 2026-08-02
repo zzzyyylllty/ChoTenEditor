@@ -525,8 +525,8 @@ check(h2.includes('data-ce-tab="custom"'), 'block 自定义选项卡存在');
 check(h3.includes('data-ce-tab="custom"'), 'recipe 自定义选项卡存在');
 // (furniture 自定义选项卡检查移到 furniture 渲染块内, 见 hf 定义处)
 const custPanelPos = miH.indexOf('data-ce-tabpanel="custom"');
-check(custPanelPos !== -1 && miH.slice(custPanelPos).includes('data-sf-type="kv-rest"'), '自定义选项卡面板含 kv-rest 编辑器 (无警告条)');
-check(!miH.includes('ce-sf-custom-warn'), '自定义选项卡不再显示警告条');
+check(custPanelPos !== -1 && miH.slice(custPanelPos).includes('data-sf-type="kv-rest"'), '自定义选项卡面板含 kv-rest 编辑器');
+check(miH.includes('ce-sf-custom-warn') && !miH.includes('may cause errors'), '自定义选项卡警告保留前半句 (不含崩溃警告)');
 const krRe = /data-sf-type="kv-rest" data-sf-exclude="([^"]+)"/g;
 const krExcl = [...miH.matchAll(krRe)].map(m => m[1]);
 check(krExcl.length >= 1 && krExcl.some(e => e.includes('material') && e.includes('data') && !e.includes('unknown_extra')), 'kv-rest exclude 列出 modeled 键且不含未知键');
