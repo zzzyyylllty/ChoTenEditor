@@ -955,10 +955,13 @@
   function _sfVersionHidden() {
     return typeof document !== 'undefined' && !!(document.body && document.body.classList && document.body.classList.contains('ce-hide-version-hints'));
   }
+  // 字段 schema 定义缓存: 渲染 tooltip 编辑器方式时按路径取 def 分情况渲染控件
+  var _sfHintDefs = {};
   function _sfHintIcon(def, path) {
     var tip = _sfTipText(def, path);
     if (!tip) return '';
     var k = _sfHintKey(path);
+    if (k && def) _sfHintDefs[k] = def;
     var isPremium = (_sfPremiumKeys.indexOf(k) !== -1) || (def && def.key && _sfPremiumKeys.indexOf(def.key) !== -1);
     if (isPremium && !_sfPremiumHidden()) {
       tip += '\n\n§c' + _t('craftengine.premiumHint');
@@ -967,7 +970,7 @@
     if (versions.length && !_sfVersionHidden()) {
       tip += '\n\n§a' + _t('craftengine.versionHint', { versions: versions.join('、') });
     }
-    return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '">ℹ</span>';
+    return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '" data-sf-path="' + _escHtml(k) + '">ℹ</span>';
   }
   function _sfBindHintIcons() {
     if (typeof RichTooltip === 'undefined') return;
@@ -982,12 +985,265 @@
       icon.__ceTip = 1;
       var txt = icon.getAttribute('data-sf-hint');
       if (!txt) return;
-      var html = RichTooltip.md ? RichTooltip.md(txt) : ('<span class="rt-strong">' + txt + '</span>');
+      var def = _sfHintDefs[icon.getAttribute('data-sf-path') || ''];
+      var html = _sfTipEditorHtml(txt, def);
       RichTooltip.bind(icon, function () { return html; });
       RichTooltip.show(e, html);
     });
+    // 点击 ℹ 打开提示详情弹窗 (编辑器方式 / Wiki 原文 可切换)
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || t.nodeType !== 1) return;
+      var icon = (t.classList && t.classList.contains('ce-sf-hint-icon')) ? t : (t.closest ? t.closest('.ce-sf-hint-icon') : null);
+      if (!icon) return;
+      e.preventDefault();
+      e.stopPropagation();
+      _sfOpenHintPopup(icon);
+    });
   }
   _sfBindHintIcons();
+
+  // ---- 提示详情弹窗 + YAML 编辑器方式树 (tooltip 内的 ```yaml 块 → 表单式结构) ----
+  // 只切出 yaml 代码块; 非 yaml 代码块整段保留交给 RichTooltip.md 渲染 (它自己处理 ``` 围栏)
+  function _sfSplitTip(txt) {
+    var s = String(txt || '');
+    var out = [];
+    var i = 0, n = s.length;
+    while (i < n) {
+      var fence = s.indexOf('```', i);
+      if (fence === -1) { out.push({ yaml: false, text: s.slice(i) }); break; }
+      var fe = s.indexOf('```', fence + 3);
+      if (fe === -1) { out.push({ yaml: false, text: s.slice(i) }); break; }
+      var fin = s.slice(fence + 3, fe);
+      if (!/^yaml\b/i.test(fin)) {
+        // 非 yaml 代码块: 连同围栏整段保留, 交给 RichTooltip.md 渲染
+        if (fence > i) out.push({ yaml: false, text: s.slice(i, fe + 3) });
+        i = fe + 3;
+        continue;
+      }
+      var lm = /^[a-zA-Z0-9_-]*\n/.exec(fin);
+      var body = lm ? fin.slice(lm[0].length) : fin;
+      if (fence > i) out.push({ yaml: false, text: s.slice(i, fence) });
+      out.push({ yaml: true, text: body });
+      i = fe + 3;
+    }
+    return out;
+  }
+  function _sfYvType(v) {
+    if (v === null || v === undefined) return 'null';
+    if (Array.isArray(v)) return 'arr';
+    if (typeof v === 'object') return 'obj';
+    return typeof v;
+  }
+  // 控件模拟: 按值类型分情况 (文本→输入框 / 数字→数字框 / 布尔→勾选框 / null→空 / type 键→下拉)
+  function _sfYvCtrl(v, isTypeKey) {
+    var t = _sfYvType(v);
+    if (t === 'null') return '<span class="ce-yv-ctrl ce-yv-nullctrl">' + _escHtml(_t('craftengine.yvEmpty')) + '</span>';
+    if (t === 'boolean') return '<span class="ce-yv-ctrl ce-yv-boolctrl' + (v ? ' is-on' : '') + '">' + (v ? '☑' : '☐') + ' ' + v + '</span>';
+    if (t === 'number') return '<span class="ce-yv-ctrl ce-yv-numctrl">' + v + '</span>';
+    if (isTypeKey) return '<span class="ce-yv-ctrl ce-yv-select">' + _escHtml(String(v)) + '<span class="ce-yv-sel-arrow">▾</span></span>';
+    return '<span class="ce-yv-ctrl ce-yv-textctrl">' + _escHtml(String(v)) + '</span>';
+  }
+  function _sfYvPlain(v) {
+    var t = _sfYvType(v);
+    if (t === 'null') return 'null';
+    if (t === 'boolean') return v ? 'true' : 'false';
+    return String(v);
+  }
+  // 递归生成只读「编辑器方式」结构: 对象=字段组(key 标签+控件), 列表=每行一个控件
+  function _sfYvHtml(v, ind, isItem) {
+    var t = _sfYvType(v);
+    var pad = 'padding-left:' + (ind * 18) + 'px';
+    var html = '';
+    if (t === 'arr') {
+      if (!v.length) return '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-type">' + _escHtml(_t('craftengine.yvList')) + '</span></div>';
+      for (var i = 0; i < v.length; i++) {
+        var item = v[i];
+        if (item !== null && typeof item === 'object') {
+          html += _sfYvHtml(item, ind, true);
+        } else {
+          html += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">-</span> ' + _sfYvCtrl(item, false) + '</div>';
+        }
+      }
+      return '<div class="ce-yv-group">' + html + '</div>';
+    }
+    if (t === 'obj') {
+      var keys = Object.keys(v);
+      if (!keys.length) return '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-type">' + _escHtml(_t('craftengine.yvObject')) + '</span></div>';
+      for (var j = 0; j < keys.length; j++) {
+        var k = keys[j];
+        var val = v[k];
+        var vt = _sfYvType(val);
+        html += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">' + (isItem ? '- ' : '') + '</span><span class="ce-yv-key">' + _escHtml(k) + '</span>: ';
+        if (vt === 'obj' || vt === 'arr') {
+          html += '<span class="ce-yv-type">' + (vt === 'arr' ? _escHtml(_t('craftengine.yvList')) : _escHtml(_t('craftengine.yvObject'))) + '</span></div>';
+          html += _sfYvHtml(val, ind + 1, false);
+        } else {
+          html += _sfYvCtrl(val, k === 'type') + '</div>';
+        }
+      }
+      return '<div class="ce-yv-group">' + html + '</div>';
+    }
+    return '<div class="ce-yv-row" style="' + pad + '">' + _sfYvCtrl(v, false) + '</div>';
+  }
+  // 递归找目标字段: 深度大的(示例重点)优先
+  function _sfFindKey(obj, key, depth) {
+    if (!obj || typeof obj !== 'object') return null;
+    var found = null;
+    Object.keys(obj).forEach(function (k) {
+      var v = obj[k];
+      var cur = (k === key) ? { val: v, ctx: obj, depth: depth } : null;
+      if (v !== null && typeof v === 'object') {
+        var sub = _sfFindKey(v, key, depth + 1);
+        if (sub && (!found || sub.depth > found.depth)) found = sub;
+      }
+      if (cur && (!found || cur.depth > found.depth)) found = cur;
+    });
+    return found;
+  }
+  // 去掉示例里的集合/条目容器 (items: → 条目名 → 配置结构)
+  function _sfUnwrapSample(obj) {
+    var o = obj;
+    for (var i = 0; i < 3; i++) {
+      if (o === null || typeof o !== 'object' || Array.isArray(o)) break;
+      var keys = Object.keys(o);
+      if (keys.length !== 1) break;
+      if (SECTION_KEYS.indexOf(keys[0]) !== -1 || keys[0].indexOf(':') !== -1) o = o[keys[0]];
+      else break;
+    }
+    return o;
+  }
+  // 目标字段按 schema 类型分情况渲染 (与编辑器控件一致, 新手可对照):
+  // 列表→每行一个控件 / union→下拉模拟 / 对象→字段组 / 布尔→勾选框 / 其余→文本框; 兄弟标量压缩为描述
+  function _sfTargetHtml(def, val, ctx, ind) {
+    var t = def.type || 'text';
+    var pad = 'padding-left:' + (ind * 18) + 'px';
+    var desc = '';
+    if (ctx && typeof ctx === 'object') {
+      var sibs = [];
+      Object.keys(ctx).forEach(function (k) {
+        if (k === def.key) return;
+        var sv = ctx[k];
+        if (sv !== null && typeof sv !== 'object') sibs.push(k + _t('craftengine.yvOf') + _sfYvPlain(sv));
+      });
+      if (sibs.length) desc = '（' + sibs.join('、') + '）';
+    }
+    if (t === 'listOf' || t === 'lines' || t === 'linesScalar' || Array.isArray(val)) {
+      var arr = Array.isArray(val) ? val : [];
+      var rows = '';
+      for (var i = 0; i < arr.length; i++) {
+        var item = arr[i];
+        if (item !== null && typeof item === 'object') rows += _sfYvHtml(item, ind, true);
+        else rows += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">-</span> ' + _sfYvCtrl(item, false) + '</div>';
+      }
+      if (!rows) rows = '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-type">' + _escHtml(_t('craftengine.yvList')) + '</span></div>';
+      return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') + '<div class="ce-yv-group">' + rows + '</div>';
+    }
+    if (t === 'union') {
+      var cur = _sfUnionCurrent(def, val);
+      var curLabel = cur && cur.def ? _labelOf(cur.def) : _t('craftengine.unionEmpty');
+      var body = '';
+      var pad2 = 'padding-left:' + ((ind + 1) * 18) + 'px';
+      if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+        body = '<div class="ce-yv-row" style="' + pad2 + '"><span class="ce-yv-type">' + _escHtml(_t('craftengine.yvObject')) + '</span></div>' + _sfYvHtml(val, ind + 1, false);
+      } else if (typeof val === 'string' && val !== '') {
+        body = '<div class="ce-yv-row" style="' + pad2 + '">' + _sfYvCtrl(val, false) + '</div>';
+      }
+      return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') +
+        '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-ctrl ce-yv-select">' + _escHtml(curLabel) + '<span class="ce-yv-sel-arrow">▾</span></span></div>' + body;
+    }
+    if (t === 'object') {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') + _sfYvHtml(val, ind + 1, false);
+      }
+    }
+    if (t === 'bool') {
+      return '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-ctrl ce-yv-boolctrl' + (val ? ' is-on' : '') + '">' + (val ? '☑' : '☐') + ' ' + (val ? 'true' : 'false') + '</span></div>';
+    }
+    return '<div class="ce-yv-row" style="' + pad + '">' + _sfYvCtrl(val, false) + '</div>';
+  }
+  function _sfYamlTreeHtml(yamlText, def) {
+    var obj;
+    try { obj = YAML.load(yamlText); } catch (e) { return ''; }
+    if (obj === null || obj === undefined || typeof obj !== 'object') return '';
+    var root = _sfUnwrapSample(obj);
+    var tgt = (def && def.key) ? _sfFindKey(root, def.key, 0) : null;
+    if (tgt) {
+      return '<div class="ce-yv">' + _sfTargetHtml(def, tgt.val, tgt.ctx, 0) + '</div>';
+    }
+    return '<div class="ce-yv">' + _sfYvHtml(root, 0, false) + '</div>';
+  }
+  // tooltip 全文: ```yaml 块用编辑器方式结构, 其余走 RichTooltip.md; 解析失败回退原文代码块
+  function _sfTipEditorHtml(txt, def) {
+    if (!txt) return '';
+    if (typeof RichTooltip === 'undefined' || !RichTooltip.md) return '<span class="rt-strong">' + _escHtml(txt) + '</span>';
+    var parts = _sfSplitTip(txt);
+    var html = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].yaml) {
+        var tree = _sfYamlTreeHtml(parts[i].text, def);
+        html += tree || ('<pre class="rt-pre"><code>' + _escHtml(parts[i].text) + '</code></pre>');
+      } else {
+        html += RichTooltip.md(parts[i].text);
+      }
+    }
+    return html;
+  }
+  function _sfHintPopupEsc(e) {
+    if (e.key === 'Escape') _sfCloseHintPopup();
+  }
+  function _sfCloseHintPopup() {
+    var ov = document.getElementById('ce-hint-overlay');
+    if (ov) ov.remove();
+    document.removeEventListener('keydown', _sfHintPopupEsc, true);
+  }
+  function _sfOpenHintPopup(icon) {
+    if (typeof RichTooltip === 'undefined') return;
+    if (typeof RichTooltip.hide === 'function') RichTooltip.hide();
+    _sound('click');
+    var txt = icon.getAttribute('data-sf-hint');
+    if (!txt) return;
+    var def = _sfHintDefs[icon.getAttribute('data-sf-path') || ''];
+    var editorHtml = _sfTipEditorHtml(txt, def);
+    var wikiHtml = RichTooltip.md(txt);
+    _sfCloseHintPopup();
+    var ov = document.createElement('div');
+    ov.id = 'ce-hint-overlay';
+    ov.className = 'ce-hint-overlay';
+    ov.innerHTML =
+      '<div class="ce-hint-popup">' +
+        '<div class="ce-hint-head">' +
+          '<span class="ce-hint-title">' + _escHtml(_t('craftengine.hintDetail')) + '</span>' +
+          '<span class="ce-hint-modes">' +
+            '<button type="button" class="cv-btn cv-btn-sm ce-hint-mode-btn is-active" data-ce-hint-mode="editor">' + _escHtml(_t('craftengine.hintModeEditor')) + '</button>' +
+            '<button type="button" class="cv-btn cv-btn-sm ce-hint-mode-btn" data-ce-hint-mode="wiki">' + _escHtml(_t('craftengine.hintModeWiki')) + '</button>' +
+          '</span>' +
+          '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger ce-hint-close" title="Esc">✕</button>' +
+        '</div>' +
+        '<div class="ce-hint-body">' +
+          '<div class="ce-hint-content" data-ce-hint-view="editor">' + editorHtml + '</div>' +
+          '<div class="ce-hint-content" data-ce-hint-view="wiki" style="display:none">' + wikiHtml + '</div>' +
+        '</div>' +
+      '</div>';
+    ov.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t === ov) { _sfCloseHintPopup(); return; }
+      var c = t.closest ? t.closest('.ce-hint-close') : null;
+      if (c) { _sfCloseHintPopup(); return; }
+      var mb = t.closest ? t.closest('[data-ce-hint-mode]') : null;
+      if (!mb) return;
+      var view = mb.getAttribute('data-ce-hint-mode');
+      var v0 = ov.querySelector('[data-ce-hint-view="editor"]');
+      var v1 = ov.querySelector('[data-ce-hint-view="wiki"]');
+      if (view === 'wiki') { v0.style.display = 'none'; v1.style.display = ''; }
+      else { v0.style.display = ''; v1.style.display = 'none'; }
+      var btns = ov.querySelectorAll('.ce-hint-mode-btn');
+      for (var b = 0; b < btns.length; b++) btns[b].classList.toggle('is-active', btns[b] === mb);
+      _sound('click');
+    });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', _sfHintPopupEsc, true);
+  }
 
   // ---- 容器 (list/map/union/object) ----
   function _sfItemHtml(def, path, value, opts) {
@@ -1607,23 +1863,30 @@
           if (curShape.key !== '__scalar' && path) _sfSetScalar(entry, path);
         } else if (curShape.key !== v) {
           var td = _sfTypesOf(rec.def)[v];
-          var defVal = {};
-          if (td && td.widget) {
-            // 形状切换时尽量保留数据:
-            // 目标为 list/lines 且当前为对象/标量 → 包裹为 [cur]
-            // 目标为对象值 widget 且当前为单元素数组 → 解包 cur[0]
-            var wt = td.widget.type;
-            var listLike = wt === 'listOf' || wt === 'lines' || wt === 'linesScalar';
-            var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model';
-            if (listLike && cur !== undefined && cur !== null) {
-              defVal = Array.isArray(cur) ? cur : [cur];
-            } else if (objLike && Array.isArray(cur) && cur.length === 1) {
-              defVal = cur[0];
-            } else {
-              defVal = _sfDefaultOf(td.widget);
+          var wt2 = td && td.widget ? td.widget.type : '';
+          var scalarLike = wt2 === 'text' || wt2 === 'textarea' || wt2 === 'miniText' || wt2 === 'bool' || wt2 === 'linesScalar';
+          if (scalarLike) {
+            // 简单值类型: 写入空串占位 (_applyValue 会删除空值导致 select 弹回, remove_lore 正则等)
+            if (path) _sfSetScalar(entry, path);
+          } else {
+            var defVal = {};
+            if (td && td.widget) {
+              // 形状切换时尽量保留数据:
+              // 目标为 list/lines 且当前为对象/标量 → 包裹为 [cur]
+              // 目标为对象值 widget 且当前为单元素数组 → 解包 cur[0]
+              var wt = td.widget.type;
+              var listLike = wt === 'listOf' || wt === 'lines' || wt === 'linesScalar';
+              var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model';
+              if (listLike && cur !== undefined && cur !== null) {
+                defVal = Array.isArray(cur) ? cur : [cur];
+              } else if (objLike && Array.isArray(cur) && cur.length === 1) {
+                defVal = cur[0];
+              } else {
+                defVal = _sfDefaultOf(td.widget);
+              }
             }
+            if (path) _applyValue(entry, path, defVal, parsed, section);
           }
-          if (path) _applyValue(entry, path, defVal, parsed, section);
         }
         _sfRerender(uid, containerEl);
         if (ROOT.__keAutoSync) syncToSource(parsed);

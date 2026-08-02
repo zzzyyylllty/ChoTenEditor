@@ -872,6 +872,13 @@ chemdah:
 craftengine:
   premiumHint: "此功能为CraftEngine插件的高级版专属功能 - 如果您正在使用社区版，此配置可能没有作用。"
   versionHint: "此功能有版本限制: {versions}"
+  hintDetail: "提示详情"
+  hintModeEditor: "编辑器方式"
+  hintModeWiki: "Wiki 原文"
+  yvObject: "对象"
+  yvList: "列表"
+  yvEmpty: "空"
+  yvOf: "为"
   syncedToSource: "已同步到源码"
   fieldEmpty: "（空）"
   type_config: "插件配置"

@@ -872,6 +872,13 @@ chemdah:
 craftengine:
   premiumHint: "This feature is exclusive to the premium version of the CraftEngine plugin - if you are using the community edition, this config may have no effect."
   versionHint: "This feature has a version requirement: {versions}"
+  hintDetail: "Hint Details"
+  hintModeEditor: "Editor View"
+  hintModeWiki: "Wiki Source"
+  yvObject: "Object"
+  yvList: "List"
+  yvEmpty: "empty"
+  yvOf: " is "
   syncedToSource: "Synced to source"
   fieldEmpty: "(empty)"
   type_config: "Plugin Config"

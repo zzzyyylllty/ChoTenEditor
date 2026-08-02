@@ -3484,6 +3484,164 @@ textarea.ce-input {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- 提示详情弹窗 (点击 ℹ 图标) ---- */
+.ce-hint-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rt-tooltip-in 0.12s ease;
+}
+.ce-hint-popup {
+  width: min(720px, 92vw);
+  max-height: 82vh;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.ce-hint-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+.ce-hint-title {
+  font-size: 13px;
+  font-weight: 700;
+  flex: 1;
+}
+.ce-hint-modes {
+  display: flex;
+  gap: 6px;
+}
+.ce-hint-mode-btn {
+  opacity: 0.65;
+}
+.ce-hint-mode-btn.is-active {
+  opacity: 1;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.ce-hint-body {
+  overflow: auto;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.ce-hint-body pre.rt-pre {
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 9px;
+  margin: 6px 0;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+.ce-hint-body pre.rt-pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--color-text-secondary);
+  white-space: pre;
+  word-break: normal;
+  display: block;
+}
+/* YAML 编辑器方式结构: ```yaml 块 → 与编辑器控件一致的展示 (列表每行一个/下拉/勾选/输入框) */
+.ce-yv {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+}
+.ce-yv-desc {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 2px 0 4px;
+}
+.ce-yv-group {
+  border-left: 2px solid var(--color-border-light);
+  padding-left: 10px;
+  margin-left: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ce-yv-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.ce-yv-key {
+  color: #79c0ff;
+  white-space: nowrap;
+}
+.ce-yv-arrow {
+  color: var(--color-text-tertiary);
+}
+.ce-yv-type {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+/* 控件模拟: 输入框/数字框/下拉/勾选/空 */
+.ce-yv-ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.ce-yv-textctrl {
+  color: #a5d6ff;
+}
+.ce-yv-numctrl {
+  color: #79c0ff;
+}
+.ce-yv-boolctrl {
+  color: var(--color-text-tertiary);
+}
+.ce-yv-boolctrl.is-on {
+  color: #7ee787;
+}
+.ce-yv-select {
+  color: var(--color-text-primary);
+  padding-right: 6px;
+}
+.ce-yv-sel-arrow {
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+}
+.ce-yv-nullctrl {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  background: transparent;
+  border-color: transparent;
+  padding: 1px 2px;
+}
+
 .ce-sf-input {
   width: 100%;
   box-sizing: border-box;
