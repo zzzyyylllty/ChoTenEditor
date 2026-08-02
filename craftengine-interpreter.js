@@ -871,7 +871,7 @@
   function _sfWrap(def, html) {
     var label = _labelOf(def);
     var hint = def.hint ? '<div class="ce-sf-hint">' + _escHtml(_labelOf(def.hint)) + '</div>' : '';
-    if (_sfIsStack(def.type)) {
+    if (_sfIsStack(def.type) || def.layout === 'stack') {
       return '<div class="ce-stack"><label class="ce-field-label">' + _escHtml(label) + '</label>' + hint + html + '</div>';
     }
     return '<div class="ce-row"><label class="ce-field-label" title="' + _escHtml(label) + '">' + _escHtml(label) + '</label>' +
@@ -1108,6 +1108,7 @@
         addSel += '<option value="' + _escHtml(ck) + '">' + _escHtml(_labelOf(comps[ck]) || ck) + '</option>';
       }
     }
+    addSel += '<option value="__custom__">' + _escHtml(_t('craftengine.componentCustom')) + '</option>';
     addSel += '</select>';
     html += '<div class="ce-sf-map-add">' + addSel + '</div>';
     return html + '</div>';
@@ -1306,12 +1307,19 @@
       var ckey = el.value;
       if (!ckey) return;
       var comps = _sfCompsOf(rec.def);
-      var wd = comps[ckey];
       var cobj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
       if (!cobj || typeof cobj !== 'object' || Array.isArray(cobj)) {
         cobj = {};
         if (rec.path) _setNested(entry.data, rec.path, cobj);
       }
+      if (ckey === '__custom__') {
+        // 自定义组件: 自动生成不冲突的键, 值用 kv 编辑器 (支持嵌套)
+        var cbn = 'custom';
+        var cni = 1;
+        while (cobj[cbn + (cni === 1 ? '' : '_' + cni)] !== undefined) cni++;
+        ckey = cbn + (cni === 1 ? '' : '_' + cni);
+      }
+      var wd = comps[ckey];
       cobj[ckey] = wd ? _sfDefaultOf(wd) : {};
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);

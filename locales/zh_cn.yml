@@ -797,6 +797,7 @@ craftengine:
   unionClear: "清除"
   customValue: "自定义值…"
   componentAdd: "添加组件…"
+  componentCustom: "自定义 (键值对)"
   componentsEmpty: "此条目还没有 data 组件 — 从下方下拉框选择添加"
   modelSimplified: "简化模型"
   modelTree: "模型树"
