@@ -31,7 +31,22 @@
     tip.innerHTML = html;
     tip.style.setProperty('--rt-accent', opts.accent || '');
     tip.style.display = 'block';
+    // 阴影取背景反色: 深背景→浅阴影, 浅背景→深阴影, 黑/白底上文字都清晰
+    tip.style.setProperty('--rt-shadow', calcShadow(tip));
     posTip(e);
+  }
+
+  // 计算与背景相反的颜色作文字阴影 (半透明, 若背景不可解析则回退默认)
+  function calcShadow(tip) {
+    var bg = '';
+    try { bg = getComputedStyle(tip).backgroundColor || ''; } catch (err) { bg = ''; }
+    var m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(bg);
+    if (!m) return 'rgba(0,0,0,0.45)';
+    var inv = [255 - (+m[1]), 255 - (+m[2]), 255 - (+m[3])];
+    // 反色接近中灰 (无对比) 或接近原背景时按亮度补正, 保证方向正确
+    var lum = (0.299 * inv[0] + 0.587 * inv[1] + 0.114 * inv[2]) / 255;
+    var a = (lum > 0.65 || lum < 0.35) ? 0.55 : 0.8;
+    return 'rgba(' + inv[0] + ',' + inv[1] + ',' + inv[2] + ',' + a + ')';
   }
 
   function hide() {
