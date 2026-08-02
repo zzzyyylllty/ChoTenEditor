@@ -265,6 +265,42 @@
                         </div>
                     </section>
 
+                    <!-- 复选框设置 -->
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionCheckbox">☑️ 复选框设置</h2>
+                        <div class="color-group">
+                            <h3 data-i18n="settings.checkboxColorTitle">复选框颜色（默认随主题色变化）</h3>
+                            <div class="color-items">
+                                <div class="color-item">
+                                    <label for="color-checkbox-off" data-i18n="settings.checkboxColorOff">未选中颜色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-checkbox-off" class="color-input" value="#ff1744">
+                                        <span class="color-value" id="color-checkbox-off-value">#FF1744</span>
+                                    </div>
+                                </div>
+                                <div class="color-item">
+                                    <label for="color-checkbox-on" data-i18n="settings.checkboxColorOn">选中颜色</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="color-checkbox-on" class="color-input" value="#00c853">
+                                        <span class="color-value" id="color-checkbox-on-value">#00C853</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="checkbox-mark-on">
+                                <span data-i18n="settings.checkboxMarkOn">选中时显示 √ 标记</span>
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="checkbox-mark-off">
+                                <span data-i18n="settings.checkboxMarkOff">未选中时显示 X 标记</span>
+                            </label>
+                        </div>
+                    </section>
+
                     <!-- 语法高亮颜色 -->
                     <section class="settings-section">
                         <h2 data-i18n="settings.sectionSyntax">📝 语法高亮颜色</h2>

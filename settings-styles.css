@@ -322,14 +322,7 @@ body.embedded .title-bar {
   color: var(--color-text-primary);
 }
 
-.checkbox-row input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  margin: 0;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-  flex-shrink: 0;
-}
+/* 复选框统一走 styles.css 全局自定义样式 (22px 两态色) */
 
 .setting-hint {
   font-size: 11px;

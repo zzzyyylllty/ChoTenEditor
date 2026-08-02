@@ -1054,7 +1054,7 @@
   ];
   // data 六类 = 五类 + 客户端数据 (bind 根级 client_bound_data, components 直接添加 + 条件块)
   var ITEM_DATA_TABS_SIX = ITEM_DATA_TABS_FIVE.concat([
-    { key: 'client', label: l('客户端数据', 'Client Data'), bind: 'client_bound_data', widget: { type: 'components', components: ITEM_CLIENT_TYPES_REF, label: l('客户端数据', 'Client Data') } },
+    { key: 'client', label: l('客户端数据', 'Client Data'), bind: 'client_bound_data', widget: { type: 'components', components: ITEM_CLIENT_TYPES_REF, conditionKey: 'conditional', label: l('客户端数据', 'Client Data') } },
   ]);
   var CONDITIONAL_FIELDS = [
     f('data', '数据', 'Data', 'tabs', { tabs: ITEM_DATA_TABS_FIVE, label: l('数据', 'Data'), hint: l('条件满足时应用的数据', 'Data applied when conditions pass') }),

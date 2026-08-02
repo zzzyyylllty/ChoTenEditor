@@ -449,14 +449,14 @@ check(dH.includes('data-sf-path="data.pdc"'), '存储面板: pdc 字段');
 check(dH.includes('data-sf-path="data.external"') && dH.includes('data-sf-path="data.external.plugin"'), '外部面板: external 对象 (plugin/id)');
 check(dH.includes('data-sf-path="data.components"'), '数据组件面板: components 字段');
 check(dH.includes('data-sf-path="client_bound_data"'), '客户端数据面板: components 绑定 client_bound_data');
-// 客户端数据: comp-add 添加条件块 conditional
+// v1.0.30: 客户端数据 = 组件列表 + 条件分区 (conditional 不进 comp-add, 独立 cond-add)
 const dCompUid = dH.match(/data-sf-action="comp-add" data-sf-uid="([^"]+)"/);
 check(!!dCompUid, '客户端数据 comp-add uid 可定位');
+check(!dH.includes('<option value="conditional">'), 'comp-add 下拉排除 conditional 键');
+check(dH.includes('data-sf-action="cond-add"'), '无条件时渲染 cond-add 按钮');
 if (dCompUid) {
-  dR.listeners['change'][0]({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': dCompUid[1] }, 'conditional') });
-  check(dEntry.data.client_bound_data && dEntry.data.client_bound_data.conditional && typeof dEntry.data.client_bound_data.conditional === 'object' && !Array.isArray(dEntry.data.client_bound_data.conditional), '写回: comp-add conditional 条件块');
-  dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'client_bound_data.conditional.data.item_name', 'data-sf-type': 'textarea' }, 'Test Name') });
-  check(dEntry.data.client_bound_data.conditional.data && dEntry.data.client_bound_data.conditional.data.item_name === 'Test Name', '写回: 条件块内嵌套 data.item_name');
+  dR.listeners['change'][0]({ target: mk({ 'data-sf-action': 'cond-add', 'data-sf-uid': dCompUid[1] }, null) });
+  check(dEntry.data.client_bound_data && dEntry.data.client_bound_data.conditional && typeof dEntry.data.client_bound_data.conditional === 'object' && !Array.isArray(dEntry.data.client_bound_data.conditional), '写回: cond-add 生成 conditional 对象');
 }
 
 // 条件块渲染: 已含 conditional 的 yaml → data 嵌套五类子选项卡 + conditions 列表 + 追加写回
@@ -472,19 +472,10 @@ items:
 const cbR = renderCap(condBlkYaml);
 const cbH = cbR.el.innerHTML;
 const cbEntry = cbR.el._ceParsed.sections[0].entries[0];
-check(cbH.includes('data-sf-kind="tabs"') && cbH.includes('data-sf-path="client_bound_data.conditional.data"'), '条件块 data 嵌套五类子选项卡');
-check(cbH.includes('data-sf-kind="list"') && cbH.includes('data-sf-path="client_bound_data.conditional.conditions"'), '条件块 conditions 列表渲染');
-check(cbH.includes('data-sf-action="union-set"') && cbH.includes('data-sf-path="client_bound_data.conditional.conditions.0"'), '条件块 conditions 条目 union 渲染');
-const cbListUidRe = /data-sf-kind="list" data-sf-path="client_bound_data\.conditional\.conditions"[^>]*data-sf-uid="([^"]+)"/;
-const cbListUid = cbH.match(cbListUidRe);
-check(!!cbListUid, '条件块 conditions list-add 按钮');
-if (cbListUid) {
-  const cbPick = mk({ 'data-sf-list-pick': '1' }, 'permission');
-  const cbAddBtn = mk({ 'data-sf-action': 'list-add', 'data-sf-uid': cbListUid[1] }, null);
-  cbAddBtn.closest = () => ({ querySelector: () => cbPick });
-  cbR.listeners['change'][0]({ target: cbAddBtn });
-  check(cbEntry.data.client_bound_data.conditional.conditions.length === 2 && cbEntry.data.client_bound_data.conditional.conditions[1].type === 'permission', '写回: 条件块 list-add 追加条件');
-}
+// v1.0.30: conditional 弹窗编辑 — 条件区渲染摘要 + 编辑按钮, 内容不再行内
+check(cbH.includes('data-sf-action="popup-edit"') && cbH.includes('data-sf-path="client_bound_data.conditional"'), '条件块: 弹窗编辑按钮 (popup-edit)');
+check(cbH.includes('conditions: 1 项'), '条件块: 弹窗摘要含 conditions 计数');
+check(!cbH.includes('client_bound_data.conditional.conditions.0'), '条件块: 内容不再行内渲染 (弹窗内)');
 
 // v1.0.28: MiniMessage 快捷按钮 (mini:true → .ce-sf-mini-wrap + ✏️按钮)
 const miniYaml = `
@@ -509,7 +500,7 @@ const miR = renderCap(miniYaml);
 const miH = miR.el.innerHTML;
 const miEntry = miR.el._ceParsed.sections[0].entries[0];
 const miniBtns = (miH.match(/data-sf-action="mini-edit"/g) || []).length;
-check(miniBtns >= 5, 'mini 按钮数量 >= 5 (item_name/custom_name/lore/客户端/条件块)');
+check(miniBtns >= 4, 'mini 按钮数量 >= 4 (item_name/custom_name/lore 简单/高级行)');
 check(miH.includes('class="ce-sf-mini-wrap"'), 'mini 输入框有 ce-sf-mini-wrap 包裹');
 function miniOf(path) {
   // 匹配 text input（union 的 select 也携带相同 data-sf-path 且先出现，需排除）
@@ -520,8 +511,8 @@ function miniOf(path) {
 check(miniOf('data.item_name') && miniOf('data.custom_name'), '外观面板: item_name/custom_name 带 mini 按钮');
 check(miniOf('data.lore.0'), 'lore 简单行 (union scalar) 带 mini 按钮');
 check(miniOf('data.lore.1.content'), 'lore 高级行 content 带 mini 按钮');
-check(miniOf('client_bound_data.item_name'), '客户端数据 item_name 带 mini 按钮');
-check(miniOf('client_bound_data.conditional.data.item_name'), '条件块内 data.item_name 带 mini 按钮');
+check(miH.includes('data-sf-action="popup-edit"') && miH.includes('data-sf-path="client_bound_data.item_name"'), '客户端数据: item_name 组件行弹窗编辑按钮');
+check(miH.includes('data-sf-action="popup-edit"') && miH.includes('data-sf-path="client_bound_data.conditional"'), '客户端数据: 条件块弹窗编辑按钮');
 // mini-edit 点击: 沙箱无 MiniMessageEditor → 静默跳过, 不改数据
 const mmBtn = mk({ 'data-sf-action': 'mini-edit' }, null);
 mmBtn.closest = () => mmBtn;

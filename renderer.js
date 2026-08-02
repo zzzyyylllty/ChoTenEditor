@@ -2029,6 +2029,10 @@ function applyStoredConfig() {
       });
     }
 
+    // 重新应用复选框标记开关 (body class: cb-mark-on 选中√ / cb-mark-off 未选中X)
+    document.body.classList.toggle('cb-mark-on', config.checkboxMarkOn === true);
+    document.body.classList.toggle('cb-mark-off', config.checkboxMarkOff === true);
+
     // 重新应用背景图片到 body
     const body = document.body;
     if (config.background && config.background.filename) {

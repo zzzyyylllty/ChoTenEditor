@@ -1106,28 +1106,47 @@
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'components', def, opts);
     var obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     var comps = _sfCompsOf(def);
-    var keys = Object.keys(obj);
+    var condKey = def.conditionKey;
+    var keys = [];
+    Object.keys(obj).forEach(function (k) { if (k !== condKey) keys.push(k); });
     var html = '<div class="ce-sf-map ce-sf-components" data-sf-kind="components" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
+    // 组件列表: 行 = 名称 + 编辑弹窗按钮 + 删除按钮
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var base = String(k).split('#')[0];
       var wd = comps[base];
-      var body = wd ? _sfItemHtml(wd.widget || wd, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList })
-        : '<div class="ce-stack">' + _sfKvTextarea({ type: 'kv' }, _sfKeyPath(path, k), obj[k]) + '</div>';
+      var name = wd ? (_labelOf(wd) || base) : k;
+      var bodyDef = wd ? (wd.widget || wd) : { type: 'kv', label: k };
+      var puid = _sfUidAlloc(_sfKeyPath(path, k), 'popup', bodyDef, opts);
       html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<div class="ce-sf-comp-head">' +
-        '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">' +
+        '<span class="ce-sf-comp-name" title="' + _escHtml(k) + '">' + _escHtml(name) + '</span>' +
+        '<button class="cv-btn cv-btn-sm ce-sf-popup-btn" data-sf-action="popup-edit" data-sf-path="' + _escHtml(_sfKeyPath(path, k)) + '" data-sf-uid="' + puid + '">' + _escHtml(_t('craftengine.popupEdit')) + '</button>' +
         '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '" title="✕">✕</button>' +
-        '</div>' +
-        '<div class="ce-sf-map-val">' + body + '</div>' +
-        '</div>';
+        '</div></div>';
     }
     if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.componentsEmpty')) + '</div>';
+    // 条件部分: conditional 独立成区, 弹窗编辑 data + conditions
+    if (condKey && comps[condKey]) {
+      var condWd = comps[condKey].widget || comps[condKey];
+      var condVal = obj[condKey];
+      var hasCond = condVal !== undefined && condVal !== null && typeof condVal === 'object' && !Array.isArray(condVal);
+      html += '<div class="ce-sf-cond-block">' +
+        '<div class="ce-sf-cond-title">' + _escHtml(_t('craftengine.componentConditionTitle', '条件')) + '</div>';
+      if (hasCond) {
+        var cuid = _sfUidAlloc(_sfKeyPath(path, condKey), 'popup', condWd, opts);
+        html += '<div class="ce-sf-cond-row">' + _sfPopupHtml(condWd, _sfKeyPath(path, condKey), condVal, { uid: cuid }) + '</div>';
+      } else {
+        html += '<button type="button" class="cv-btn cv-btn-sm ce-sf-cond-add" data-sf-action="cond-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.condAdd', '添加条件')) + '</button>';
+      }
+      html += '</div>';
+    }
     var addSel = '<select class="ce-input ce-sf-pick" data-sf-action="comp-add" data-sf-uid="' + uid + '">' +
       '<option value="">-- ' + _escHtml(_t('craftengine.componentAdd')) + ' --</option>';
     var cks = Object.keys(comps);
     for (var c = 0; c < cks.length; c++) {
       var ck = cks[c];
+      if (ck === condKey) continue;
       if (obj[ck] === undefined) {
         addSel += '<option value="' + _escHtml(ck) + '">' + _escHtml(_labelOf(comps[ck]) || ck) + '</option>';
       }
@@ -1341,7 +1360,7 @@
     bodyEl.className = 'ce-popup-body';
     bodyEl._ceParsed = { sections: [{ entries: [{ data: { __popup__: copy }, _rawOrder: ['__popup__'] }] }], _isPopup: true };
     bodyEl._ceUi = { section: 0, entry: 0 };
-    bodyEl.innerHTML = _sfItemHtml(_sfPopupContent(rec.def), '__popup__', copy, {});
+    bodyEl.innerHTML = _sfItemHtml(_sfPopupContent(rec.def) || rec.def, '__popup__', copy, {});
     _bindEvents(bodyEl);
 
     var modal = document.createElement('div');
@@ -1603,6 +1622,7 @@
       if (!rec || rec.kind !== 'components') return;
       var ckey = el.value;
       if (!ckey) return;
+      if (ckey === rec.def.conditionKey) return; // 条件走 cond-add, 不占组件槽
       var comps = _sfCompsOf(rec.def);
       var cobj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
       if (!cobj || typeof cobj !== 'object' || Array.isArray(cobj)) {
@@ -1618,6 +1638,22 @@
       }
       var wd = comps[ckey];
       cobj[ckey] = wd ? _sfDefaultOf(wd.widget || wd) : {};
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+      return;
+    }
+    if (action === 'cond-add') {
+      if (!rec || rec.kind !== 'components') return;
+      var cdk = rec.def.conditionKey;
+      if (!cdk) return;
+      var cdobj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
+      if (!cdobj || typeof cdobj !== 'object' || Array.isArray(cdobj)) {
+        cdobj = {};
+        if (rec.path) _setNested(entry.data, rec.path, cdobj);
+      }
+      if (cdobj[cdk] !== undefined) return;
+      var cdWd = _sfCompsOf(rec.def)[cdk];
+      cdobj[cdk] = cdWd ? _sfDefaultOf(cdWd.widget || cdWd) : {};
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
       return;

@@ -135,6 +135,78 @@ body[data-theme="light"] {
 }
 
 /* ============================================
+   自定义复选框（全局统一）:
+   未选中=主题红, 选中=主题绿, 随主题色变化;
+   标记 X/√ 由设置里的 body class (cb-mark-on/off) 控制, 默认不显示
+   ============================================ */
+:root {
+  --color-checkbox-off: var(--color-error);
+  --color-checkbox-on: var(--color-success);
+  --cb-mark-color: #ffffff;
+}
+body[data-theme="light"] {
+  /* 浅色主题: 语义色加深 (与 --color-error 浅色加深一致) */
+  --color-checkbox-off: var(--color-error);
+  --color-checkbox-on: #107c10;
+}
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  vertical-align: -5px;
+  flex-shrink: 0;
+  border: 2px solid var(--color-checkbox-off);
+  border-radius: 5px;
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+input[type="checkbox"]:hover {
+  filter: brightness(1.15);
+}
+input[type="checkbox"]:checked {
+  background: var(--color-checkbox-on);
+  border-color: var(--color-checkbox-on);
+}
+/* 深色主题: 选中绿稍微调暗一点 (亮绿不刺眼, 但不要太暗) */
+body[data-theme="dark"] input[type="checkbox"]:checked {
+  filter: brightness(0.9);
+}
+/* 标记: 选中 √ / 未选中 X (设置-个性化开关, 默认都不显示) */
+body.cb-mark-on input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cb-mark-color);
+}
+body.cb-mark-off input[type="checkbox"]:not(:checked)::before {
+  content: '✕';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-checkbox-off);
+}
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
    基础样式
    ============================================ */
 
@@ -2865,7 +2937,6 @@ body {
   user-select: none;
 }
 .ce-autosync input {
-  accent-color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -3210,11 +3281,7 @@ body {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px rgba(0, 152, 255, 0.15);
 }
-input.ce-input[type="checkbox"] {
-  width: auto;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
+/* 复选框统一走全局自定义样式 (见主题变量区) */
 select.ce-input {
   cursor: pointer;
   width: auto;
@@ -3369,11 +3436,7 @@ textarea.ce-input {
   width: 100%;
   box-sizing: border-box;
 }
-.ce-sf-input[type="checkbox"] {
-  width: auto;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
+/* 复选框统一走全局自定义样式 (见主题变量区) */
 select.ce-sf-input {
   width: auto;
   min-width: 180px;
@@ -3478,18 +3541,41 @@ textarea.ce-sf-input {
 }
 .ce-sf-comp-head {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 6px;
   align-items: center;
   padding: 4px 6px;
-  border-bottom: 1px dashed var(--color-border);
   background: var(--color-bg-secondary, rgba(128, 128, 128, 0.06));
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: var(--radius-sm);
 }
-.ce-sf-comp-head .ce-sf-map-key {
-  width: auto;
+.ce-sf-comp-name {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.ce-sf-comp-row > .ce-sf-map-val {
+/* 条件部分 (client data: conditional 独立成区) */
+.ce-sf-cond-block {
+  margin-top: 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  background: var(--color-bg-secondary, rgba(128, 128, 128, 0.04));
+}
+.ce-sf-cond-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+.ce-sf-cond-add {
+  width: 100%;
+}
+.ce-sf-cond-row .ce-sf-popup {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 6px 8px;
 }
 

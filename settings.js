@@ -39,6 +39,8 @@ let editorLineWrapping;
 let editorTheme;
 let editorAutoSync;
 let editorDevtools;
+let checkboxMarkOn;
+let checkboxMarkOff;
 let itemKeyStyle;
 let uiFont;
 let editorFontFamily;
@@ -107,6 +109,8 @@ const defaultConfig = {
     syntaxOperator: '#d4d4d4',
     syntaxPunctuation: '#d4d4d4',
     syntaxProperty: '#9cdcfe',
+    checkboxOff: '#ff1744',
+    checkboxOn: '#00c853',
   },
   editor: {
     fontSize: '14',
@@ -117,6 +121,8 @@ const defaultConfig = {
     fontFamily: '',
   },
   autoSync: false,
+  checkboxMarkOn: false,
+  checkboxMarkOff: false,
   blockFontSize: '11',
   categoryColors: {
     '实体操作': '#c06262',
@@ -331,6 +337,8 @@ function initializeDOMElements() {
     'syntax-operator': document.getElementById('color-syntax-operator'),
     'syntax-punctuation': document.getElementById('color-syntax-punctuation'),
     'syntax-property': document.getElementById('color-syntax-property'),
+    checkboxOff: document.getElementById('color-checkbox-off'),
+    checkboxOn: document.getElementById('color-checkbox-on'),
   };
 
   // 预设按钮
@@ -378,6 +386,10 @@ function initializeDOMElements() {
 
   // 开发者工具
   editorDevtools = document.getElementById('editor-devtools');
+
+  // 复选框设置
+  checkboxMarkOn = document.getElementById('checkbox-mark-on');
+  checkboxMarkOff = document.getElementById('checkbox-mark-off');
 
   // AI 设置
   aiEndpoint = document.getElementById('ai-endpoint');
@@ -805,6 +817,14 @@ function updateColorInputs() {
   console.log('[SETTINGS] 更新颜色输入，当前主题', themeSelect ? themeSelect.value : 'dark');
 }
 
+// 应用复选框标记显示开关 (body class: cb-mark-on 选中√ / cb-mark-off 未选中X)
+function applyCheckboxMarks(config) {
+  const on = config.checkboxMarkOn === true;
+  const off = config.checkboxMarkOff === true;
+  document.body.classList.toggle('cb-mark-on', on);
+  document.body.classList.toggle('cb-mark-off', off);
+}
+
 // 应用字体（实时预览，读取选择框当前值）
 function applyFonts() {
   var ui = uiFont ? uiFont.value : '';
@@ -1014,6 +1034,8 @@ async function saveSettings() {
     },
     autoSync: editorAutoSync ? editorAutoSync.value === 'true' : defaultConfig.autoSync,
     devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
+    checkboxMarkOn: checkboxMarkOn ? checkboxMarkOn.checked : defaultConfig.checkboxMarkOn,
+    checkboxMarkOff: checkboxMarkOff ? checkboxMarkOff.checked : defaultConfig.checkboxMarkOff,
     itemKeyStyle: itemKeyStyle ? itemKeyStyle.value : defaultConfig.itemKeyStyle,
     prewarm: {
       files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
@@ -1082,6 +1104,7 @@ async function saveSettings() {
   }
 
   localStorage.setItem('editorConfig', JSON.stringify(config));
+  applyCheckboxMarks(config);
   showNotification(I18N.t('settings.saved'), 'success');
 }
 
@@ -1293,6 +1316,9 @@ function loadSettings() {
   if (editorTheme) editorTheme.value = editorConfig.theme;
   if (editorAutoSync) editorAutoSync.value = String(config.autoSync === true);
   if (editorDevtools) editorDevtools.checked = config.devTools === true;
+  if (checkboxMarkOn) checkboxMarkOn.checked = config.checkboxMarkOn === true;
+  if (checkboxMarkOff) checkboxMarkOff.checked = config.checkboxMarkOff === true;
+  applyCheckboxMarks(config);
   if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';
 
   // 启动预热设置
