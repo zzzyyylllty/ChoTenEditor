@@ -1398,8 +1398,14 @@ async function switchEditorMode(visual) {
 
   console.log('[RENDERER] 切换编辑器模式:', visual ? '可视化' : '源代码', 'currentFile=', currentFile, 'dirty=', dirtyTabs[currentFile] ? 'Y' : 'N');
 
+  // 可视化模式下缓冲区的改动均来自"同步到源码"写入, 即最新可视化状态:
+  // 切到源代码模式时直接保留缓冲区, 不再弹"未保存更改"提示, 也不从磁盘重载
+  // (重载会覆盖刚同步的可视化改动), 并自动保存到磁盘, 让未保存标记随写入完成消失。
+  // 源代码模式下的手工编辑仍走保存/放弃确认。
+  var keepBuffer = !visual && isVisualMode && currentFile && dirtyTabs[currentFile];
+
   // 切换模式前处理未保存更改
-  if (currentFile && dirtyTabs[currentFile]) {
+  if (!keepBuffer && currentFile && dirtyTabs[currentFile]) {
     var swResult = await showDirtyConfirmDialog(getFileName(currentFile));
     if (swResult === 'cancel') {
       console.log('[RENDERER] 用户取消模式切换');
@@ -1412,24 +1418,30 @@ async function switchEditorMode(visual) {
 
   // 切换到源代码模式：始终从磁盘重新加载（CodeMirror 在隐藏时 DOM 可能过期）
   if (currentFile && !visual) {
-    console.log('[RENDERER] 源代码模式：从磁盘重新加载:', currentFile);
-    if (_fmMode !== 'remote' && _electronAPI && _electronAPI.readFile) {
-      var reloadResult = await _electronAPI.readFile(currentFile);
-      console.log('[RENDERER] 读取结果:', reloadResult ? 'ok=' + reloadResult.success : 'null');
-      if (reloadResult && reloadResult.success) {
-        var freshContent = reloadResult.content;
-        console.log('[RENDERER] 内容长度:', freshContent ? freshContent.length : 0);
-        _loadingFile = true;
-        codeMirrorEditor.setValue(freshContent);
-        _loadingFile = false;
-        delete dirtyTabs[currentFile];
-        updateTabDirtyIndicator(currentFile);
-        _fileContents[currentFile] = freshContent;
-        updateCodeMirrorMode(currentFile);
+    if (keepBuffer) {
+      // 缓冲区已含"同步到源码"写入的最新内容: 保留并自动保存, 保证切回可视化不丢状态
+      console.log('[RENDERER] 源代码模式：保留缓冲区（可视化同步内容）并自动保存');
+      saveCurrentFile();
+    } else {
+      console.log('[RENDERER] 源代码模式：从磁盘重新加载:', currentFile);
+      if (_fmMode !== 'remote' && _electronAPI && _electronAPI.readFile) {
+        var reloadResult = await _electronAPI.readFile(currentFile);
+        console.log('[RENDERER] 读取结果:', reloadResult ? 'ok=' + reloadResult.success : 'null');
+        if (reloadResult && reloadResult.success) {
+          var freshContent = reloadResult.content;
+          console.log('[RENDERER] 内容长度:', freshContent ? freshContent.length : 0);
+          _loadingFile = true;
+          codeMirrorEditor.setValue(freshContent);
+          _loadingFile = false;
+          delete dirtyTabs[currentFile];
+          updateTabDirtyIndicator(currentFile);
+          _fileContents[currentFile] = freshContent;
+          updateCodeMirrorMode(currentFile);
+        }
+      } else if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
+        console.log('[RENDERER] 远程模式：请求服务器刷新');
+        window.electronAPI.remote.requestFileRead({ filePath: currentFile });
       }
-    } else if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
-      console.log('[RENDERER] 远程模式：请求服务器刷新');
-      window.electronAPI.remote.requestFileRead({ filePath: currentFile });
     }
   } else if (currentFile && visual && _fileContents[currentFile]) {
     // 切换到可视化模式：从缓存加载正确内容
