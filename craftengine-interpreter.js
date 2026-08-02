@@ -925,6 +925,9 @@
   }
   function _sfBindHintIcons() {
     if (typeof RichTooltip === 'undefined') return;
+    // 立即执行时 tooltip.js 可能尚未加载 (index.html 顺序: interpreter < tooltip), render 时兜底
+    if (document.__ceHintIconsBound) return;
+    document.__ceHintIconsBound = 1;
     document.addEventListener('mouseover', function (e) {
       var t = e.target;
       if (!t || t.nodeType !== 1) return;
@@ -3154,6 +3157,7 @@
     if (!containerEl._ceUi) containerEl._ceUi = { section: 0, entry: 0 };
     ROOT._ceRenderFn = function () { _renderFromParsed(containerEl); };
     _bindEvents(containerEl);
+    _sfBindHintIcons();
     _renderFromParsed(containerEl);
     return parsed;
   }
