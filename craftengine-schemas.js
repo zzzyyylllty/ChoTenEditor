@@ -716,6 +716,7 @@
     return (list || []).map(function (spec) {
       var p = spec[0], t = spec[1];
       if (p === 'conditions') return f(p, p, p, 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') });
+      if (p === 'sounds' && t === 'json') return f(p, p, p, 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') });
       if (t === 'number') return f(p, p, p, 'number');
       if (t === 'bool') return f(p, p, p, 'bool');
       if (t === 'lines') return f(p, p, p, 'lines');
@@ -1049,7 +1050,7 @@
   var INLINE_FURNITURE_SETTINGS = [
     f('item', '物品', 'Item', 'text'),
     f('hit_times', '击打次数', 'Hit Times', 'number'),
-    f('sounds', '音效', 'Sounds', 'kv'),
+    f('sounds', '音效', 'Sounds', 'popup', { content: FURNITURE_SOUND_OBJECT, label: l('音效', 'Sounds') }),
     f('adventure_mode_breaking', '冒险模式可破坏', 'Adventure Mode Breaking', 'bool'),
     f('correct_tools', '正确工具', 'Correct Tools', 'lines'),
   ];
@@ -1077,13 +1078,13 @@
     f('item', '物品', 'Item', 'text'),
     f('map-color', '地图颜色', 'Map Color', 'number'),
     f('tags', '标签', 'Tags', 'lines'),
-    f('sounds', '音效', 'Sounds', 'kv'),
+    f('sounds', '音效', 'Sounds', 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') }),
   ];
   var INLINE_BLOCK_FIELDS = [
     f('settings', '设置', 'Settings', 'object', { fields: INLINE_BLOCK_SETTINGS, label: l('设置', 'Settings') }),
     f('behavior', '行为', 'Behavior', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behavior') }),
     f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot') }),
-    f('state', '状态', 'State', 'kv'),
+    f('state', '状态', 'State', 'popup', { content: { type: 'object', fields: blockAppearanceFields(true), label: l('状态', 'State') }, label: l('状态', 'State') }),
   ];
   var BLOCK_ITEM_FIELDS = [
     f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: {
@@ -1237,6 +1238,20 @@
   function soundRefField(key, zh, en) {
     return f(key, zh, en, 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:block.deepslate.break', 'minecraft:block.deepslate.break') }, label: l('音效', 'Sound'), types: SOUND_REF_TYPES });
   }
+  // 音效对象 (弹窗 content): 方块五键 / 家具三键 / 其他键位
+  function soundObject(keys) {
+    return {
+      type: 'object',
+      fields: keys.map(function (k) {
+        var zh = { break: '破坏', step: '踩踏', place: '放置', hit: '挖掘', fall: '坠落', open: '打开', close: '关闭', put: '放入', take: '取出' }[k] || k;
+        var en = k.charAt(0).toUpperCase() + k.slice(1);
+        return soundRefField(k, zh, en);
+      }),
+      label: l('音效', 'Sounds'),
+    };
+  }
+  var BLOCK_SOUND_OBJECT = soundObject(['break', 'step', 'place', 'hit', 'fall']);
+  var FURNITURE_SOUND_OBJECT = soundObject(['break', 'place', 'hit']);
   // 实体剔除: 布尔 或 详细参数
   var ENTITY_CULLING_TYPES = {
     map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
@@ -1463,13 +1478,7 @@
     f('is_redstone_conductor', '红石导体', 'Is Redstone Conductor', 'bool'),
     f('is_suffocating', '窒息判定', 'Is Suffocating', 'bool'),
     f('is_view_blocking', '阻挡视线', 'Is View Blocking', 'bool'),
-    f('sounds', '音效', 'Sounds', 'object', { fields: [
-      soundRefField('break', '破坏', 'Break'),
-      soundRefField('step', '踩踏', 'Step'),
-      soundRefField('place', '放置', 'Place'),
-      soundRefField('hit', '挖掘', 'Hit'),
-      soundRefField('fall', '坠落', 'Fall'),
-    ], label: l('音效', 'Sounds') }),
+    f('sounds', '音效', 'Sounds', 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') }),
     f('require_correct_tools', '需要正确工具', 'Require Correct Tools', 'bool', { hint: l('设置 correct_tools 时自动为 true', 'Automatically true when correct_tools is set') }),
     f('respect_tool_component', '尊重工具组件', 'Respect Tool Component', 'bool'),
     f('correct_tools', '正确工具', 'Correct Tools', 'lines'),
@@ -1516,8 +1525,8 @@
       { key: 'events', label: l('事件', 'Events') },
     ],
     fields: [
-      f('state', '单状态', 'State', 'object', { fields: blockAppearanceFields(true), label: l('单状态', 'State'), tab: 'state' }),
-      f('states', '多状态', 'States', 'object', { fields: [
+      f('state', '单状态', 'State', 'popup', { content: { type: 'object', fields: blockAppearanceFields(true), label: l('单状态', 'State') }, label: l('单状态', 'State'), tab: 'state' }),
+      f('states', '多状态', 'States', 'popup', { content: { type: 'object', fields: [
         f('id', '起始 ID', 'Start ID', 'number', { hint: l('固定内部 ID, 变体占用连续区间', 'Fixed internal ID; variants occupy a continuous range') }),
         f('properties', '属性', 'Properties', 'mapOf', { valueType: { type: 'union', types: PROPERTY_TYPES, label: l('属性', 'Property') }, label: l('属性', 'Properties'), hint: l('属性类型与特殊名称 (axis/facing/waterlogged...) 见 Wiki', 'Property types & special names (axis/facing/waterlogged...) per Wiki') }),
         f('appearances', '外观', 'Appearances', 'mapOf', { valueType: { type: 'object', fields: blockAppearanceFields(false), label: l('外观', 'Appearance') }, label: l('外观', 'Appearances'), hint: l('第一个外观为默认回退', 'First appearance is the default fallback') }),
@@ -1527,7 +1536,7 @@
         ], label: l('变体', 'Variant') }, label: l('变体映射', 'Variants'), hint: l('键: 如 waterlogged=true,facing=north (未列出属性通配)', 'Key: e.g. waterlogged=true,facing=north (unlisted = wildcard)') }),
         f('entity_renderer', '实体渲染器', 'Entity Renderer', 'union', ENTITY_RENDERER_UNION),
         f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
-      ], label: l('多状态', 'States'), tab: 'state' }),
+      ], label: l('多状态', 'States') }, label: l('多状态', 'States'), tab: 'state' }),
       f('settings', '设置', 'Settings', 'object', { fields: BLOCK_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
       f('behavior', '行为', 'Behavior', 'union', { types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behavior' }),
       f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behavior' }),
@@ -1658,11 +1667,7 @@
   var FURNITURE_SETTINGS_FIELDS = [
     f('item', '对应物品', 'Item', 'text', { hint: l('创造模式中键拾取 (默认自动为家具 ID)', 'Creative middle-click (defaults to furniture id)') }),
     f('hit_times', '破坏次数', 'Hit Times', 'number', { hint: l('默认 0 = 一击破坏; 停手 2 秒重置', 'Default 0 = instant; resets after 2s') }),
-    f('sounds', '音效', 'Sounds', 'object', { fields: [
-      soundRefField('break', '破坏', 'Break'),
-      soundRefField('place', '放置', 'Place'),
-      soundRefField('hit', '挖掘', 'Hit'),
-    ], label: l('音效', 'Sounds') }),
+    f('sounds', '音效', 'Sounds', 'popup', { content: FURNITURE_SOUND_OBJECT, label: l('音效', 'Sounds') }),
     f('adventure_mode_breaking', '冒险模式可破坏', 'Adventure Mode Breaking', 'bool'),
     f('correct_tools', '正确工具', 'Correct Tools', 'lines', { hint: l('#minecraft:axes = 标签; minecraft:diamond_pickaxe = 物品 ID', '#tag = tag; plain id = item') }),
   ];

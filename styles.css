@@ -3362,6 +3362,34 @@ textarea.ce-sf-input {
   padding: 8px 10px;
 }
 
+/* popup (弹窗编辑器: 界面显示简略值) */
+.ce-sf-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+}
+.ce-sf-popup-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ce-sf-popup-btn {
+  flex-shrink: 0;
+}
+.ce-sf-popup-clear {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
 /* 折叠区 (其他字段 / kv-rest) */
 .ce-sf-collapse {
   border: 1px dashed var(--color-border);
@@ -3401,4 +3429,28 @@ textarea.ce-sf-input {
   min-height: 56px;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
+}
+
+/* popup 弹窗模态框 */
+.ce-popup-modal {
+  z-index: 10001;
+}
+.ce-popup-content {
+  width: min(760px, 92vw);
+  max-width: 760px;
+  padding: 16px 20px;
+}
+.ce-popup-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+  margin: 10px 0 14px;
+  padding: 2px 4px;
+}
+.ce-popup-body .ce-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.ce-popup-body .ce-sf-collapse {
+  background: var(--color-bg-primary);
 }

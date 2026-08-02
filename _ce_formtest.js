@@ -153,15 +153,13 @@ check(h2.includes('data-ce-tab="settings"'), 'block 选项卡 settings');
 check(h2.includes('data-ce-tab="behavior"'), 'block 选项卡 behavior');
 check(h2.includes('data-ce-tab="loot"'), 'block 选项卡 loot');
 check(h2.includes('data-ce-tab="events"'), 'block 选项卡 events');
-check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="state.auto_state"'), 'auto_state union (noTypeKey 标量)');
-check(h2.includes('data-sf-kind="map"') && h2.includes('data-sf-path="states.properties"'), 'states.properties mapOf');
-check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="states.properties.facing"'), '属性 union (regular, type-keyed)');
-check(h2.includes('data-sf-path="states.properties.facing.default"') && h2.includes('data-sf-type="select"'), 'direction 类型体 default select');
-check(h2.includes('data-sf-path="states.appearances.default.state"'), 'appearances mapOf 值渲染');
-check(h2.includes('data-sf-path="states.variants.{facing=west}.settings.hardness"'), 'variants 嵌套 settings 字段');
-check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="state.entity_renderer"'), 'entity_renderer union (single/list)');
-check(h2.includes('data-sf-action="union-set"') && h2.includes('data-sf-path="settings.sounds.place"'), 'settings.sounds.place union (音效引用)');
-check(h2.includes('data-sf-path="settings.sounds.place.id"'), '音效 map 形式 id 字段');
+check(h2.includes('data-sf-action="popup-edit"') && h2.includes('data-sf-path="state"'), 'state 弹窗编辑按钮');
+check(h2.includes('data-sf-action="popup-edit"') && h2.includes('data-sf-path="states"'), 'states 弹窗编辑按钮');
+check(h2.includes('data-sf-action="popup-edit"') && h2.includes('data-sf-path="settings.sounds"'), 'settings.sounds 弹窗编辑按钮');
+check(h2.includes('auto_state: minecraft:flower') && h2.includes('entity_renderer: item_display'), 'state 弹窗摘要 (union 值)');
+check(h2.includes('properties: 1 项') && h2.includes('variants: 1 项'), 'states 弹窗摘要 (mapOf 计数)');
+check(h2.includes('place: minecraft:block.wool.place'), 'sounds 弹窗摘要 (音效 union 值)');
+check(!h2.includes('data-sf-path="state.auto_state"') && !h2.includes('data-sf-path="states.properties"'), 'state/states 内容不再行内渲染 (弹窗内)');
 check(h2.includes('data-sf-path="settings.hardness"') && h2.includes('data-sf-type="number"'), 'settings.hardness number');
 check(h2.includes('data-sf-path="behavior"') && h2.includes('data-sf-action="union-set"'), 'behavior union 渲染');
 check(h2.includes('data-sf-path="behavior.bounce_height"') && h2.includes('data-sf-type="number"'), 'bouncing_block 类型体字段 (union)');
@@ -493,38 +491,28 @@ check(bEntry.data.settings.hardness === 2.5, 'block 写回: number');
 bCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'loot.arguments.seed', 'data-sf-type': 'scalar' }, '99') });
 check(bEntry.data.loot.arguments.seed === 99, 'block 写回: scalar 数字解析');
 
-// entity_renderer: single → list 包裹 / list → single 解包
-const erUidRe = /data-sf-action="union-set" data-sf-path="state\.entity_renderer" data-sf-uid="([^"]+)"/;
-const erUid = bh.match(erUidRe);
-check(!!erUid, 'entity_renderer union-set uid 可定位');
-if (erUid) {
-  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.entity_renderer', 'data-sf-uid': erUid[1] }, 'list') });
-  check(Array.isArray(bEntry.data.state.entity_renderer) && bEntry.data.state.entity_renderer.length === 1 &&
-    bEntry.data.state.entity_renderer[0].type === 'item_display' && bEntry.data.state.entity_renderer[0].translation === '1 2 3',
-    '写回: entity_renderer single→list 包裹保留数据');
-  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.entity_renderer', 'data-sf-uid': erUid[1] }, 'single') });
-  check(!Array.isArray(bEntry.data.state.entity_renderer) && bEntry.data.state.entity_renderer.type === 'item_display' &&
-    bEntry.data.state.entity_renderer.translation === '1 2 3',
-    '写回: entity_renderer list→single 解包保留数据');
+// popup-clear: 状态清除按钮 (有值时显示) + 写回删除字段
+const stClearRe = /data-sf-action="popup-clear" data-sf-path="state" data-sf-uid="([^"]+)"/;
+const stClear = bh.match(stClearRe);
+check(!!stClear, 'state popup-clear 按钮 (有值时显示)');
+if (stClear) {
+  const bClk = bR.listeners['click'][0];
+  const stBtn = mk({ 'data-sf-action': 'popup-clear', 'data-sf-path': 'state', 'data-sf-uid': stClear[1] }, null);
+  stBtn.closest = () => stBtn;
+  bClk({ target: stBtn });
+  check(bEntry.data.state === undefined, '写回: popup-clear 删除字段');
 }
 
-// 属性 union-set: direction → boolean
-const propUidRe = /data-sf-action="union-set" data-sf-path="states\.properties\.facing" data-sf-uid="([^"]+)"/;
-const propUid = bh.match(propUidRe);
-check(!!propUid, '属性 union-set uid 可定位');
-if (propUid) {
-  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'states.properties.facing', 'data-sf-uid': propUid[1] }, 'boolean') });
-  check(bEntry.data.states.properties.facing.type === 'boolean', '写回: 属性切换类型 (丢弃非共享键)');
-}
-
-// auto_state: 标量 → expanded 对象
-const asUidRe = /data-sf-action="union-set" data-sf-path="state\.auto_state" data-sf-uid="([^"]+)"/;
-const asUid = bh.match(asUidRe);
-check(!!asUid, 'auto_state union-set uid 可定位');
-if (asUid) {
-  bCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'state.auto_state', 'data-sf-uid': asUid[1] }, 'expanded') });
-  check(bEntry.data.state.auto_state !== null && typeof bEntry.data.state.auto_state === 'object' && !Array.isArray(bEntry.data.state.auto_state), '写回: auto_state → expanded 对象');
-}
+// popup-clear: 无值时不显示清除按钮, 摘要显示占位文案
+const blkMinYaml = `
+blocks:
+  default:plain:
+    settings:
+      hardness: 1
+`;
+const hm = render(blkMinYaml).innerHTML;
+check(!/data-sf-action="popup-clear" data-sf-path="state"/.test(hm), '未设置 popup 无清除按钮');
+check(hm.includes('data-sf-path="state"') && hm.includes('未设置'), '未设置 popup 显示占位文案');
 
 // ---------- 2.5 recipe 写回 (Phase 5) ----------
 const rR = renderCap(recipeYaml);
@@ -608,7 +596,8 @@ check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="va
 check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.entity_culling"'), 'entity_culling union (标量 bool)');
 check(hf.includes('data-sf-path="variants.wall.blueprint"'), '变体 blueprint 字段');
 check(hf.includes('data-sf-path="settings.hit_times"') && hf.includes('data-sf-type="number"'), 'settings.hit_times number');
-check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="settings.sounds.break"'), 'settings.sounds.break 音效 union');
+check(hf.includes('data-sf-action="popup-edit"') && hf.includes('data-sf-path="settings.sounds"'), 'settings.sounds 弹窗编辑按钮');
+check(hf.includes('break: minecraft:block.bamboo_wood.break'), 'furniture sounds 弹窗摘要');
 check(hf.includes('data-sf-type="lines"') && hf.includes('data-sf-path="settings.correct_tools"'), 'settings.correct_tools lines');
 check(hf.includes('data-sf-path="behavior"') && hf.includes('data-sf-action="union-set"'), 'behavior union');
 check(hf.includes('data-sf-kind="list"') && hf.includes('data-sf-path="behavior.lights"'), 'glowing 行为 lights listOf');
@@ -631,27 +620,18 @@ check(fEntry.data.settings.hit_times === 5, 'furniture 写回: hit_times number'
 fCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'loot.arguments.item', 'data-sf-type': 'scalar' }, 'default:bench') });
 check(fEntry.data.loot.arguments.item === 'default:bench', 'furniture 写回: loot.arguments.item');
 
-// settings.sounds.break: 标量 → 详细 map (音效)
-const sndUidRe = /data-sf-action="union-set" data-sf-path="settings\.sounds\.break" data-sf-uid="([^"]+)"/;
-const sndUid = fh.match(sndUidRe);
-check(!!sndUid, '音效 union-set uid 可定位');
-if (sndUid) {
-  fCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'settings.sounds.break', 'data-sf-uid': sndUid[1] }, 'map') });
-  check(fEntry.data.settings.sounds.break !== null && typeof fEntry.data.settings.sounds.break === 'object' && !Array.isArray(fEntry.data.settings.sounds.break) && fEntry.data.settings.sounds.break.id === undefined, '写回: 音效标量 → 详细对象 (默认空)');
-}
-
-// union-clear: 音效删除按钮 (click 事件)
-const sndClearRe = /data-sf-action="union-clear" data-sf-path="settings\.sounds\.break" data-sf-uid="([^"]+)"/;
+// popup-clear: 音效清除按钮 (click 事件)
+const sndClearRe = /data-sf-action="popup-clear" data-sf-path="settings\.sounds" data-sf-uid="([^"]+)"/;
 const sndClear = fh.match(sndClearRe);
-check(!!sndClear, '音效 union-clear 按钮可定位');
+check(!!sndClear, '音效 popup-clear 按钮可定位');
 if (sndClear) {
   const clk = fR.listeners['click'][0];
   check(!!clk, 'click 监听器已安装');
   if (clk) {
-    const clearBtn = mk({ 'data-sf-action': 'union-clear', 'data-sf-path': 'settings.sounds.break', 'data-sf-uid': sndClear[1] }, null);
+    const clearBtn = mk({ 'data-sf-action': 'popup-clear', 'data-sf-path': 'settings.sounds', 'data-sf-uid': sndClear[1] }, null);
     clearBtn.closest = () => clearBtn;
     clk({ target: clearBtn });
-    check(fEntry.data.settings.sounds.break === undefined, '写回: union-clear 删除音效字段');
+    check(fEntry.data.settings.sounds === undefined, '写回: popup-clear 删除音效字段');
   }
 }
 

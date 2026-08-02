@@ -627,6 +627,7 @@
   }
 
   function syncToSource(parsed) {
+    if (parsed && parsed._isPopup) return; // 弹窗内临时数据, 不写回源码
     var yaml = generateYAML(parsed);
     if (ROOT.codeMirrorEditor) {
       ROOT.codeMirrorEditor.setValue(yaml);
@@ -779,7 +780,7 @@
   }
 
   // ---- 布局: 两栏 (行) / 堆叠 ----
-  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1 };
+  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1, popup: 1 };
   function _sfIsStack(t) { return _SF_STACK_TYPES[t] === 1; }
 
   // ---- 控件 (无标签) ----
@@ -899,6 +900,7 @@
     if (t === 'object') return _sfObjectHtml(def, path, value, opts);
     if (t === 'components') return _sfComponentsHtml(def, path, value, opts);
     if (t === 'model') return _sfModelHtml(def, path, value, opts);
+    if (t === 'popup') return _sfPopupHtml(def, path, value, opts);
     return _sfControl(def, path, value);
   }
   function _sfListHtml(def, path, value, opts) {
@@ -1153,6 +1155,104 @@
     }
     return html + '<div class="ce-sf-union-body">' + body + '</div></div>';
   }
+  // ---- 弹窗编辑器 (popup): 界面显示简略值, 点击弹窗编辑完整字段 ----
+  function _sfPopupScalar(fld, v) {
+    var ft = fld.type;
+    if (ft === 'union') {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        if (v.type) return String(v.type);
+        if (v.id || v.name) return String(v.id || v.name);
+        return _t('craftengine.popupDetailed');
+      }
+      return String(v);
+    }
+    if (ft === 'lines' || ft === 'linesScalar') return Array.isArray(v) ? String(v.length) + ' 行' : String(v);
+    if (ft === 'mapOf' || ft === 'map') return String(Object.keys(v).length) + ' 项';
+    if (ft === 'listOf') return String(v.length) + ' 项';
+    if (v && typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  }
+  function _sfPopupSummary(def, value) {
+    var c = def.content;
+    var empty = _t('craftengine.popupEmpty');
+    if (!c || value === undefined || value === null || value === '') return empty;
+    if (typeof value !== 'object') return String(value);
+    var t = c.type;
+    if (t === 'mapOf' || t === 'map' || t === 'components') {
+      var keys = Object.keys(value);
+      if (!keys.length) return empty;
+      return keys.slice(0, 4).join(', ') + (keys.length > 4 ? ' …' : '') + ' (' + keys.length + ' 个)';
+    }
+    if (t === 'object') {
+      var parts = [];
+      (c.fields || []).forEach(function (fld) {
+        var v = value[fld.key];
+        if (v === undefined || v === null || v === '' || (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0)) return;
+        parts.push(fld.key + ': ' + _sfPopupScalar(fld, v));
+      });
+      if (!parts.length) return empty;
+      return parts.slice(0, 5).join(', ') + (parts.length > 5 ? ' …' : '');
+    }
+    return String(value);
+  }
+  function _sfPopupHtml(def, path, value, opts) {
+    var uid = (opts && opts.uid) || _sfUidAlloc(path, 'popup', def, opts);
+    var clear = '';
+    if (value !== undefined && value !== null && value !== '') {
+      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-popup-clear" data-sf-action="popup-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
+    }
+    return '<div class="ce-sf-popup" data-sf-uid="' + uid + '">' +
+      '<div class="ce-sf-popup-row">' +
+      '<span class="ce-sf-popup-summary">' + _escHtml(_sfPopupSummary(def, value)) + '</span>' +
+      '<button class="cv-btn cv-btn-sm ce-sf-popup-btn" data-sf-action="popup-edit" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.popupEdit')) + '</button>' + clear +
+      '</div></div>';
+  }
+  // 打开 popup 弹窗: 弹窗 body 复用 _bindEvents, 编辑副本数据, 确定后写回真实数据
+  function _sfOpenPopup(rec, path, containerEl, entry, parsed, section, uid) {
+    if (!document) return;
+    var old = document.getElementById('ce-popup-modal');
+    if (old) old.remove();
+    var cur = path ? _getNested(entry.data, path) : entry.data;
+    var copy = (cur === undefined || cur === null) ? undefined : JSON.parse(JSON.stringify(cur));
+
+    var bodyEl = document.createElement('div');
+    bodyEl.className = 'ce-popup-body';
+    bodyEl._ceParsed = { sections: [{ entries: [{ data: { __popup__: copy }, _rawOrder: ['__popup__'] }] }], _isPopup: true };
+    bodyEl._ceUi = { section: 0, entry: 0 };
+    bodyEl.innerHTML = _sfItemHtml(rec.def.content, '__popup__', copy, {});
+    _bindEvents(bodyEl);
+
+    var modal = document.createElement('div');
+    modal.id = 'ce-popup-modal';
+    modal.className = 'cv-modal ce-popup-modal';
+    modal.innerHTML =
+      '<div class="cv-modal-content ce-modal-content ce-popup-content">' +
+      '<h3>' + _escHtml(_labelOf(rec.def)) + '</h3>' +
+      '<div class="ce-popup-scroll"></div>' +
+      '<div class="cv-modal-actions">' +
+      '<button class="cv-btn cv-btn-secondary" data-ce-popup="cancel">' + _escHtml(_t('craftengine.popupCancel')) + '</button>' +
+      '<button class="cv-btn cv-btn-primary" data-ce-popup="ok">' + _escHtml(_t('craftengine.popupOk')) + '</button>' +
+      '</div></div>';
+    modal.querySelector('.ce-popup-scroll').appendChild(bodyEl);
+    document.body.appendChild(modal);
+
+    function close() { modal.remove(); }
+    modal.querySelector('[data-ce-popup="cancel"]').addEventListener('click', close);
+    modal.querySelector('[data-ce-popup="ok"]').addEventListener('click', function () {
+      var got = bodyEl._ceParsed.sections[0].entries[0].data.__popup__;
+      close();
+      if (got === undefined || got === null ||
+          (typeof got === 'object' && !Array.isArray(got) && Object.keys(got).length === 0)) {
+        // 弹窗内为空 → 删除字段
+        if (path) _applyValue(entry, path, undefined, parsed, section);
+      } else {
+        if (path) _applyValue(entry, path, got, parsed, section);
+      }
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+    });
+    modal.addEventListener('click', function (e) { if (e.target === this) close(); });
+  }
   // 容器局部重渲染 (list/map/union/object/components/model 内容), 不整页刷新、不丢焦点
   function _sfRerender(uid, containerEl) {
     var rec = _sfUidMap[uid];
@@ -1172,6 +1272,7 @@
     else if (rec.kind === 'object') html = _sfObjectHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'components') html = _sfComponentsHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'model') html = _sfModelHtml(rec.def, rec.path, value, { uid: uid });
+    else if (rec.kind === 'popup') html = _sfPopupHtml(rec.def, rec.path, value, { uid: uid });
     else return;
     // html 含根节点, 必须替换节点本身 (innerHTML 会把新根嵌套进旧根, 每轮残留一层)
     wrap.outerHTML = html;
@@ -1332,6 +1433,20 @@
       if (mp) _applyValue(entry, mp, undefined, parsed, section);
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
+    }
+    if (action === 'popup-clear') {
+      if (!rec || rec.kind !== 'popup') return;
+      var pp = el.getAttribute('data-sf-path') || rec.path;
+      if (pp) _applyValue(entry, pp, undefined, parsed, section);
+      _sfRerender(uid, containerEl);
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+      return;
+    }
+    if (action === 'popup-edit') {
+      if (!rec || rec.kind !== 'popup') return;
+      var pep = el.getAttribute('data-sf-path') || rec.path;
+      _sfOpenPopup(rec, pep, containerEl, entry, parsed, section, uid);
+      return;
     }
     if (action === 'comp-add') {
       if (!rec || rec.kind !== 'components') return;
