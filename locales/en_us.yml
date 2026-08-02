@@ -363,6 +363,8 @@ settings:
   checkboxColorOn: "Checked Color"
   checkboxMarkOn: "Show ✓ mark when checked"
   checkboxMarkOff: "Show ✕ mark when unchecked"
+  hidePremiumHints: "Hide premium feature hints"
+  hideVersionHints: "Hide version requirement hints"
   sectionSyntax: "📝 Syntax Highlighting Colors"
   syntaxGroup: "Syntax Token Colors"
   syntaxKeyword: "Keyword"
@@ -868,6 +870,8 @@ chemdah:
   visualEditHint: "Please select an interpreter type and retry, or edit in source code mode."
 
 craftengine:
+  premiumHint: "This feature is exclusive to the premium version of the CraftEngine plugin - if you are using the community edition, this config may have no effect."
+  versionHint: "This feature has a version requirement: {versions}"
   syncedToSource: "Synced to source"
   fieldEmpty: "(empty)"
   type_config: "Plugin Config"

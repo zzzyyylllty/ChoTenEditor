@@ -41,6 +41,8 @@ let editorAutoSync;
 let editorDevtools;
 let checkboxMarkOn;
 let checkboxMarkOff;
+let hidePremiumHints;
+let hideVersionHints;
 let itemKeyStyle;
 let uiFont;
 let editorFontFamily;
@@ -123,6 +125,8 @@ const defaultConfig = {
   autoSync: false,
   checkboxMarkOn: true,
   checkboxMarkOff: false,
+  hidePremiumHints: false,
+  hideVersionHints: false,
   blockFontSize: '11',
   categoryColors: {
     '实体操作': '#c06262',
@@ -390,6 +394,8 @@ function initializeDOMElements() {
   // 复选框设置
   checkboxMarkOn = document.getElementById('checkbox-mark-on');
   checkboxMarkOff = document.getElementById('checkbox-mark-off');
+  hidePremiumHints = document.getElementById('hide-premium-hints');
+  hideVersionHints = document.getElementById('hide-version-hints');
 
   // AI 设置
   aiEndpoint = document.getElementById('ai-endpoint');
@@ -826,6 +832,18 @@ function applyCheckboxMarks(config) {
   document.body.classList.toggle('cb-mark-off', off);
 }
 
+// 高级版专属功能提示开关 (body class: ce-hide-premium-hints)
+// 勾选后 tooltip 不再显示高级版专属红色提示行
+function applyPremiumHint(config) {
+  document.body.classList.toggle('ce-hide-premium-hints', config.hidePremiumHints === true);
+}
+
+// 版本限制提示开关 (body class: ce-hide-version-hints)
+// 勾选后 tooltip 不再显示绿色版本限制提示行
+function applyVersionHint(config) {
+  document.body.classList.toggle('ce-hide-version-hints', config.hideVersionHints === true);
+}
+
 // 应用字体（实时预览，读取选择框当前值）
 function applyFonts() {
   var ui = uiFont ? uiFont.value : '';
@@ -1037,6 +1055,8 @@ async function saveSettings() {
     devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
     checkboxMarkOn: checkboxMarkOn ? checkboxMarkOn.checked : defaultConfig.checkboxMarkOn,
     checkboxMarkOff: checkboxMarkOff ? checkboxMarkOff.checked : defaultConfig.checkboxMarkOff,
+    hidePremiumHints: hidePremiumHints ? hidePremiumHints.checked : defaultConfig.hidePremiumHints,
+    hideVersionHints: hideVersionHints ? hideVersionHints.checked : defaultConfig.hideVersionHints,
     itemKeyStyle: itemKeyStyle ? itemKeyStyle.value : defaultConfig.itemKeyStyle,
     prewarm: {
       files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
@@ -1106,6 +1126,8 @@ async function saveSettings() {
 
   localStorage.setItem('editorConfig', JSON.stringify(config));
   applyCheckboxMarks(config);
+  applyPremiumHint(config);
+  applyVersionHint(config);
   showNotification(I18N.t('settings.saved'), 'success');
 }
 
@@ -1320,6 +1342,10 @@ function loadSettings() {
   if (checkboxMarkOn) checkboxMarkOn.checked = config.checkboxMarkOn !== false;
   if (checkboxMarkOff) checkboxMarkOff.checked = config.checkboxMarkOff === true;
   applyCheckboxMarks(config);
+  if (hidePremiumHints) hidePremiumHints.checked = config.hidePremiumHints === true;
+  applyPremiumHint(config);
+  if (hideVersionHints) hideVersionHints.checked = config.hideVersionHints === true;
+  applyVersionHint(config);
   if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';
 
   // 启动预热设置

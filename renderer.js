@@ -2034,6 +2034,10 @@ function applyStoredConfig() {
     document.body.classList.toggle('cb-mark-on', config.checkboxMarkOn !== false);
     document.body.classList.toggle('cb-mark-off', config.checkboxMarkOff === true);
 
+    // 重新应用 tooltip 提示开关 (body class: ce-hide-premium-hints / ce-hide-version-hints)
+    document.body.classList.toggle('ce-hide-premium-hints', config.hidePremiumHints === true);
+    document.body.classList.toggle('ce-hide-version-hints', config.hideVersionHints === true);
+
     // 重新应用背景图片到 body
     const body = document.body;
     if (config.background && config.background.filename) {

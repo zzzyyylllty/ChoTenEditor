@@ -363,6 +363,8 @@ settings:
   checkboxColorOn: "选中颜色"
   checkboxMarkOn: "选中时显示 √ 标记"
   checkboxMarkOff: "未选中时显示 X 标记"
+  hidePremiumHints: "隐藏高级版专属功能提示"
+  hideVersionHints: "隐藏版本限制提示"
   sectionSyntax: "📝 语法高亮颜色"
   syntaxGroup: "语法标记颜色"
   syntaxKeyword: "关键字"
@@ -868,6 +870,8 @@ chemdah:
   visualEditHint: "请选择解释器类型后重试，或在源代码模式中编辑。"
 
 craftengine:
+  premiumHint: "此功能为CraftEngine插件的高级版专属功能 - 如果您正在使用社区版，此配置可能没有作用。"
+  versionHint: "此功能有版本限制: {versions}"
   syncedToSource: "已同步到源码"
   fieldEmpty: "（空）"
   type_config: "插件配置"

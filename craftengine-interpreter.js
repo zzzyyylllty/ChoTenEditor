@@ -926,9 +926,37 @@
     if (!h && def) h = def.hint;
     return _sfTipOf(h);
   }
+  // 高级版专属字段 (wiki 标记 Premium Exclusive), tooltip 末尾追加红色提示
+  var _sfPremiumKeys = ['client_bound_data', 'client_bound_material', 'data.conditional', 'visual_result', 'functions', 'variants.entity_culling', 'config.item.client-bound-model'];
+  function _sfPremiumHidden() {
+    return typeof document !== 'undefined' && !!(document.body && document.body.classList && document.body.classList.contains('ce-hide-premium-hints'));
+  }
+  // 版本限制字段 (tooltip 内含 1.20.x+ / 1.21.2+ / 1.20.4- 等标记), 末尾追加绿色版本提示
+  var _sfVersionRe = /(?:1\.\d{1,2}(?:\.\d{1,2})?(?:\.x)?[-+]|\d{1,2}\.x[-+])/gi;
+  function _sfVersionOf(txt) {
+    var list = [];
+    var m;
+    var re = new RegExp(_sfVersionRe.source, 'gi');
+    while ((m = re.exec(String(txt || ''))) !== null) {
+      if (list.indexOf(m[0]) === -1) list.push(m[0]);
+    }
+    return list;
+  }
+  function _sfVersionHidden() {
+    return typeof document !== 'undefined' && !!(document.body && document.body.classList && document.body.classList.contains('ce-hide-version-hints'));
+  }
   function _sfHintIcon(def, path) {
     var tip = _sfTipText(def, path);
     if (!tip) return '';
+    var k = _sfHintKey(path);
+    var isPremium = (_sfPremiumKeys.indexOf(k) !== -1) || (def && def.key && _sfPremiumKeys.indexOf(def.key) !== -1);
+    if (isPremium && !_sfPremiumHidden()) {
+      tip += '\n\n§c' + _t('craftengine.premiumHint');
+    }
+    var versions = _sfVersionOf(tip);
+    if (versions.length && !_sfVersionHidden()) {
+      tip += '\n\n§a' + _t('craftengine.versionHint', { versions: versions.join('、') });
+    }
     return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '">ℹ</span>';
   }
   function _sfBindHintIcons() {
