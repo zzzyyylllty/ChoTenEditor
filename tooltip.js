@@ -65,6 +65,17 @@
     var n = s.length;
     while (i < n) {
       var c = s[i];
+      if (c === '`' && s[i + 1] === '`' && s[i + 2] === '`') {
+        var fe = s.indexOf('```', i + 3);
+        if (fe !== -1) {
+          var fin = s.slice(i + 3, fe);
+          var lm = /^([a-zA-Z0-9_-]*)\n/.exec(fin);
+          if (lm) fin = fin.slice(lm[0].length);
+          out += '<pre class="rt-pre"><code>' + esc(fin) + '</code></pre>';
+          i = fe + 3;
+          continue;
+        }
+      }
       if (c === '`') {
         var e = s.indexOf('`', i + 1);
         if (e !== -1) { out += '<code>' + esc(s.slice(i + 1, e)) + '</code>'; i = e + 1; continue; }
