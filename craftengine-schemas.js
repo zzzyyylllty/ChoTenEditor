@@ -1004,7 +1004,10 @@
   var ITEM_APPEARANCE_TYPES = {
     item_name: { label: l('物品名 (item_name)', 'Item Name'), widget: { type: 'text', label: l('物品名', 'Item Name'), mini: true } },
     custom_name: { label: l('自定义名 (custom_name)', 'Custom Name'), widget: { type: 'text', label: l('自定义名', 'Custom Name'), mini: true } },
-    lore: { label: l('Lore', 'Lore'), widget: { type: 'listOf', itemType: LORE_LINE_UNION, label: l('Lore', 'Lore') } },
+    lore: { label: l('Lore', 'Lore'), widget: { type: 'union', noTypeKey: true, defaultKey: 'simple', keepKey: true, label: l('Lore', 'Lore'), types: {
+      simple: { label: l('普通定义', 'Simple'), widget: { type: 'lines', label: l('Lore', 'Lore'), hint: l('每行一条描述文本', 'One line each') } },
+      complex: { label: l('复杂定义', 'Complex'), widget: { type: 'listOf', itemType: LORE_LINE_UNION, label: l('Lore', 'Lore') } },
+    } } },
     insert_lore: { label: l('插入 Lore (insert_lore)', 'Insert Lore'), widget: { type: 'object', fields: INSERT_LORE_FIELDS, label: l('插入 Lore', 'Insert Lore') } },
     remove_lore: { label: l('移除 Lore (remove_lore)', 'Remove Lore'), widget: REMOVE_LORE_UNION },
     tooltip_style: { label: l('提示样式 (tooltip_style)', 'Tooltip Style'), widget: { type: 'text', label: l('提示样式', 'Tooltip Style'), hint: l('如 minecraft:missing', 'e.g. minecraft:missing') } },

@@ -1021,11 +1021,24 @@
         var types = _sfTypesOf(def);
         var ks = Object.keys(types);
         if (Array.isArray(value)) {
+          // 元素含对象 → 优先 listOf 类型; 全字符串 → 优先 lines/linesScalar
+          var hasObj = false;
+          for (var e = 0; e < value.length; e++) {
+            if (value[e] !== null && typeof value[e] === 'object') { hasObj = true; break; }
+          }
           for (var i = 0; i < ks.length; i++) {
             var w = (types[ks[i]].widget || {}).type;
-            if (w === 'listOf' || w === 'lines' || w === 'linesScalar') return { key: ks[i], neg: false };
+            if (w === 'listOf' || w === 'lines' || w === 'linesScalar') {
+              if (hasObj && w !== 'listOf') continue;
+              if (!hasObj && w === 'listOf') continue;
+              return { key: ks[i], neg: false };
+            }
           }
         } else {
+          // 键名形式: value 的键命中 types 键 → 该类型 (如 {simple: ''}); 否则回退第一个容器类型
+          for (var kv in value) {
+            if (types[kv]) return { key: kv, neg: false };
+          }
           for (var j = 0; j < ks.length; j++) {
             var w2 = (types[ks[j]].widget || {}).type;
             if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest' || w2 === 'union') return { key: ks[j], neg: false };
@@ -1051,7 +1064,7 @@
   }
   function _sfTypeBody(td, path, value, opts) {
     var html = '';
-    var sub = { inList: opts && opts.inList }; // 不向下传播 uid: 子容器/嵌套 union 需要自己的 uid
+    var sub = { inList: opts && opts.inList, entry: opts && opts.entry }; // 不向下传播 uid: 子容器/嵌套 union 需要自己的 uid
     if (td.widget) return _sfFieldHtml(td.widget, path, value, sub);
     var modeled = {};
     if (td.fields) {
@@ -1079,6 +1092,14 @@
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'union', def, opts);
     var types = _sfTypesOf(def);
     var cur = _sfUnionCurrent(def, value);
+    // keepKey: 用户显式切换过的类型优先于形状推断 (如 lore 切到复杂定义后空数组不再弹回普通定义)
+    if (def.keepKey && opts && opts.entry) {
+      var kk = (opts.entry._unionKeys || {})[path];
+      if (kk === '__scalar') cur = { key: '__scalar', neg: false };
+      else if (kk && types[kk]) cur = { key: kk, neg: false };
+    }
+    // defaultKey: 空值时默认选中并展开该类型 (如 lore 默认普通定义)
+    if (!cur.key && def.defaultKey && types[def.defaultKey]) cur = { key: def.defaultKey, neg: false };
     var optHtml = '<option value=""' + (!cur.key ? ' selected' : '') + '>' + _escHtml(_t('craftengine.unionEmpty')) + '</option>';
     if (def.allowScalar) {
       optHtml += '<option value="__scalar"' + (cur.key === '__scalar' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.customValue')) + '</option>';
@@ -1465,7 +1486,7 @@
     var html;
     if (rec.kind === 'list') html = _sfListHtml(rec.def, rec.path, value, { uid: uid, inList: rec.inList });
     else if (rec.kind === 'map') html = _sfMapHtml(rec.def, rec.path, value, { uid: uid });
-    else if (rec.kind === 'union') html = _sfUnionHtml(rec.def, rec.path, value, { uid: uid, inList: rec.inList });
+    else if (rec.kind === 'union') html = _sfUnionHtml(rec.def, rec.path, value, { uid: uid, inList: rec.inList, entry: entry });
     else if (rec.kind === 'object') html = _sfObjectHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'components') html = _sfComponentsHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'model') html = _sfModelHtml(rec.def, rec.path, value, { uid: uid });
@@ -1521,12 +1542,18 @@
       if (v === '') {
         // 改回"不指定": 删除字段值
         if (path) _applyValue(entry, path, undefined, parsed, section);
+        if (rec.def.keepKey && entry && entry._unionKeys) delete entry._unionKeys[path];
         _sfRerender(uid, containerEl);
         if (ROOT.__keAutoSync) syncToSource(parsed);
         return;
       }
       var cur = path ? _getNested(entry.data, path) : entry.data;
       if (rec.def.noTypeKey) {
+        // keepKey: 记录用户显式选择的类型, rerender 后形状推断不覆盖
+        if (rec.def.keepKey && entry) {
+          if (!entry._unionKeys) entry._unionKeys = {};
+          entry._unionKeys[path] = v;
+        }
         // 形状推断 union: 切换类型时若当前值不匹配目标形状, 创建默认值
         var curShape = _sfUnionCurrent(rec.def, cur);
         if (v === '__scalar') {
@@ -1591,7 +1618,14 @@
           if (pick) tv = pick.value;
         }
         if (!tv) return;
-        nv = tv === '__scalar' ? '' : { type: tv };
+        if (tv === '__scalar') nv = '';
+        else if (itemDef.noTypeKey) {
+          // 形状推断 union: 键名形式 {类型键: 默认值}, 否则渲染会推断到第一个容器类型
+          var wd = _sfTypesOf(itemDef)[tv];
+          nv = {};
+          nv[tv] = (wd && wd.widget) ? _sfDefaultOf(wd.widget) : '';
+        }
+        else nv = { type: tv };
       } else {
         nv = _sfDefaultOf(itemDef);
       }
@@ -1801,13 +1835,13 @@
       var fhtml;
       if (fld.custom === 'events') fhtml = _eventsPanel(entry, evKey);
       else if (fld.custom === 'root-map') {
-        fhtml = _sfFieldHtml(fld, '', entry.data, { entryData: entry.data, keyStyle: keyStyle });
+        fhtml = _sfFieldHtml(fld, '', entry.data, { entryData: entry.data, entry: entry, keyStyle: keyStyle });
         // 根键已由 root-map 渲染, 全部标记为已建模
         if (entry.data && typeof entry.data === 'object' && !Array.isArray(entry.data)) {
           for (var rk = 0; rk < Object.keys(entry.data).length; rk++) modeled[Object.keys(entry.data)[rk]] = 1;
         }
       }
-      else fhtml = _sfFieldHtml(fld, fk, entry.data ? entry.data[fk] : undefined, { entryData: entry.data, keyStyle: keyStyle });
+      else fhtml = _sfFieldHtml(fld, fk, entry.data ? entry.data[fk] : undefined, { entryData: entry.data, entry: entry, keyStyle: keyStyle });
       if (tabs) {
         var tk = fld.tab || 'other';
         if (tabs[tk] === undefined) tabs[tk] = '';
