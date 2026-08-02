@@ -121,7 +121,7 @@ const defaultConfig = {
     fontFamily: '',
   },
   autoSync: false,
-  checkboxMarkOn: false,
+  checkboxMarkOn: true,
   checkboxMarkOff: false,
   blockFontSize: '11',
   categoryColors: {
@@ -818,8 +818,9 @@ function updateColorInputs() {
 }
 
 // 应用复选框标记显示开关 (body class: cb-mark-on 选中√ / cb-mark-off 未选中X)
+// 选中√默认显示 (checkboxMarkOn 缺省视为 true), 可在设置里关闭
 function applyCheckboxMarks(config) {
-  const on = config.checkboxMarkOn === true;
+  const on = config.checkboxMarkOn !== false;
   const off = config.checkboxMarkOff === true;
   document.body.classList.toggle('cb-mark-on', on);
   document.body.classList.toggle('cb-mark-off', off);
@@ -1316,7 +1317,7 @@ function loadSettings() {
   if (editorTheme) editorTheme.value = editorConfig.theme;
   if (editorAutoSync) editorAutoSync.value = String(config.autoSync === true);
   if (editorDevtools) editorDevtools.checked = config.devTools === true;
-  if (checkboxMarkOn) checkboxMarkOn.checked = config.checkboxMarkOn === true;
+  if (checkboxMarkOn) checkboxMarkOn.checked = config.checkboxMarkOn !== false;
   if (checkboxMarkOff) checkboxMarkOff.checked = config.checkboxMarkOff === true;
   applyCheckboxMarks(config);
   if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';

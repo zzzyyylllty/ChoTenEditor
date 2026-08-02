@@ -62,10 +62,10 @@ app.whenReady().then(async () => {
       cb4.remove();
       inp.value = '#ff1744';
       inp.dispatchEvent(new Event('input', { bubbles: true }));
-      // 标记开关
+      // 标记开关: 选中√默认显示 (缺省视为 true)
       document.body.classList.remove('cb-mark-on', 'cb-mark-off');
-      applyCheckboxMarks({ checkboxMarkOn: true, checkboxMarkOff: false });
-      out.markOn = document.body.classList.contains('cb-mark-on');
+      applyCheckboxMarks({});
+      out.markDefault = document.body.classList.contains('cb-mark-on');
       applyCheckboxMarks({ checkboxMarkOn: false, checkboxMarkOff: true });
       out.markOff = document.body.classList.contains('cb-mark-off');
       applyCheckboxMarks({ checkboxMarkOn: false, checkboxMarkOff: false });
@@ -97,7 +97,7 @@ app.whenReady().then(async () => {
     check(a.onBgLight === 'rgb(16, 124, 16)', '浅色选中填充 = #107c10');
     check(a.darkCheckedFilter.includes('brightness(0.9)'), '深色选中轻微调暗 brightness(0.9)');
     check(a.varOff === '#123456' && a.borderCustom === 'rgb(18, 52, 86)', '颜色输入即时生效 → --color-checkbox-off + 边框');
-    check(a.markOn && a.markOff && a.markNone, '标记开关 body class 切换 cb-mark-on/cb-mark-off');
+    check(a.markDefault && a.markOff && a.markNone, '选中√默认显示, 开关可关闭 cb-mark-on/cb-mark-off');
     check(a.markContent === '"✓"', '选中标记伪元素内容 ✓');
     check(a.savedMarkOn && a.savedMarkOff && a.savedColors, '保存: checkboxMark + 复选框颜色写入 localStorage');
 
