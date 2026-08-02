@@ -1769,7 +1769,7 @@
       recipeIngredientField('ingredient', '材料', 'Ingredient', { tab: 'basic', hint: l('烹饪/切石/酿造: 单个材料', 'Cooking/stonecutting/brewing: single ingredient') }),
       f('experience', '经验', 'Experience', 'number', { tab: 'basic', hint: l('烹饪配方 (smelting 系)', 'Cooking recipes (smelting family)') }),
       f('time', '时间 (tick)', 'Time', 'number', { tab: 'basic', hint: l('烹饪时间, 默认 200', 'Cooking time, default 200') }),
-      f('template_type', '模板', 'Template Type', 'text', { tab: 'basic', hint: l('smithing: 槽位 1 (可选)', 'Smithing slot 1 (optional)') }),
+      f('template-type', '模板', 'Template Type', 'text', { tab: 'basic', hint: l('smithing: 槽位 1 (可选)', 'Smithing slot 1 (optional)') }),
       recipeIngredientField('base', '基底', 'Base', { tab: 'basic', hint: l('smithing: 槽位 2 (必需)', 'Smithing slot 2 (required)') }),
       recipeIngredientField('addition', '附加', 'Addition', { tab: 'basic', hint: l('smithing: 槽位 3 (可选)', 'Smithing slot 3 (optional)') }),
       recipeIngredientField('container', '容器', 'Container', { tab: 'basic', hint: l('酿造: 药水瓶/水瓶', 'Brewing: bottle') }),
@@ -1799,14 +1799,16 @@
     fields: [
       // 基础
       f('material', '材质', 'Material', 'text', { datalist: 'items', tab: 'basic' }),
-      f('custom_model_data', 'Custom Model Data', 'Custom Model Data', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, types: CUSTOM_MODEL_DATA_TYPES, tab: 'basic', label: l('Custom Model Data', 'Custom Model Data') }),
+      f('custom-model-data', 'Custom Model Data', 'Custom Model Data', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, types: CUSTOM_MODEL_DATA_TYPES, tab: 'basic', label: l('Custom Model Data', 'Custom Model Data') }),
       f('texture', '纹理', 'Texture', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx'), tab: 'basic' }),
+      f('textures', '纹理列表 (模型简写)', 'Textures (model shorthand)', 'linesScalar', { hint: l('多个纹理 = 动画帧/部位 (每行一个)', 'One texture per line; multiple = animation frames/parts'), tab: 'basic' }),
       f('category', '分类', 'Category', 'linesScalar', { hint: l('多行 = 多个分类', 'Multiple lines = several categories'), tab: 'basic' }),
       f('template', '模板', 'Template', 'linesScalar', { hint: l('多行 = 多个模板', 'Multiple lines = several templates'), tab: 'basic' }),
       f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments'), tab: 'basic' }),
       f('client-bound-material', '客户端材质', 'Client Bound Material', 'text', { datalist: 'items', tab: 'basic' }),
       // 数据组件
       f('data', '数据', 'Data', 'components', { components: DATA_COMPONENT_TYPES_REF, label: l('数据', 'Data'), tab: 'data' }),
+      f('client-bound-data', '客户端数据', 'Client Bound Data', 'components', { components: DATA_COMPONENT_TYPES_REF, label: l('客户端数据', 'Client Bound Data'), hint: l('客户端侧 data 覆盖 (1.21.2+)', 'Client-side data overrides (1.21.2+)'), tab: 'data' }),
       // 模型
       f('item_model', '物品模型', 'Item Model', 'model', { tab: 'model' }),
       f('model', '模型 (旧键)', 'Model (legacy)', 'model', { tab: 'model' }),
