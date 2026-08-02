@@ -3246,7 +3246,8 @@ textarea.ce-sf-input {
   gap: 6px;
   margin-bottom: 8px;
 }
-.ce-sf-list-add select.ce-sf-input {
+.ce-sf-list-add select.ce-sf-input,
+.ce-sf-list-add .ce-sf-pick {
   flex: 1;
   min-width: 0;
 }

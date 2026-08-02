@@ -921,7 +921,7 @@
   }
   function _sfUnionPickHtml(def, uid) {
     var types = _sfTypesOf(def);
-    var html = '<select class="ce-input ce-sf-pick" data-sf-action="list-add" data-sf-uid="' + uid + '">' +
+    var html = '<select class="ce-input ce-sf-pick" data-sf-list-pick="1" data-sf-uid="' + uid + '">' +
       '<option value="">-- ' + _escHtml(_t('craftengine.listAdd')) + ' --</option>';
     if (def.allowScalar) html += '<option value="__scalar">' + _escHtml(_t('craftengine.customValue')) + '</option>';
     var keys = Object.keys(types);
@@ -931,7 +931,8 @@
       html += '<option value="' + _escHtml(k) + '">' + _escHtml(lb) + '</option>';
       if (def.negatable) html += '<option value="!' + _escHtml(k) + '">' + _escHtml('!' + lb) + '</option>';
     }
-    return html + '</select>';
+    return html + '</select>' +
+      '<button class="cv-btn cv-btn-sm cv-btn-secondary" data-sf-action="list-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.listAdd')) + '</button>';
   }
   function _sfMapHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'map', def, opts);
@@ -1231,7 +1232,12 @@
       var itemDef = rec.def.itemType;
       var nv;
       if (itemDef && itemDef.type === 'union') {
-        var tv = el.value;
+        var tv = '';
+        if (el.closest) {
+          var addBox = el.closest('.ce-sf-list-add');
+          var pick = addBox ? addBox.querySelector('.ce-sf-pick') : null;
+          if (pick) tv = pick.value;
+        }
         if (!tv) return;
         nv = tv === '__scalar' ? '' : { type: tv };
       } else {
@@ -2126,7 +2132,7 @@
 
   function _bindEvents(containerEl) {
     var clickHandler = function (e) {
-      var el = e.target.closest ? e.target.closest('[data-action]') : null;
+      var el = e.target.closest ? e.target.closest('[data-action], [data-sf-action]') : null;
       if (!el) return;
       var action = el.getAttribute('data-action');
       var parsed = containerEl._ceParsed;

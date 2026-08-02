@@ -336,13 +336,22 @@ if (uidMatch) {
   check(wEntry.data.conditions[0].type === 'permission' && wEntry.data.conditions[0].value === undefined, '写回: union-set 切换类型 (丢弃非共享键)');
 }
 
-// list-add: 通过 pick select 添加条件
+// list-add: 类型选择器 + 添加按钮
 const listUidRe = /data-sf-action="list-add" data-sf-uid="([^"]+)"/;
 const listUid = h5.match(listUidRe);
-check(!!listUid, 'list-add uid 可定位');
+check(!!listUid, 'list-add 按钮可定位');
+check(/data-sf-list-pick="1"/.test(h5), 'list-add 类型选择器存在');
 if (listUid) {
-  fire(mk({ 'data-sf-action': 'list-add', 'data-sf-uid': listUid[1] }, 'block'));
-  check(wEntry.data.conditions.length === 2 && wEntry.data.conditions[1].type === 'block', '写回: list-add 追加 union 条目');
+  const pickSel = mk({ 'data-sf-list-pick': '1' }, 'block');
+  const addBtn = mk({ 'data-sf-action': 'list-add', 'data-sf-uid': listUid[1] }, null);
+  addBtn.closest = () => ({ querySelector: () => pickSel });
+  fire(addBtn);
+  check(wEntry.data.conditions.length === 2 && wEntry.data.conditions[1].type === 'block', '写回: list-add 按钮+选择器追加 union 条目');
+  const pickEmpty = mk({ 'data-sf-list-pick': '1' }, '');
+  const addBtn2 = mk({ 'data-sf-action': 'list-add', 'data-sf-uid': listUid[1] }, null);
+  addBtn2.closest = () => ({ querySelector: () => pickEmpty });
+  fire(addBtn2);
+  check(wEntry.data.conditions.length === 2, 'list-add 未选类型不添加');
 }
 
 // kv 写回 (emoji overrides)
@@ -582,6 +591,21 @@ check(!!sndUid, '音效 union-set uid 可定位');
 if (sndUid) {
   fCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'settings.sounds.break', 'data-sf-uid': sndUid[1] }, 'map') });
   check(fEntry.data.settings.sounds.break !== null && typeof fEntry.data.settings.sounds.break === 'object' && !Array.isArray(fEntry.data.settings.sounds.break) && fEntry.data.settings.sounds.break.id === undefined, '写回: 音效标量 → 详细对象 (默认空)');
+}
+
+// union-clear: 音效删除按钮 (click 事件)
+const sndClearRe = /data-sf-action="union-clear" data-sf-path="settings\.sounds\.break" data-sf-uid="([^"]+)"/;
+const sndClear = fh.match(sndClearRe);
+check(!!sndClear, '音效 union-clear 按钮可定位');
+if (sndClear) {
+  const clk = fR.listeners['click'][0];
+  check(!!clk, 'click 监听器已安装');
+  if (clk) {
+    const clearBtn = mk({ 'data-sf-action': 'union-clear', 'data-sf-path': 'settings.sounds.break', 'data-sf-uid': sndClear[1] }, null);
+    clearBtn.closest = () => clearBtn;
+    clk({ target: clearBtn });
+    check(fEntry.data.settings.sounds.break === undefined, '写回: union-clear 删除音效字段');
+  }
 }
 
 // updater: map 版本 → 步骤列表/单个步骤
