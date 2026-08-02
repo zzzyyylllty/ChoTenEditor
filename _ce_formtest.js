@@ -406,6 +406,102 @@ if (asUid) {
   check(bEntry.data.state.auto_state !== null && typeof bEntry.data.state.auto_state === 'object' && !Array.isArray(bEntry.data.state.auto_state), '写回: auto_state → expanded 对象');
 }
 
+// ---------- 2.4 furniture schema 表单 (Phase 4) ----------
+const furnYaml = `
+furniture:
+  default:my_chair:
+    variants:
+      ground:
+        loot_spawn_offset: 0,0.5,0
+        elements:
+          - type: item_display
+            item: default:my_chair_model
+            translation: 0,0.5,0
+        hitboxes:
+          - type: shulker
+            position: 0,0,0
+            peek: 100
+            blocks_building: true
+            interactive: true
+            interaction_entity: true
+            seats:
+              - 0.5,0.3,0
+          - position: 0,0,0
+        entity_culling: false
+      wall:
+        blueprint: my_model
+    settings:
+      item: default:my_chair
+      hit_times: 3
+      sounds:
+        break: minecraft:block.bamboo_wood.break
+      adventure_mode_breaking: true
+      correct_tools:
+        - "#minecraft:axes"
+    behavior:
+      type: glowing_furniture
+      lights:
+        - 0,0,0 15
+    loot:
+      template: default:loot_table/furniture
+      arguments:
+        item: default:my_chair
+    events:
+      - on: right_click
+        functions:
+          - type: command
+            command: say hi
+`;
+const elF = render(furnYaml);
+const hf = elF.innerHTML;
+check(hf.includes('data-ce-tab="variants"'), 'furniture 选项卡 variants');
+check(hf.includes('data-ce-tab="settings"'), 'furniture 选项卡 settings');
+check(hf.includes('data-ce-tab="behaviors"'), 'furniture 选项卡 behaviors');
+check(hf.includes('data-ce-tab="loot"'), 'furniture 选项卡 loot');
+check(hf.includes('data-ce-tab="events"'), 'furniture 选项卡 events');
+check(hf.includes('data-sf-path="variants.ground.loot_spawn_offset"'), '变体 loot_spawn_offset 字段');
+check(hf.includes('data-sf-kind="list"') && hf.includes('data-sf-path="variants.ground.elements"'), 'elements listOf');
+check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.elements.0"'), '元素 union (type-keyed)');
+check(hf.includes('data-sf-path="variants.ground.elements.0.item"'), 'item_display 元素 item 字段');
+check(hf.includes('data-sf-path="variants.ground.hitboxes.0"') && hf.includes('data-sf-action="union-set"'), 'hitboxes union (type-keyed)');
+check(hf.includes('data-sf-path="variants.ground.hitboxes.0.peek"') && hf.includes('data-sf-type="number"'), 'shulker 类型体 peek number');
+check(hf.includes('data-sf-type="lines"') && hf.includes('data-sf-path="variants.ground.hitboxes.0.seats"'), 'shulker seats lines');
+check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.hitboxes.1"'), '无 type 碰撞箱 union 渲染 (数据保留)');
+check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.entity_culling"'), 'entity_culling union (标量 bool)');
+check(hf.includes('data-sf-path="variants.wall.blueprint"'), '变体 blueprint 字段');
+check(hf.includes('data-sf-path="settings.hit_times"') && hf.includes('data-sf-type="number"'), 'settings.hit_times number');
+check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="settings.sounds.break"'), 'settings.sounds.break 音效 union');
+check(hf.includes('data-sf-type="lines"') && hf.includes('data-sf-path="settings.correct_tools"'), 'settings.correct_tools lines');
+check(hf.includes('data-sf-path="behavior"') && hf.includes('data-sf-action="union-set"'), 'behavior union');
+check(hf.includes('data-sf-kind="list"') && hf.includes('data-sf-path="behavior.lights"'), 'glowing 行为 lights listOf');
+check(hf.includes('data-sf-path="behavior.lights.0"'), 'lights 条目 union (noTypeKey 标量简写)');
+check(hf.includes('data-sf-path="loot.template"'), 'loot template 字段');
+check(hf.includes('data-sf-kind="map"') && hf.includes('data-sf-path="loot.arguments"'), 'loot arguments mapOf');
+check(hf.includes('data-ce-tabpanel="events"') && hf.includes('data-ce-ev="0"'), 'furniture 事件面板渲染');
+check(!hf.includes('data-ce-field-json'), 'furniture 表单无 JSON 字段编辑器');
+
+// furniture 写回
+const fR = renderCap(furnYaml);
+const fEntry = fR.el._ceParsed.sections[0].entries[0];
+const fCh = fR.listeners['change'][0];
+const fh = fR.el.innerHTML;
+
+fCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'variants.ground.hitboxes.0.seats', 'data-sf-type': 'lines' }, '0.5,0.3,0 90\n0,0.3,0') });
+check(Array.isArray(fEntry.data.variants.ground.hitboxes[0].seats) && fEntry.data.variants.ground.hitboxes[0].seats.length === 2, 'furniture 写回: seats lines');
+fCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'settings.hit_times', 'data-sf-type': 'number' }, '5') });
+check(fEntry.data.settings.hit_times === 5, 'furniture 写回: hit_times number');
+fCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'loot.arguments.item', 'data-sf-type': 'scalar' }, 'default:bench') });
+check(fEntry.data.loot.arguments.item === 'default:bench', 'furniture 写回: loot.arguments.item');
+
+// settings.sounds.break: 标量 → 详细 map (音效)
+const sndUidRe = /data-sf-action="union-set" data-sf-path="settings\.sounds\.break" data-sf-uid="([^"]+)"/;
+const sndUid = fh.match(sndUidRe);
+check(!!sndUid, '音效 union-set uid 可定位');
+if (sndUid) {
+  fCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'settings.sounds.break', 'data-sf-uid': sndUid[1] }, 'map') });
+  check(fEntry.data.settings.sounds.break !== null && typeof fEntry.data.settings.sounds.break === 'object' && !Array.isArray(fEntry.data.settings.sounds.break) && fEntry.data.settings.sounds.break.id === undefined, '写回: 音效标量 → 详细对象 (默认空)');
+}
+
 // updater: map 版本 → 步骤列表/单个步骤
 const upYaml = `
 items:

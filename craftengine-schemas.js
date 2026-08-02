@@ -507,7 +507,15 @@
     ] },
   };
   function LOOT_TYPES_REF() { return LOOT_TYPES; }
-  S.loot = { types: LOOT_TYPES, pool: LOOT_POOL, entries: LOOT_ENTRY_TYPES, functions: LOOT_FN_TYPES };
+  // loot 对象形式: template+arguments 或 pools+functions 共存于同一对象
+  // (loot 数据无 type 键, 不用 union 避免形状误判丢数据)
+  var LOOT_OBJECT_FIELDS = [
+    f('template', '模板', 'Template', 'text', { hint: l('如 default:loot_table/furniture', 'e.g. default:loot_table/furniture') }),
+    f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments') }),
+    f('pools', '战利品池', 'Pools', 'listOf', { itemType: LOOT_POOL, label: l('战利品池', 'Pools') }),
+    f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES }, label: l('函数', 'Functions') }),
+  ];
+  S.loot = { types: LOOT_TYPES, pool: LOOT_POOL, entries: LOOT_ENTRY_TYPES, functions: LOOT_FN_TYPES, objectFields: LOOT_OBJECT_FIELDS };
 
   // ============ 共享字段构建 ============
   function conditionsList() {
@@ -1049,21 +1057,9 @@
     f('events', '事件', 'Events', 'kv'),
     f('settings', '设置', 'Settings', 'object', { fields: INLINE_FURNITURE_SETTINGS, label: l('设置', 'Settings') }),
     f('variants', '变体', 'Variants', 'kv'),
-    f('loot', '掉落', 'Loot', 'union', { types: LOOT_TYPES, label: l('掉落', 'Loot') }),
+    f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot') }),
     f('behaviors', '行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: function () { return FURNITURE_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behaviors') }),
   ];
-  var FURNITURE_BEHAVIOR_TYPES = {
-    simple_storage_furniture: { label: l('简单存储 (simple_storage_furniture)', 'Simple Storage'), fields: [
-      f('title', '标题', 'Title', 'text'), f('rows', '行数', 'Rows', 'number'),
-      f('data_key', '数据键', 'Data Key', 'text'), f('sounds', '音效', 'Sounds', 'kv'),
-    ] },
-    glowing_furniture: { label: l('发光 (glowing_furniture)', 'Glowing'), fields: [
-      f('lights', '光源', 'Lights', 'lines'), f('variants', '变体', 'Variants', 'kv'),
-    ] },
-    display_item_furniture: { label: l('展示物品 (display_item_furniture)', 'Display Item'), fields: [
-      f('data_key', '数据键', 'Data Key', 'text'), f('sounds', '音效', 'Sounds', 'kv'), f('variants', '变体', 'Variants', 'kv'),
-    ] },
-  };
   var FURNITURE_ITEM_FIELDS = [
     f('furniture', '家具', 'Furniture', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, label: l('家具', 'Furniture'), types: {
       inline: { label: l('内联家具', 'Inline Furniture'), widget: { type: 'object', fields: INLINE_FURNITURE_FIELDS } },
@@ -1086,7 +1082,7 @@
   var INLINE_BLOCK_FIELDS = [
     f('settings', '设置', 'Settings', 'object', { fields: INLINE_BLOCK_SETTINGS, label: l('设置', 'Settings') }),
     f('behavior', '行为', 'Behavior', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behavior') }),
-    f('loot', '掉落', 'Loot', 'union', { types: LOOT_TYPES, label: l('掉落', 'Loot') }),
+    f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot') }),
     f('state', '状态', 'State', 'kv'),
   ];
   var BLOCK_ITEM_FIELDS = [
@@ -1508,13 +1504,7 @@
     f('block_light', '阻挡亮度', 'Block Light', 'number'),
     f('propagate_skylight', '透射天空光', 'Propagate Skylight', 'bool'),
   ];
-  // 方块掉落: template+arguments 或 pools+functions (loot 无 type 键, 不用 union 避免形状误判丢数据)
-  var BLOCK_LOOT_FIELDS = [
-    f('template', '模板', 'Template', 'text', { hint: l('如 default:loot_table/furniture', 'e.g. default:loot_table/furniture') }),
-    f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments') }),
-    f('pools', '战利品池', 'Pools', 'listOf', { itemType: LOOT_POOL, label: l('战利品池', 'Pools') }),
-    f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES }, label: l('函数', 'Functions') }),
-  ];
+  var BLOCK_LOOT_FIELDS = LOOT_OBJECT_FIELDS;
 
   // ---- block section ----
   SECTIONS.block = {
@@ -1542,6 +1532,163 @@
       f('behavior', '行为', 'Behavior', 'union', { types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behavior' }),
       f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: BLOCK_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behavior' }),
       f('loot', '掉落', 'Loot', 'object', { fields: BLOCK_LOOT_FIELDS, label: l('掉落', 'Loot'), tab: 'loot' }),
+      f('events', '事件', 'Events', 'events', { tab: 'events', custom: 'events' }),
+      f('merges', '合并', 'Merges', 'kv', { tab: 'events' }),
+      f('overrides', '覆盖', 'Overrides', 'kv', { tab: 'events' }),
+    ],
+  };
+
+  // ---- furniture section (wiki furniture.mdx + furniture/variants.mdx) ----
+  // 家具显示元素 (同方块实体渲染器 7 种, 无 conditions)
+  var FURNITURE_ELEMENT_TYPES = {
+    item_display: { label: l('物品显示 (item_display)', 'Item Display'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('display_transform', '显示变换', 'Display Transform', 'select', { options: S.constants.displayTransforms }),
+      tintSourceField(),
+    ].concat(DISPLAY_PARAMS_FIELDS) },
+    text_display: { label: l('文本显示 (text_display)', 'Text Display'), fields: [
+      f('text', '文本', 'Text', 'textarea', { rows: 2, hint: l('支持 MiniMessage 与 PAPI 占位符', 'Supports MiniMessage & PAPI placeholders') }),
+      f('line_width', '行宽 (像素)', 'Line Width', 'number', { hint: l('默认 200', 'Default 200') }),
+      f('background_color', '背景色 (ARGB)', 'Background Color', 'text', { placeholder: l('64,0,0,0', '64,0,0,0') }),
+      f('text_opacity', '文本透明度', 'Text Opacity', 'number', { hint: l('0-255, -1 = 默认', '0-255, -1 = default') }),
+      f('has_shadow', '阴影', 'Has Shadow', 'bool'),
+      f('is_see_through', '透视背面', 'Is See Through', 'bool'),
+      f('use_default_background_color', '默认背景色', 'Use Default Background Color', 'bool'),
+      f('alignment', '对齐', 'Alignment', 'select', { options: ['center', 'left', 'right'] }),
+    ].concat(DISPLAY_PARAMS_FIELDS) },
+    block_display: { label: l('方块显示 (block_display)', 'Block Display'), fields: [
+      f('block', '方块', 'Block', 'text', { hint: l('方块 ID 或完整状态, 如 minecraft:chest[facing=north]', 'Block ID or full state, e.g. minecraft:chest[facing=north]') }),
+    ].concat(DISPLAY_PARAMS_FIELDS) },
+    item: { label: l('掉落物品 (item)', 'Dropped Item'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('position', '位置', 'Position', 'text', { hint: l('x,y,z (默认方块中心)', 'x,y,z (default block center)') }),
+      tintSourceField(),
+    ] },
+    armor_stand: { label: l('盔甲架 (armor_stand)', 'Armor Stand'), fields: [
+      f('item', '物品', 'Item', 'text', { datalist: 'items' }),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('scale', '缩放', 'Scale', 'number'),
+      f('small', '小型', 'Small', 'bool'),
+      f('glow_color', '发光颜色', 'Glow Color', 'select', { options: S.constants.glowColors }),
+      tintSourceField(),
+    ] },
+    better_model: { label: l('BetterModel', 'BetterModel'), fields: [
+      f('model', '模型名', 'Model', 'text'),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+      f('sight_trace', '参与射线', 'Sight Trace', 'bool', { hint: l('默认 true', 'Default true') }),
+    ] },
+    model_engine: { label: l('ModelEngine', 'ModelEngine'), fields: [
+      f('model', '模型名', 'Model', 'text'),
+      f('position', '位置', 'Position', 'text'),
+      f('yaw', '偏航角', 'Yaw', 'number'),
+      f('pitch', '俯仰角', 'Pitch', 'number'),
+    ] },
+  };
+  // 家具碰撞箱 (wiki furniture/variants.mdx#hitboxes)
+  var HITBOX_COMMON = [
+    f('position', '位置', 'Position', 'text', { hint: l('x,y,z (默认 0,0,0)', 'x,y,z (default 0,0,0)') }),
+    f('blocks_building', '阻止放置', 'Blocks Building', 'bool', { hint: l('默认 true', 'Default true') }),
+    f('can_use_item_on', '物品可交互', 'Can Use Item On', 'bool', { hint: l('默认 true', 'Default true') }),
+    f('can_be_hit_by_projectile', '可被弹射物击中', 'Can Be Hit By Projectile', 'bool', { hint: l('默认 true', 'Default true') }),
+    f('seats', '座位', 'Seats', 'lines', { hint: l('每行一个: x,y,z [yaw], 如 0,0,-0.1 0', 'One per line: x,y,z [yaw], e.g. 0,0,-0.1 0') }),
+  ];
+  var FURNITURE_HITBOX_TYPES = {
+    interaction: { label: l('交互 (interaction)', 'Interaction'), fields: [
+      f('width', '宽度', 'Width', 'number', { hint: l('或用 scale: 1,2 简写宽×高', 'Or scale: 1,2 as width×height shorthand') }),
+      f('height', '高度', 'Height', 'number'),
+      f('scale', '缩放', 'Scale', 'text'),
+      f('interactive', '可交互', 'Interactive', 'bool', { hint: l('玩家可点击 (默认 true)', 'Players can click (default true)') }),
+      f('invisible', 'F3+B 不可见', 'Invisible (F3+B)', 'bool'),
+    ].concat(HITBOX_COMMON) },
+    shulker: { label: l('潜影盒 (shulker)', 'Shulker'), fields: [
+      f('scale', '缩放', 'Scale', 'number', { hint: l('尺寸倍率 (默认 1)', 'Size multiplier (default 1)') }),
+      f('peek', '开启程度', 'Peek', 'number', { hint: l('0~100 (默认 0)', '0~100 (default 0)') }),
+      f('direction', '方向', 'Direction', 'select', { options: ['UP', 'DOWN', 'NORTH', 'WEST', 'EAST', 'SOUTH'] }),
+      f('interaction_entity', '附加交互实体', 'Interaction Entity', 'bool', { hint: l('额外生成交互实体提高点击精度', 'Extra interaction entity for click accuracy') }),
+      f('interactive', '可交互', 'Interactive', 'bool'),
+      f('invisible', 'F3+B 不可见', 'Invisible (F3+B)', 'bool'),
+    ].concat(HITBOX_COMMON) },
+    happy_ghast: { label: l('悦灵 (happy_ghast)', 'Happy Ghast'), fields: [
+      f('scale', '缩放', 'Scale', 'number', { hint: l('尺寸倍率 (默认 1); 基础 4×4 格', 'Size multiplier (default 1); base 4×4 blocks') }),
+    ].concat(HITBOX_COMMON) },
+    custom: { label: l('自定义实体 (custom)', 'Custom'), fields: [
+      f('scale', '缩放', 'Scale', 'number', { hint: l('乘以实体自然大小', 'Multiplies the entity size') }),
+      f('entity_type', '实体类型', 'Entity Type', 'text', { hint: l('任意原版实体 ID, 如 minecraft:creeper (默认 slime)', 'Any vanilla entity id, e.g. minecraft:creeper (default slime)') }),
+    ].concat(HITBOX_COMMON) },
+  };
+  // 家具行为 (wiki furniture/behaviors.mdx)
+  var FURNITURE_BEHAVIOR_TYPES = {
+    simple_storage_furniture: { label: l('简单存储 (simple_storage_furniture)', 'Simple Storage'), fields: [
+      f('title', '标题', 'Title', 'text', { hint: l('GUI 标题, 支持 MiniMessage (默认 <lang:container.chest>)', 'GUI title, MiniMessage (default <lang:container.chest>)') }),
+      f('rows', '行数', 'Rows', 'number', { hint: l('1~6 (默认 1)', '1~6 (default 1)') }),
+      f('data_key', '数据键', 'Data Key', 'text', { hint: l('NBT 持久化键 (默认 craftengine:simple_storage_contents)', 'NBT key (default craftengine:simple_storage_contents)') }),
+      f('sounds', '音效', 'Sounds', 'object', { fields: [
+        soundRefField('open', '打开', 'Open'),
+        soundRefField('close', '关闭', 'Close'),
+      ], label: l('音效', 'Sounds') }),
+      f('variants', '变体交互箱', 'Variants', 'mapOf', { valueType: { type: 'object', fields: [
+        f('hitboxes', '碰撞箱', 'Hitboxes', 'listOf', { itemType: { type: 'union', types: FURNITURE_HITBOX_TYPES, label: l('碰撞箱', 'Hitbox') }, label: l('碰撞箱', 'Hitboxes') }),
+      ], label: l('变体', 'Variant') }, label: l('变体交互箱', 'Variants'), hint: l('每变体独立交互碰撞箱', 'Per-variant interaction hitboxes') }),
+    ] },
+    glowing_furniture: { label: l('发光 (glowing_furniture)', 'Glowing'), fields: [
+      f('lights', '光源', 'Lights', 'listOf', { itemType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('光源', 'Light'), types: {
+        details: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+          f('position', '位置', 'Position', 'text', { hint: l('x,y,z', 'x,y,z') }),
+          f('level', '亮度等级', 'Level', 'number', { hint: l('1~15 (默认 15)', '1~15 (default 15)') }),
+        ], label: l('光源', 'Light') } },
+      } }, label: l('光源', 'Lights'), hint: l('简写 "x,y,z 15" 或 {position, level} 对象', 'Shorthand "x,y,z 15" or {position, level}') }),
+      f('variants', '变体光源', 'Variants', 'mapOf', { valueType: { type: 'lines', label: l('光源', 'Lights') }, label: l('变体光源', 'Variants'), hint: l('键: 家具变体名, 值: 光源简写列表', 'Key: furniture variant; value: light shorthands') }),
+    ] },
+    display_item_furniture: { label: l('展示物品 (display_item_furniture)', 'Display Item'), fields: [
+      f('data_key', '数据键', 'Data Key', 'text', { hint: l('NBT 持久化键 (默认 craftengine:display_item)', 'NBT key (default craftengine:display_item)') }),
+      f('sounds', '音效', 'Sounds', 'object', { fields: [
+        soundRefField('put', '放入', 'Put'),
+        soundRefField('take', '取出', 'Take'),
+      ], label: l('音效', 'Sounds') }),
+      f('variants', '变体显示位', 'Variants', 'mapOf', { valueType: { type: 'object', fields: [
+        f('item_position', '物品显示位置', 'Item Position', 'text', { hint: l('x,y,z', 'x,y,z') }),
+        f('hitboxes', '碰撞箱', 'Hitboxes', 'listOf', { itemType: { type: 'union', types: FURNITURE_HITBOX_TYPES, label: l('碰撞箱', 'Hitbox') }, label: l('碰撞箱', 'Hitboxes') }),
+      ], label: l('变体', 'Variant') }, label: l('变体显示位', 'Variants') }),
+    ] },
+  };
+  var FURNITURE_SETTINGS_FIELDS = [
+    f('item', '对应物品', 'Item', 'text', { hint: l('创造模式中键拾取 (默认自动为家具 ID)', 'Creative middle-click (defaults to furniture id)') }),
+    f('hit_times', '破坏次数', 'Hit Times', 'number', { hint: l('默认 0 = 一击破坏; 停手 2 秒重置', 'Default 0 = instant; resets after 2s') }),
+    f('sounds', '音效', 'Sounds', 'object', { fields: [
+      soundRefField('break', '破坏', 'Break'),
+      soundRefField('place', '放置', 'Place'),
+      soundRefField('hit', '挖掘', 'Hit'),
+    ], label: l('音效', 'Sounds') }),
+    f('adventure_mode_breaking', '冒险模式可破坏', 'Adventure Mode Breaking', 'bool'),
+    f('correct_tools', '正确工具', 'Correct Tools', 'lines', { hint: l('#minecraft:axes = 标签; minecraft:diamond_pickaxe = 物品 ID', '#tag = tag; plain id = item') }),
+  ];
+  var FURNITURE_VARIANT_FIELDS = [
+    f('loot_spawn_offset', '掉落偏移', 'Loot Spawn Offset', 'text', { hint: l('掉落物生成偏移 (默认 0,0,0)', 'Drop spawn offset (default 0,0,0)') }),
+    f('elements', '显示元素', 'Elements', 'listOf', { itemType: { type: 'union', types: FURNITURE_ELEMENT_TYPES, label: l('元素', 'Element') }, label: l('显示元素', 'Elements'), hint: l('7 种显示元素, 可多个组合', '7 display element types, combinable') }),
+    f('hitboxes', '碰撞箱', 'Hitboxes', 'listOf', { itemType: { type: 'union', types: FURNITURE_HITBOX_TYPES, label: l('碰撞箱', 'Hitbox') }, label: l('碰撞箱', 'Hitboxes'), hint: l('交互/碰撞/座位定义', 'Interaction, collision, seats') }),
+    f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
+    f('blueprint', '外部模型', 'Blueprint', 'text', { hint: l('BetterModel/ModelEngine/自定义 API 模型 ID (每变体仅一个)', 'External plugin model id (one per variant)') }),
+  ];
+  SECTIONS.furniture = {
+    tabs: [
+      { key: 'variants', label: l('变体', 'Variants') },
+      { key: 'settings', label: l('设置', 'Settings') },
+      { key: 'behaviors', label: l('行为', 'Behaviors') },
+      { key: 'loot', label: l('掉落', 'Loot') },
+      { key: 'events', label: l('事件', 'Events') },
+    ],
+    fields: [
+      f('variants', '变体', 'Variants', 'mapOf', { valueType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('变体', 'Variant'), types: {
+        details: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: FURNITURE_VARIANT_FIELDS, label: l('变体', 'Variant') } },
+      } }, label: l('变体', 'Variants'), tab: 'variants', hint: l('键: 变体名 (ground/ceiling/wall/自定义)', 'Key: variant name (ground/ceiling/wall/custom)') }),
+      f('settings', '设置', 'Settings', 'object', { fields: FURNITURE_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
+      f('behavior', '行为', 'Behavior', 'union', { types: FURNITURE_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behaviors' }),
+      f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: FURNITURE_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behaviors' }),
+      f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot'), tab: 'loot' }),
       f('events', '事件', 'Events', 'events', { tab: 'events', custom: 'events' }),
       f('merges', '合并', 'Merges', 'kv', { tab: 'events' }),
       f('overrides', '覆盖', 'Overrides', 'kv', { tab: 'events' }),
