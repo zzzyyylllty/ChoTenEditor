@@ -3425,8 +3425,6 @@ textarea.ce-input {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   line-height: 1.65;
   max-width: 440px;
-  /* 文字阴影: 颜色随背景反色 (tooltip.js calcShadow), 浅色文字在黑/白底上都清晰 */
-  text-shadow: 0 1px 2px var(--rt-shadow, rgba(0, 0, 0, 0.45)), 0 0 4px var(--rt-shadow, rgba(0, 0, 0, 0.30));
   animation: rt-tooltip-in 0.12s ease;
 }
 .rt-tooltip b,
@@ -3463,7 +3461,10 @@ textarea.ce-input {
   display: block;
 }
 .rt-tooltip span[style] {
-  text-shadow: 0 1px 2px var(--rt-shadow, rgba(0, 0, 0, 0.5)), 0 0 3px var(--rt-shadow, rgba(0, 0, 0, 0.3));
+  /* 彩色文字底块: 颜色随背景反色 (tooltip.js calcBlock), 黑/白底上都明显 */
+  background: var(--rt-block, rgba(0, 0, 0, 0.35));
+  border-radius: 3px;
+  padding: 0 2px;
 }
 .rt-tooltip .rt-restricted {
   color: var(--color-warning);

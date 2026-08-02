@@ -31,21 +31,21 @@
     tip.innerHTML = html;
     tip.style.setProperty('--rt-accent', opts.accent || '');
     tip.style.display = 'block';
-    // 阴影取背景反色: 深背景→浅阴影, 浅背景→深阴影, 黑/白底上文字都清晰
-    tip.style.setProperty('--rt-shadow', calcShadow(tip));
+    // 彩色文字底块取背景反色: 深背景→浅块(淡), 浅背景→深块(浓), 黑/白底上文字都明显
+    tip.style.setProperty('--rt-block', calcBlock(tip));
     posTip(e);
   }
 
-  // 计算与背景相反的颜色作文字阴影 (半透明, 若背景不可解析则回退默认)
-  function calcShadow(tip) {
+  // 计算与背景相反的颜色作文字底块 (透明度随背景亮度调整, 若背景不可解析则回退)
+  function calcBlock(tip) {
     var bg = '';
     try { bg = getComputedStyle(tip).backgroundColor || ''; } catch (err) { bg = ''; }
     var m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(bg);
-    if (!m) return 'rgba(0,0,0,0.45)';
+    if (!m) return 'rgba(0,0,0,0.35)';
     var inv = [255 - (+m[1]), 255 - (+m[2]), 255 - (+m[3])];
-    // 反色接近中灰 (无对比) 或接近原背景时按亮度补正, 保证方向正确
-    var lum = (0.299 * inv[0] + 0.587 * inv[1] + 0.114 * inv[2]) / 255;
-    var a = (lum > 0.65 || lum < 0.35) ? 0.55 : 0.8;
+    var lum = (0.299 * (+m[1]) + 0.587 * (+m[2]) + 0.114 * (+m[3])) / 255;
+    // 背景亮(浅主题)→浓深色块衬亮字; 背景暗(深主题)→淡浅色块, 不干扰本就清晰的浅字
+    var a = lum > 0.5 ? 0.85 : 0.28;
     return 'rgba(' + inv[0] + ',' + inv[1] + ',' + inv[2] + ',' + a + ')';
   }
 
