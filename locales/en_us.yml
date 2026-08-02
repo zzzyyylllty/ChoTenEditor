@@ -898,7 +898,6 @@ craftengine:
   unlockOnIngredient: "Unlock on Ingredient (unlock_on_ingredient_obtained)"
   unlockOnJoin: "Unlock on Join (unlock_on_join)"
   otherFields: "Other Fields"
-  customTabWarning: "The Custom tab should only be used when editing plugin files for options not covered by the tabs. Using unsupported options in the editor's own settings may cause errors and crashes."
   type_item: "Item"
   type_block: "Block"
   type_furniture: "Furniture"

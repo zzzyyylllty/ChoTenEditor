@@ -898,7 +898,6 @@ craftengine:
   unlockOnIngredient: "获取材料解锁 (unlock_on_ingredient_obtained)"
   unlockOnJoin: "加入即解锁 (unlock_on_join)"
   otherFields: "其他字段"
-  customTabWarning: "自定义选项卡仅适用于插件文件编辑中有选项卡没有提供的选项时才应该使用，在编辑器本身的设置中使用不受支持的选项可能导致错误和崩溃。"
   type_item: "物品 (Item)"
   type_block: "方块 (Block)"
   type_furniture: "家具 (Furniture)"
