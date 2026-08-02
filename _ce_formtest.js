@@ -372,7 +372,7 @@ if (listDelUid) {
   check(wEntry.data.conditions.length === 1, '写回: list-del 删除条目');
 }
 
-// kv 写回 (emoji overrides)
+// mapOf 写回 (emoji overrides, Phase 2 B 表: kv → mapOf)
 const emojiYaml = `
 emoji:
   default:test:
@@ -383,8 +383,78 @@ emoji:
 `;
 const eR = renderCap(emojiYaml);
 const eEntry = eR.el._ceParsed.sections[0].entries[0];
-eR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'overrides', 'data-sf-type': 'kv' }, 'k1: v1\nk2: 5') });
-check(eEntry.data.overrides.k1 === 'v1' && eEntry.data.overrides.k2 === 5, '写回: kv 键值解析 (数字值)');
+check(eR.el.innerHTML.includes('data-sf-kind="map"') && eR.el.innerHTML.includes('data-sf-path="overrides"') &&
+  !eR.el.innerHTML.includes('data-sf-type="kv"'), 'emoji overrides 渲染: mapOf 键值对 (不再 kv)');
+eR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'overrides.k1', 'data-sf-type': 'scalar' }, 'v1') });
+check(eEntry.data.overrides.k1 === 'v1', '写回: mapOf scalar 字符串值');
+eR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'overrides.k2', 'data-sf-type': 'scalar' }, '5') });
+check(eEntry.data.overrides.k2 === 5, '写回: mapOf scalar 数字解析');
+
+// placedFeature 弹窗 (Phase 2)
+const pfYaml = `
+placed_features:
+  default:tree:
+    feature:
+      type: minecraft:tree
+      config:
+        trunk: minecraft:oak_log
+    placement:
+      - type: minecraft:rarity_filter
+        chance: 0.5
+`;
+const pfH = render(pfYaml).innerHTML;
+check(pfH.includes('data-sf-action="popup-edit"') && pfH.includes('data-sf-path="feature"'), 'placedFeature feature 弹窗编辑按钮');
+check(pfH.includes('data-sf-action="popup-edit"') && pfH.includes('data-sf-path="placement"'), 'placedFeature placement 弹窗编辑按钮');
+check(pfH.includes('minecraft:tree'), 'feature 弹窗摘要 (union type 值)');
+check(pfH.includes('1 项'), 'placement 弹窗摘要 (修饰器列表计数)');
+check(!pfH.includes('data-sf-path="feature.type"') && !pfH.includes('data-sf-path="placement.0"'), 'feature/placement 内容不再行内渲染 (弹窗内)');
+
+// B 表 item data 组件: effects / block_state map / raw_filtered (Phase 2)
+const dataYaml = `
+items:
+  default:test:
+    data:
+      enchantment:
+        effects:
+          minecraft:sharpness: 5
+          minecraft:looting: 2
+      block_state:
+        facing: east
+        lit: 'true'
+      written_book_content:
+        pages:
+          - raw: hello
+            filtered: hi
+`;
+const dR = renderCap(dataYaml);
+const dEntry = dR.el._ceParsed.sections[0].entries[0];
+const dH = dR.el.innerHTML;
+check(dH.includes('data-sf-kind="map"') && dH.includes('data-sf-path="data.enchantment.effects"') && dH.includes('data-sf-type="scalar"'), 'enchantment effects 渲染: mapOf(scalar) (不再 kv)');
+check(dH.includes('data-sf-kind="map"') && dH.includes('data-sf-path="data.block_state"'), 'block_state map 形式: mapOf(scalar) (不再 kv)');
+check(dH.includes('data-sf-path="data.written_book_content.pages.0.raw"') && dH.includes('data-sf-path="data.written_book_content.pages.0.filtered"'), 'raw_filtered 对象字段渲染');
+check(!/data-sf-path="data\.[^"]*" data-sf-type="kv"/.test(dH), 'item data 组件无 kv 文本框 (data 前缀)');
+dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.enchantment.effects.minecraft:sharpness', 'data-sf-type': 'scalar' }, '7') });
+check(dEntry.data.data.enchantment.effects['minecraft:sharpness'] === 7, '写回: enchantment effects scalar 值');
+dR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.block_state.facing', 'data-sf-type': 'scalar' }, 'north') });
+check(dEntry.data.data.block_state.facing === 'north', '写回: block_state map 值');
+
+// recipe predicate enchantments mapOf (Phase 2 B 表)
+const predYaml = `
+recipes:
+  default:sword:
+    type: shaped
+    pattern:
+      - "a"
+    ingredients:
+      a:
+        item: default:item
+        predicate:
+          - enchantment:
+              enchantments:
+                minecraft:sharpness: 5
+`;
+const predH = render(predYaml).innerHTML;
+check(predH.includes('data-sf-kind="map"') && predH.includes('data-sf-path="ingredients.a.predicate.0.enchantments"') && predH.includes('data-sf-type="scalar"'), 'recipe predicate enchantments 渲染: mapOf(scalar) (不再 kv)');
 
 // lines-scalar (match_item.id)
 const condYaml = `
@@ -585,16 +655,9 @@ check(hf.includes('data-ce-tab="settings"'), 'furniture 选项卡 settings');
 check(hf.includes('data-ce-tab="behaviors"'), 'furniture 选项卡 behaviors');
 check(hf.includes('data-ce-tab="loot"'), 'furniture 选项卡 loot');
 check(hf.includes('data-ce-tab="events"'), 'furniture 选项卡 events');
-check(hf.includes('data-sf-path="variants.ground.loot_spawn_offset"'), '变体 loot_spawn_offset 字段');
-check(hf.includes('data-sf-kind="list"') && hf.includes('data-sf-path="variants.ground.elements"'), 'elements listOf');
-check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.elements.0"'), '元素 union (type-keyed)');
-check(hf.includes('data-sf-path="variants.ground.elements.0.item"'), 'item_display 元素 item 字段');
-check(hf.includes('data-sf-path="variants.ground.hitboxes.0"') && hf.includes('data-sf-action="union-set"'), 'hitboxes union (type-keyed)');
-check(hf.includes('data-sf-path="variants.ground.hitboxes.0.peek"') && hf.includes('data-sf-type="number"'), 'shulker 类型体 peek number');
-check(hf.includes('data-sf-type="lines"') && hf.includes('data-sf-path="variants.ground.hitboxes.0.seats"'), 'shulker seats lines');
-check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.hitboxes.1"'), '无 type 碰撞箱 union 渲染 (数据保留)');
-check(hf.includes('data-sf-action="union-set"') && hf.includes('data-sf-path="variants.ground.entity_culling"'), 'entity_culling union (标量 bool)');
-check(hf.includes('data-sf-path="variants.wall.blueprint"'), '变体 blueprint 字段');
+check(hf.includes('data-sf-action="popup-edit"') && hf.includes('data-sf-path="variants"'), 'variants 弹窗编辑按钮');
+check(hf.includes('ground, wall (2 个)'), 'variants 弹窗摘要 (键列表)');
+check(!hf.includes('data-sf-path="variants.ground.loot_spawn_offset"') && !hf.includes('data-sf-path="variants.ground.elements"'), 'variants 内容不再行内渲染 (弹窗内)');
 check(hf.includes('data-sf-path="settings.hit_times"') && hf.includes('data-sf-type="number"'), 'settings.hit_times number');
 check(hf.includes('data-sf-action="popup-edit"') && hf.includes('data-sf-path="settings.sounds"'), 'settings.sounds 弹窗编辑按钮');
 check(hf.includes('break: minecraft:block.bamboo_wood.break'), 'furniture sounds 弹窗摘要');
@@ -734,6 +797,34 @@ check(cfgH3.includes('data-sf-type="lines"') && cfgH3.includes('data-sf-path="me
 check(cfgH3.includes('data-sf-action="union-set"') && cfgH3.includes('data-sf-path="delivery.hosting.0"'), 'delivery.hosting union 列表');
 check(cfgH4.includes('data-sf-type="kv-rest"') && cfgH4.includes('data-sf-exclude="enable,font"'), 'offset-characters kv-rest (排除 enable/font)');
 check(cfgH5.includes('custom-group') && cfgH5.includes('data-sf-type="kv-rest"'), '未知组折叠 kv-rest');
+
+// config 顶层组 sound overrides (Phase 2 B 表: kv → mapOf)
+const cfgOvYaml = `
+config-version: 1
+metrics: true
+forced-locale: zh_cn
+light-system:
+  enable: true
+item:
+  custom-model-data-starting-value:
+    default: 100
+    overrides:
+      minecraft:paper: 200
+block:
+  deceive-bukkit-material:
+    overrides:
+      '0': minecraft:stone
+image:
+  codepoint-starting-value:
+    overrides:
+      minecraft:default: 0xf000
+`;
+const cfgOvH4 = renderSection(cfgOvYaml, 'config.yml', 4).innerHTML; // item
+const cfgOvH5 = renderSection(cfgOvYaml, 'config.yml', 5).innerHTML; // block
+const cfgOvH6 = renderSection(cfgOvYaml, 'config.yml', 6).innerHTML; // image
+check(cfgOvH4.includes('data-sf-kind="map"') && cfgOvH4.includes('data-sf-path="custom-model-data-starting-value.overrides"') && cfgOvH4.includes('data-sf-path="custom-model-data-starting-value.overrides.minecraft:paper"'), 'config item CMD overrides → mapOf (键=材质名)');
+check(cfgOvH5.includes('data-sf-kind="map"') && cfgOvH5.includes('data-sf-path="deceive-bukkit-material.overrides"'), 'config block deceive-bukkit overrides → mapOf (键=内部 ID)');
+check(cfgOvH6.includes('data-sf-kind="map"') && cfgOvH6.includes('data-sf-path="codepoint-starting-value.overrides"'), 'config image codepoint overrides → mapOf (键=字体)');
 
 // config 写回 → _fileLevelRaw (先切换 section)
 const cfgCh = cfgR.listeners['change'][0];

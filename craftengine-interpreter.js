@@ -1042,8 +1042,14 @@
     var body = '';
     if (cur.key && cur.key !== '__scalar') {
       var td = types[cur.key];
-      if (td) body = _sfTypeBody(td, path, value, opts);
-      else body = _sfControl({ type: 'kv' }, path, value); // 未知类型: kv 兜底
+      if (td) {
+        // 键名形式 (noTypeKey, 值 = {类型键: 内容}) 时类型体取 value[类型键]; 形状推断形式值即内容
+        var bodyValue = value;
+        if (def.noTypeKey && value && typeof value === 'object' && !Array.isArray(value) && value[cur.key] !== undefined) {
+          bodyValue = value[cur.key];
+        }
+        body = _sfTypeBody(td, path, bodyValue, opts);
+      } else body = _sfControl({ type: 'kv' }, path, value); // 未知类型: kv 兜底
     } else if (cur.key === '__scalar') {
       var sd = (def.allowScalar && typeof def.allowScalar === 'object') ? def.allowScalar : {};
       sd.type = sd.type || 'text';
@@ -1098,7 +1104,7 @@
       var k = keys[i];
       var base = String(k).split('#')[0];
       var wd = comps[base];
-      var body = wd ? _sfItemHtml(wd, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList })
+      var body = wd ? _sfItemHtml(wd.widget || wd, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList })
         : '<div class="ce-stack">' + _sfKvTextarea({ type: 'kv' }, _sfKeyPath(path, k), obj[k]) + '</div>';
       html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<div class="ce-sf-comp-head">' +
@@ -1156,6 +1162,11 @@
     return html + '<div class="ce-sf-union-body">' + body + '</div></div>';
   }
   // ---- 弹窗编辑器 (popup): 界面显示简略值, 点击弹窗编辑完整字段 ----
+  // content 可为函数 (延迟求值, 支持前向引用的共享 def)
+  function _sfPopupContent(def) {
+    var c = def.content;
+    return typeof c === 'function' ? c() : c;
+  }
   function _sfPopupScalar(fld, v) {
     var ft = fld.type;
     if (ft === 'union') {
@@ -1173,7 +1184,8 @@
     return String(v);
   }
   function _sfPopupSummary(def, value) {
-    var c = def.content;
+    // content 是 popup 字段定义; 递归传入的 widget 定义没有 content, 直接用自身
+    var c = _sfPopupContent(def) || def;
     var empty = _t('craftengine.popupEmpty');
     if (!c || value === undefined || value === null || value === '') return empty;
     if (typeof value !== 'object') return String(value);
@@ -1192,6 +1204,27 @@
       });
       if (!parts.length) return empty;
       return parts.slice(0, 5).join(', ') + (parts.length > 5 ? ' …' : '');
+    }
+    if (t === 'listOf' || t === 'lines' || t === 'linesScalar') {
+      if (!Array.isArray(value) || !value.length) return empty;
+      return String(value.length) + ' 项';
+    }
+    if (t === 'union') {
+      if (Array.isArray(value)) {
+        var ks = _sfTypesOf(c), ksL = Object.keys(ks);
+        for (var i = 0; i < ksL.length; i++) {
+          var w = (ks[ksL[i]].widget || {}).type;
+          if (w === 'listOf' || w === 'lines' || w === 'linesScalar') return _sfPopupSummary(ks[ksL[i]].widget, value);
+        }
+        return String(value.length) + ' 项';
+      }
+      if (value.type) return String(value.type);
+      var ks2 = _sfTypesOf(c), ks2L = Object.keys(ks2);
+      for (var j = 0; j < ks2L.length; j++) {
+        var w2 = (ks2[ks2L[j]].widget || {}).type;
+        if (w2 === 'object' || w2 === 'mapOf' || w2 === 'components') return _sfPopupSummary(ks2[ks2L[j]].widget, value);
+      }
+      return String(value);
     }
     return String(value);
   }
@@ -1219,7 +1252,7 @@
     bodyEl.className = 'ce-popup-body';
     bodyEl._ceParsed = { sections: [{ entries: [{ data: { __popup__: copy }, _rawOrder: ['__popup__'] }] }], _isPopup: true };
     bodyEl._ceUi = { section: 0, entry: 0 };
-    bodyEl.innerHTML = _sfItemHtml(rec.def.content, '__popup__', copy, {});
+    bodyEl.innerHTML = _sfItemHtml(_sfPopupContent(rec.def), '__popup__', copy, {});
     _bindEvents(bodyEl);
 
     var modal = document.createElement('div');
@@ -1466,7 +1499,7 @@
         ckey = cbn + (cni === 1 ? '' : '_' + cni);
       }
       var wd = comps[ckey];
-      cobj[ckey] = wd ? _sfDefaultOf(wd) : {};
+      cobj[ckey] = wd ? _sfDefaultOf(wd.widget || wd) : {};
       _sfRerender(uid, containerEl);
       if (ROOT.__keAutoSync) syncToSource(parsed);
       return;

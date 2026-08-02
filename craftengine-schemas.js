@@ -626,7 +626,7 @@
       f('permission', '权限', 'Permission', 'text'),
       f('chat_completion', '聊天补全', 'Chat Completion', 'bool'),
       f('template', '模板', 'Template', 'text'),
-      f('overrides', '覆盖', 'Overrides', 'kv'),
+      f('overrides', '覆盖', 'Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('覆盖', 'Overrides') }),
     ],
   };
 
@@ -667,10 +667,62 @@
     ],
   };
 
+  // 放置修饰器 (wiki 无结构文档, 按原版 placemod 建模; 未知类型 kv 兜底)
+  var PLACEMENT_MODIFIER_TYPES = {
+    'minecraft:rarity_filter': { label: l('稀有度过滤 (rarity_filter)', 'Rarity Filter'), fields: [f('chance', '概率', 'Chance', 'number')] },
+    'minecraft:in_square': { label: l('方形内 (in_square)', 'In Square') },
+    'minecraft:heightmap': { label: l('高度图 (heightmap)', 'Heightmap'), fields: [f('heightmap', '高度图', 'Heightmap', 'text')] },
+    'minecraft:biome': { label: l('群系过滤 (biome)', 'Biome') },
+    'minecraft:random_offset': { label: l('随机偏移 (random_offset)', 'Random Offset'), fields: [
+      f('xz_spread', 'XZ 偏移', 'XZ Spread', 'number'),
+      f('y_spread', 'Y 偏移', 'Y Spread', 'number'),
+    ] },
+    'minecraft:block_predicate_filter': { label: l('方块谓词过滤 (block_predicate_filter)', 'Block Predicate Filter'), fields: [f('predicate', '谓词', 'Predicate', 'kv')] },
+    'minecraft:count': { label: l('数量 (count)', 'Count'), fields: [f('count', '数量', 'Count', 'text')] },
+    'minecraft:noise_threshold_count': { label: l('噪声阈值数量 (noise_threshold_count)', 'Noise Threshold Count'), fields: [
+      f('noise_level', '噪声级别', 'Noise Level', 'number'),
+      f('below_noise', '低于噪声', 'Below Noise', 'number'),
+      f('above_noise', '高于噪声', 'Above Noise', 'number'),
+    ] },
+    'minecraft:count_on_every_layer': { label: l('每层数量 (count_on_every_layer)', 'Count On Every Layer'), fields: [f('count', '数量', 'Count', 'text')] },
+    'minecraft:environment_scan': { label: l('环境扫描 (environment_scan)', 'Environment Scan'), fields: [
+      f('direction_of_search', '搜索方向', 'Direction', 'text'),
+      f('max_steps', '最大步数', 'Max Steps', 'number'),
+      f('target_condition', '目标条件', 'Target Condition', 'kv'),
+      f('allowed_condition', '允许条件', 'Allowed Condition', 'kv'),
+    ] },
+    'minecraft:spread_32_above_top': { label: l('顶部上 32 格散布 (spread_32_above_top)', 'Spread 32 Above Top') },
+    'minecraft:top_slice_height': { label: l('顶部切片高度 (top_slice_height)', 'Top Slice Height'), fields: [f('height', '高度', 'Height', 'text')] },
+    'minecraft:carving_mask': { label: l('洞穴雕刻掩码 (carving_mask)', 'Carving Mask'), fields: [f('step', '步骤', 'Step', 'text')] },
+    'minecraft:random_spread': { label: l('随机散布 (random_spread)', 'Random Spread'), fields: [
+      f('spread_type', '散布类型', 'Spread Type', 'text'),
+      f('spread', '散布', 'Spread', 'number'),
+      f('horizontal_spread', '水平散布', 'Horizontal Spread', 'number'),
+      f('vertical_spread', '垂直散布', 'Vertical Spread', 'number'),
+    ] },
+    'minecraft:block_predictions': { label: l('方块预测 (block_predictions)', 'Block Predictions'), fields: [f('predicate', '谓词', 'Predicate', 'kv')] },
+  };
+  var PLACED_FEATURE_UNION = {
+    type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:patch', 'minecraft:patch') },
+    label: l('地物', 'Feature'),
+    types: {
+      map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+        f('type', '类型', 'Type', 'text'),
+        f('config', '配置', 'Config', 'kv'),
+      ], label: l('地物', 'Feature') } },
+    },
+  };
+  var PLACED_PLACEMENT_UNION = {
+    type: 'union', noTypeKey: true, label: l('放置规则', 'Placement'),
+    types: {
+      single: { label: l('单个修饰器', 'Single Modifier'), widget: { type: 'union', types: PLACEMENT_MODIFIER_TYPES, label: l('修饰器', 'Modifier') } },
+      list: { label: l('修饰器列表', 'Modifier List'), widget: { type: 'listOf', label: l('放置修饰器', 'Placement Modifiers'), itemType: { type: 'union', types: PLACEMENT_MODIFIER_TYPES, label: l('修饰器', 'Modifier') } } },
+    },
+  };
   SECTIONS.placedFeature = {
     fields: [
-      f('feature', '地物', 'Feature', 'kv', { hint: l('生成结构定义', 'Structure definition') }),
-      f('placement', '放置规则', 'Placement', 'kv', { hint: l('放置修饰器', 'Placement modifiers') }),
+      f('feature', '地物', 'Feature', 'popup', { content: PLACED_FEATURE_UNION, label: l('地物', 'Feature'), hint: l('生成结构定义', 'Structure definition') }),
+      f('placement', '放置规则', 'Placement', 'popup', { content: PLACED_PLACEMENT_UNION, label: l('放置规则', 'Placement'), hint: l('放置修饰器', 'Placement modifiers') }),
       f('world', '世界', 'World', 'lines'),
       f('dimension', '维度', 'Dimension', 'lines'),
       f('dimension_type', '维度类型', 'Dimension Type', 'lines'),
@@ -778,7 +830,7 @@
     type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('facing=north', 'facing=north') },
     label: l('方块状态', 'Block State'),
     types: {
-      map: { label: l('属性映射', 'Property Map'), widget: { type: 'kv', label: l('属性映射', 'Property Map') } },
+      map: { label: l('属性映射', 'Property Map'), widget: { type: 'mapOf', valueType: { type: 'scalar' }, label: l('属性映射', 'Property Map') } },
     },
   };
 
@@ -826,7 +878,10 @@
   var PROFILE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('皮肤', 'Profile'), types: PROFILE_TYPES };
   var WRITTEN_PAGE_TYPES = {
     lines: { label: l('多行文本', 'Lines'), widget: { type: 'lines', label: l('文本', 'Text') } },
-    raw_filtered: { label: l('原始过滤 (raw_filtered)', 'Raw Filtered'), widget: { type: 'kv', label: l('原始文本', 'Raw Filtered') } },
+    raw_filtered: { label: l('原始过滤 (raw_filtered)', 'Raw Filtered'), widget: { type: 'object', fields: [
+      f('raw', '原始文本', 'Raw', 'text'),
+      f('filtered', '过滤后文本', 'Filtered', 'text'),
+    ], label: l('原始过滤', 'Raw Filtered') } },
   };
   var WRITTEN_PAGE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('页', 'Page'), types: WRITTEN_PAGE_TYPES };
   var ATTR_MOD_FIELDS = [
@@ -891,7 +946,7 @@
     ], label: l('移除 Lore', 'Remove Lore') } },
     attribute_modifiers: { label: l('属性修饰 (attribute_modifiers)', 'Attribute Modifiers'), widget: { type: 'listOf', itemType: { type: 'object', fields: ATTR_MOD_FIELDS, label: l('修饰', 'Modifier') }, label: l('属性修饰', 'Attribute Modifiers') } },
     enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), widget: { type: 'object', fields: [
-      f('effects', '效果', 'Effects', 'kv', { hint: l('键: 附魔谓词, 值: 值/概率', 'Key: enchantment predicate, value: value/chance') }),
+      f('effects', '效果', 'Effects', 'mapOf', { valueType: { type: 'scalar' }, label: l('效果', 'Effects'), hint: l('键: 附魔谓词, 值: 值/概率', 'Key: enchantment predicate, value: value/chance') }),
       f('glow', '发光', 'Glow', 'bool'),
     ], label: l('附魔', 'Enchantment') } },
     food: { label: l('食物 (food)', 'Food'), widget: { type: 'object', fields: FOOD_FIELDS, label: l('食物', 'Food') } },
@@ -1081,9 +1136,9 @@
     f('correct_tools', '正确工具', 'Correct Tools', 'lines'),
   ];
   var INLINE_FURNITURE_FIELDS = [
-    f('events', '事件', 'Events', 'kv'),
+    f('events', '事件', 'Events', 'events', { custom: 'events' }),
     f('settings', '设置', 'Settings', 'object', { fields: INLINE_FURNITURE_SETTINGS, label: l('设置', 'Settings') }),
-    f('variants', '变体', 'Variants', 'kv'),
+    f('variants', '变体', 'Variants', 'popup', { content: function () { return FURNITURE_VARIANTS_MAP; }, label: l('变体', 'Variants') }),
     f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot') }),
     f('behaviors', '行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: function () { return FURNITURE_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behaviors') }),
   ];
@@ -1679,6 +1734,15 @@
     f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
     f('blueprint', '外部模型', 'Blueprint', 'text', { hint: l('BetterModel/ModelEngine/自定义 API 模型 ID (每变体仅一个)', 'External plugin model id (one per variant)') }),
   ];
+  // 变体映射 (弹窗 content): 键=变体名, 值=标量或详细定义
+  var FURNITURE_VARIANTS_MAP = {
+    type: 'mapOf',
+    valueType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('变体', 'Variant'), types: {
+      details: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: FURNITURE_VARIANT_FIELDS, label: l('变体', 'Variant') } },
+    } },
+    label: l('变体', 'Variants'),
+    hint: l('键: 变体名 (ground/ceiling/wall/自定义)', 'Key: variant name (ground/ceiling/wall/custom)'),
+  };
   SECTIONS.furniture = {
     tabs: [
       { key: 'variants', label: l('变体', 'Variants') },
@@ -1688,9 +1752,7 @@
       { key: 'events', label: l('事件', 'Events') },
     ],
     fields: [
-      f('variants', '变体', 'Variants', 'mapOf', { valueType: { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('变体', 'Variant'), types: {
-        details: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: FURNITURE_VARIANT_FIELDS, label: l('变体', 'Variant') } },
-      } }, label: l('变体', 'Variants'), tab: 'variants', hint: l('键: 变体名 (ground/ceiling/wall/自定义)', 'Key: variant name (ground/ceiling/wall/custom)') }),
+      f('variants', '变体', 'Variants', 'popup', { content: FURNITURE_VARIANTS_MAP, label: l('变体', 'Variants'), tab: 'variants' }),
       f('settings', '设置', 'Settings', 'object', { fields: FURNITURE_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
       f('behavior', '行为', 'Behavior', 'union', { types: FURNITURE_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behaviors' }),
       f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: FURNITURE_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behaviors' }),
@@ -1707,7 +1769,7 @@
   // 材料谓词 (额外条件)
   var RECIPE_PREDICATE_TYPES = {
     enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), fields: [
-      f('enchantments', '附魔映射', 'Enchantments', 'kv', { hint: l('键: 附魔 ID, 值: 等级', 'Key: enchantment id, value: level') }),
+      f('enchantments', '附魔映射', 'Enchantments', 'mapOf', { valueType: { type: 'scalar' }, label: l('附魔映射', 'Enchantments'), hint: l('键: 附魔 ID, 值: 等级', 'Key: enchantment id, value: level') }),
     ] },
     exact: { label: l('精确组件 (exact)', 'Exact Component'), fields: [
       f('component', '组件', 'Component', 'text', { hint: l('如 minecraft:custom_name', 'e.g. minecraft:custom_name') }),
@@ -1736,7 +1798,7 @@
     f('items', '物品 (items)', 'Items (items)', 'text', { datalist: 'items' }),
     f('count', '数量', 'Count', 'number'),
     f('source', '源物品', 'Source', 'bool', { hint: l('标记为源物品, 其数据合并到结果', 'Mark as source; data merges into result') }),
-    f('predicate', '谓词', 'Predicate', 'listOf', { itemType: { type: 'union', types: RECIPE_PREDICATE_TYPES, label: l('谓词', 'Predicate') }, label: l('谓词', 'Predicates'), hint: l('额外条件, 如附魔等级要求', 'Extra conditions, e.g. enchantment requirements') }),
+    f('predicate', '谓词', 'Predicate', 'listOf', { itemType: { type: 'union', noTypeKey: true, types: RECIPE_PREDICATE_TYPES, label: l('谓词', 'Predicate') }, label: l('谓词', 'Predicates'), hint: l('额外条件, 如附魔等级要求', 'Extra conditions, e.g. enchantment requirements') }),
   ], label: l('材料', 'Ingredient') } };
   // 材料值: 字符串/标签 或 详细 (含嵌套列表, shapeless 条目用)
   var RECIPE_INGREDIENT_TYPES = {
@@ -1998,7 +2060,7 @@
       ] }),
       f('custom-model-data-starting-value', 'CMD 起始值', 'Custom Model Data Starting Value', 'object', { fields: [
         f('default', '默认', 'Default', 'number'),
-        f('overrides', '覆盖', 'Overrides', 'kv', { hint: l('键 = 材质名, 值 = 起始值', 'Key = material, value = start value') }),
+        f('overrides', '覆盖', 'Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('覆盖', 'Overrides'), hint: l('键 = 材质名, 值 = 起始值', 'Key = material, value = start value') }),
       ] }),
       f('default-drop-display', '默认掉落显示', 'Default Drop Display', 'object', { fields: [
         f('enable', '启用', 'Enable', 'bool'),
@@ -2031,7 +2093,7 @@
       f('simplify-adventure-place-check', '简化冒险模式放置检查', 'Simplify Adventure Place Check', 'bool'),
       f('deceive-bukkit-material', '伪装 Bukkit 材质', 'Deceive Bukkit Material', 'object', { hint: l('自定义方块 GetMaterial() 返回值', 'GetMaterial() return value for custom blocks'), fields: [
         f('default', '默认', 'Default', 'text', { datalist: 'items' }),
-        f('overrides', '覆盖', 'Overrides', 'kv', { hint: l('键 = 内部真实 ID (如 0, 1~8)', 'Key = internal real ID (e.g. 0, 1~8)') }),
+        f('overrides', '覆盖', 'Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('覆盖', 'Overrides'), hint: l('键 = 内部真实 ID (如 0, 1~8)', 'Key = internal real ID (e.g. 0, 1~8)') }),
       ] }),
     ] },
 
@@ -2059,7 +2121,7 @@
       ] }),
       f('codepoint-starting-value', '码点起始值', 'Codepoint Starting Value', 'object', { fields: [
         f('default', '默认', 'Default', 'number'),
-        f('overrides', '覆盖', 'Overrides', 'kv', { hint: l('键 = 字体, 值 = 起始码点', 'Key = font, value = start codepoint') }),
+        f('overrides', '覆盖', 'Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('覆盖', 'Overrides'), hint: l('键 = 字体, 值 = 起始码点', 'Key = font, value = start codepoint') }),
       ] }),
       f('offset-characters', '偏移字符', 'Offset Characters', 'object', { hint: l('定义 <shift:xxx> 定位使用的 Unicode 字符 (与资源包字体定义匹配); 键 = 偏移量 (-256~256), 值 = 字符', 'Defines the Unicode chars used by <shift:xxx>; key = offset (-256~256), value = char'), fields: [
         f('enable', '启用', 'Enable', 'bool'),
