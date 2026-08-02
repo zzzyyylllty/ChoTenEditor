@@ -11,7 +11,8 @@
   border-bottom: 1px solid var(--color-border);
   user-select: none;
   flex-shrink: 0;
-  z-index: 100;
+  /* 始终高于弹窗遮罩 (最高 999999), 保证弹窗打开时仍可最小化/最大化/关闭 */
+  z-index: 1000000;
 }
 .title-bar-drag {
   flex: 1;
@@ -89,10 +90,151 @@
   background-clip: text;
 }
 
-.settings-content {
+/* ============================================
+   设置弹窗（iframe 嵌入主窗口）
+   ============================================ */
+
+.st-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: stFadeIn 0.2s ease;
+}
+
+.st-modal {
+  width: min(1040px, 94vw);
+  height: min(820px, 92vh);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: stPopIn 0.2s ease;
+}
+
+.st-modal iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: var(--color-bg-primary);
+}
+
+@keyframes stFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes stPopIn {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 嵌入模式下隐藏设置页自身标题栏（窗口控制按钮对 iframe 无意义） */
+body.embedded .title-bar {
+  display: none;
+}
+
+/* ============================================
+   设置页面主体布局 — 左选项卡 + 右内容
+   ============================================ */
+
+.settings-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-nav {
+  width: 200px;
+  flex-shrink: 0;
+  background-color: var(--color-bg-secondary-alpha);
+  border-right: 1px solid var(--color-border);
+  padding: var(--spacing-lg) var(--spacing-md);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  font-family: inherit;
+}
+
+.settings-nav-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.settings-nav-item.active {
+  background: rgba(0, 152, 255, 0.1);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.settings-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.nav-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.settings-panels {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-xl);
+}
+
+.settings-panel {
+  display: none;
+}
+
+.settings-panel.active {
+  display: block;
+  animation: panelFadeIn 0.2s ease;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================
@@ -127,8 +269,6 @@
   font-weight: 500;
   margin-bottom: var(--spacing-md);
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 /* ============================================
@@ -147,6 +287,62 @@
   font-weight: 500;
   color: var(--color-text-secondary);
   display: block;
+}
+
+.setting-group-spaced {
+  margin-top: var(--spacing-md);
+}
+
+/* ============================================
+   统一控件：复选框 / 提示文字 / 小按钮 / 输入框
+   ============================================ */
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.setting-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.input-full {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-row .input-full,
+.field-row > input:not([type="checkbox"]) {
+  flex: 1;
 }
 
 /* ============================================
@@ -334,7 +530,7 @@ select option {
   background-color: var(--color-bg-tertiary);
   color: var(--color-text-primary);
   border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--btn-radius);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -358,7 +554,7 @@ select option {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 12px rgba(0, 152, 255, 0.3);
+  box-shadow: 0 0 12px var(--btn-primary-glow);
 }
 
 /* ============================================
@@ -421,6 +617,17 @@ select option {
   flex-wrap: wrap;
 }
 
+.preview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-controls .select-wrapper .input-full {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
 .preview-buttons .btn {
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: 12px;
@@ -448,7 +655,29 @@ select option {
    ============================================ */
 
 @media (max-width: 768px) {
-  .settings-content {
+  .settings-body {
+    flex-direction: column;
+  }
+
+  .settings-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--spacing-sm);
+  }
+
+  .settings-nav-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .settings-nav-item.active::before {
+    display: none;
+  }
+
+  .settings-panels {
     padding: var(--spacing-lg);
   }
 
@@ -496,26 +725,39 @@ select option {
    滚动条美化
    ============================================ */
 
-.settings-content::-webkit-scrollbar {
+.settings-panels::-webkit-scrollbar {
   width: 10px;
 }
 
-.settings-content::-webkit-scrollbar-track {
+.settings-panels::-webkit-scrollbar-track {
   background: var(--color-bg-primary);
 }
 
-.settings-content::-webkit-scrollbar-thumb {
+.settings-panels::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: var(--radius-md);
   border: 2px solid var(--color-bg-primary);
 }
 
-.settings-content::-webkit-scrollbar-thumb:hover {
+.settings-panels::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-light);
 }
 
-.settings-content::-webkit-scrollbar-corner {
+.settings-panels::-webkit-scrollbar-corner {
   background: var(--color-bg-primary);
+}
+
+.settings-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-nav::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 /* ============================================
@@ -622,25 +864,7 @@ body[data-theme="light"] .preview-text p.secondary {
   color: var(--color-text-secondary);
 }
 
-body[data-theme="light"] .btn {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-body[data-theme="light"] .btn:hover {
-  background-color: var(--color-primary-hover);
-}
-
-body[data-theme="light"] .btn-secondary {
-  background-color: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
-}
-
-body[data-theme="light"] .btn-secondary:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-light);
-}
+/* 按钮颜色统一由 styles.css 的 --btn-* 令牌控制，浅色主题在 body[data-theme="light"] 中自动适配 */
 
 /* ============================================
    动画过渡
@@ -657,6 +881,17 @@ body[data-theme="light"] .btn-secondary:hover {
 /* ============================================
    背景图片选择器
    ============================================ */
+
+.bg-disclaimer {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-lg);
+  padding: 8px 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  line-height: 1.5;
+}
 
 .bg-grid {
   display: grid;
@@ -766,8 +1001,12 @@ body[data-theme="light"] .btn-secondary:hover {
     display: none;
   }
 
-  .settings-content {
+  .settings-panels {
     padding: 0;
+  }
+
+  .settings-nav {
+    display: none;
   }
 
   .settings-section {

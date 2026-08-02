@@ -213,7 +213,8 @@ body {
   border-bottom: 1px solid var(--color-border);
   user-select: none;
   flex-shrink: 0;
-  z-index: 100;
+  /* 始终高于弹窗遮罩 (最高 999999), 保证弹窗打开时仍可最小化/最大化/关闭 */
+  z-index: 1000000;
 }
 .title-bar-drag {
   flex: 1;
