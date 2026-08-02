@@ -3427,6 +3427,10 @@ textarea.ce-input {
 .rt-tooltip .rt-restricted {
   color: var(--color-warning);
 }
+.rt-tooltip .rt-dim {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
 @keyframes rt-tooltip-in {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }

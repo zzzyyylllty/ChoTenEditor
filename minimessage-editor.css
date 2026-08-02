@@ -43,6 +43,7 @@
 
 /* ---- 预览区 ---- */
 .mini-preview-box {
+  position: relative;
   margin: 12px 16px 0;
   border: 1px dashed var(--color-border);
   border-radius: 10px;
@@ -61,10 +62,35 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.mini-preview { line-height: 1.6; word-break: break-word; }
+.mini-preview { line-height: 1.6; word-break: break-word; padding-right: 30px; }
 .mini-preview .adventure-text { cursor: default; }
 .mini-preview-empty { color: var(--color-text-tertiary); }
 .mini-preview-error { color: var(--color-error); }
+/* 预览黑白底色切换按钮 (右上角) */
+.mini-preview-bg {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+.mini-preview-bg:hover { background: var(--color-bg-hover); color: var(--color-primary); }
+.mini-preview.white-bg {
+  background: #ffffff;
+  padding: 4px 6px;
+  margin-top: 2px;
+  border-radius: 6px;
+}
 
 /* ---- 工具栏 ---- */
 .mini-toolbar {
@@ -186,3 +212,47 @@
 }
 .mini-btn-primary:hover { background: var(--color-primary-hover); }
 .mini-btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* ---- 详细添加弹窗 ---- */
+.mini-overlay.is-top { z-index: 999999; }
+.mini-detail-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.mini-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mini-detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.mini-detail-input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-family: var(--font-mono, Consolas, 'Courier New', monospace);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.mini-detail-input:focus { border-color: var(--color-primary); }
+.mini-detail-select { font-family: inherit; }
+.mini-detail-tag {
+  padding: 6px 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono, Consolas, 'Courier New', monospace);
+  font-size: 12px;
+  word-break: break-all;
+}

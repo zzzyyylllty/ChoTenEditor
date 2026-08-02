@@ -66,13 +66,41 @@
     { id: 'rainbow', label: '彩虹', btn: '🌈', tag: wrap('<rainbow>', '</rainbow>') },
     { id: 'gradient', label: '渐变', btn: '🌈2', tag: param('<gradient:#a:#b>', '#a:#b', '', '</gradient>') },
     { id: 'color', label: '颜色', btn: '🎨', colorPicker: true },
+    { id: 'font', label: '字体', btn: '🅵', tag: param('<font:', 'minecraft:textname', '>', '</font>') },
     { id: 'open_url', label: '点击打开链接', btn: '🔗', tag: param("<click:open_url:'", 'url', "'>", '</click>'), restricted: true },
     { id: 'run_command', label: '点击执行命令', btn: '⌘', tag: param("<click:run_command:'", '/command', "'>", '</click>'), restricted: true },
     { id: 'suggest_command', label: '点击填入命令', btn: '💬', tag: param("<click:suggest_command:'", '/command', "'>", '</click>'), restricted: true },
     { id: 'hover_text', label: '悬停显示文本', btn: '👁', tag: param("<hover:show_text:'", 'text', "'>", '</hover>'), restricted: true },
   ];
+  // 插入型标签 (非包裹): 重置/换行 用「在光标处插入」描述
+  var INSERT_TAGS = { reset: 1, newline: 1 };
+  function tagDesc(def) {
+    var op = INSERT_TAGS[def.id] ? t('minimessage.tooltipInsert', '在光标处插入') : t('minimessage.tooltipWrap', '给选定的文字添加');
+    return op + def.label;
+  }
+  function tagTooltipHtml(def) {
+    var html = '<b class="rt-strong">' + esc(def.label) + '</b> — ' + esc(tagDesc(def)) + '<br>' +
+      '<code>' + esc((def.tag ? def.tag.before + def.tag.placeholder + def.tag.after + def.tag.suffix : '')) + '</code><br>' +
+      '<span class="rt-dim">' + esc(t('minimessage.editBtnTip', '左键: 详细添加 · 右键: 快速添加')) + '</span>';
+    if (def.restricted) html += '<br><span class="rt-restricted">⚠ ' + esc(t('minimessage.restrictedTip', '受限的标签，可能不能用在全部地方')) + '</span>';
+    return html;
+  }
 
   var overlay = null, inputEl = null, previewEl = null, colorPanel = null, cb = null;
+
+  // 预览底色: 黑白切换 (localStorage 记忆)
+  var previewBg = 'black';
+  function loadPreviewBg() {
+    try { previewBg = localStorage.getItem('miniPreviewBg') === 'white' ? 'white' : 'black'; } catch (e) {}
+  }
+  function togglePreviewBg() {
+    previewBg = (previewBg === 'black') ? 'white' : 'black';
+    try { localStorage.setItem('miniPreviewBg', previewBg); } catch (e) {}
+    applyPreviewBg();
+  }
+  function applyPreviewBg() {
+    if (previewEl) previewEl.classList.toggle('white-bg', previewBg === 'white');
+  }
 
   function closeOverlay(result) {
     if (!overlay) return;
@@ -241,6 +269,7 @@
         '</div>' +
         '<div class="mini-preview-box">' +
           '<div class="mini-preview-label">' + esc(t('minimessage.preview', '预览')) + '</div>' +
+          '<button type="button" class="mini-preview-bg" id="mini-preview-bg" title="' + esc(t('minimessage.previewBg', '切换黑白底色')) + '">◐</button>' +
           '<div class="mini-preview" id="mini-preview"></div>' +
         '</div>' +
         '<div class="mini-toolbar" id="mini-toolbar"></div>' +
@@ -255,6 +284,9 @@
     inputEl = overlay.querySelector('#mini-input');
     previewEl = overlay.querySelector('#mini-preview');
     var toolbar = overlay.querySelector('#mini-toolbar');
+    loadPreviewBg();
+    applyPreviewBg();
+    overlay.querySelector('#mini-preview-bg').addEventListener('click', togglePreviewBg);
 
     inputEl.value = (value == null) ? '' : String(value);
     inputEl.addEventListener('input', updatePreview);
@@ -268,35 +300,185 @@
     overlay.querySelector('#mini-save').addEventListener('click', function () { closeOverlay(inputEl.value); });
     overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeOverlay(null); });
 
-    // 标签按钮
+    // 标签按钮: 左键=详细添加弹窗, 右键=快速添加 (和之前一样直接应用标签)
     for (var i = 0; i < TAGS.length; i++) {
       var def = TAGS[i];
       var btn = document.createElement('button');
       btn.className = 'mini-tag-btn' + (def.restricted ? ' is-restricted' : '');
       btn.innerHTML = def.btn;
-      if (def.colorPicker) {
-        btn.addEventListener('click', toggleColorPanel);
-        colorPanel = buildColorPanel(btn);
-      } else {
-        (function (tag) {
-          btn.addEventListener('click', function () { applyTag(tag); });
-        })(def.tag);
-      }
-      if (def.restricted && root.RichTooltip) {
-        root.RichTooltip.bind(btn, function () {
-          return '<b class="rt-strong">' + esc(def.label) + '</b><br><code>' + esc(def.tag.before + def.tag.placeholder + def.tag.after + def.tag.suffix) + '</code><br><span class="rt-restricted">⚠ ' + esc(t('minimessage.restrictedTip', '受限的标签，可能不能用在全部地方')) + '</span>';
-        }, { accent: 'var(--color-warning)' });
-      } else if (root.RichTooltip) {
-        root.RichTooltip.bind(btn, function () {
-          return '<b class="rt-strong">' + esc(def.label) + '</b><br><code>' + esc(def.tag.before + def.tag.placeholder + def.tag.after + def.tag.suffix) + '</code>';
-        }, { accent: 'var(--color-primary)' });
-      }
+      btn.addEventListener('click', function (d) { return function () { openDetail(d); }; }(def));
+      btn.addEventListener('contextmenu', function (d) { return function (e) {
+        e.preventDefault();
+        if (d.colorPicker) toggleColorPanel();
+        else applyTag(d.tag);
+      }; }(def));
+      // 先入树再构建色板: buildColorPanel 用 btn.parentNode 定位
       toolbar.appendChild(btn);
+      if (def.colorPicker) {
+        colorPanel = buildColorPanel(btn);
+      }
+      if (root.RichTooltip) {
+        root.RichTooltip.bind(btn, function (d) { return function () { return tagTooltipHtml(d); }; }(def),
+          { accent: def.restricted ? 'var(--color-warning)' : 'var(--color-primary)' });
+      }
     }
 
     updatePreview();
     inputEl.focus();
     inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+  }
+
+  // ---- 详细添加弹窗: 左键点击格式按钮打开; 选择文字内容 + 类型 + 额外输入(如字体) ----
+  function detailTypeById(id) {
+    for (var i = 0; i < TAGS.length; i++) if (TAGS[i].id === id) return TAGS[i];
+    return null;
+  }
+  function detailExtraHtml(id) {
+    switch (id) {
+      case 'font':
+        return '<label>' + esc(t('minimessage.detailFont', '字体')) + '</label><input id="mini-detail-font" spellcheck="false" placeholder="textname">' +
+          '<label>' + esc(t('minimessage.detailNamespace', 'namespace（可空）')) + '</label><input id="mini-detail-ns" spellcheck="false" placeholder="minecraft">';
+      case 'color':
+        return '<label>' + esc(t('minimessage.detailColor', '颜色（如 #ff0000 或 red）')) + '</label><input id="mini-detail-color" spellcheck="false" placeholder="#ff0000">';
+      case 'gradient':
+        return '<label>' + esc(t('minimessage.detailGradientA', '渐变色 1')) + '</label><input id="mini-detail-grad-a" spellcheck="false" placeholder="#ff0000">' +
+          '<label>' + esc(t('minimessage.detailGradientB', '渐变色 2')) + '</label><input id="mini-detail-grad-b" spellcheck="false" placeholder="#ffff00">';
+      case 'open_url':
+        return '<label>' + esc(t('minimessage.detailUrl', '链接')) + '</label><input id="mini-detail-url" spellcheck="false" placeholder="https://...">';
+      case 'run_command':
+      case 'suggest_command':
+        return '<label>' + esc(t('minimessage.detailCommand', '命令')) + '</label><input id="mini-detail-cmd" spellcheck="false" placeholder="/command">';
+      case 'hover_text':
+        return '<label>' + esc(t('minimessage.detailHoverText', '悬停文本')) + '</label><input id="mini-detail-hover" spellcheck="false" placeholder="text">';
+      default:
+        return '';
+    }
+  }
+  function detailFields(id) {
+    var f = { ns: '', font: '', color: '', gradA: '', gradB: '', url: '', cmd: '', hover: '' };
+    var g = function (sel) {
+      var el = document.getElementById(sel);
+      return el ? el.value : '';
+    };
+    if (id === 'font') { f.font = g('mini-detail-font'); f.ns = g('mini-detail-ns'); }
+    if (id === 'color') f.color = g('mini-detail-color');
+    if (id === 'gradient') { f.gradA = g('mini-detail-grad-a'); f.gradB = g('mini-detail-grad-b'); }
+    if (id === 'open_url') f.url = g('mini-detail-url');
+    if (id === 'run_command' || id === 'suggest_command') f.cmd = g('mini-detail-cmd');
+    if (id === 'hover_text') f.hover = g('mini-detail-hover');
+    return f;
+  }
+  function buildDetailTag(id, f) {
+    if (id === 'font') {
+      var inner = f.ns.trim() ? f.ns.trim() + ':' + f.font.trim() : f.font.trim();
+      return { before: '<font:' + inner + '>', suffix: '</font>' };
+    }
+    if (id === 'color') {
+      var v = f.color.trim().toLowerCase();
+      return { before: '<color:' + (v || 'white') + '>', suffix: '</color>' };
+    }
+    if (id === 'gradient') {
+      return { before: '<gradient:' + (f.gradA.trim() || '#ff0000') + ':' + (f.gradB.trim() || '#ffff00') + '>', suffix: '</gradient>' };
+    }
+    if (id === 'open_url') return { before: "<click:open_url:'" + f.url.trim() + "'>", suffix: '</click>' };
+    if (id === 'run_command') return { before: "<click:run_command:'" + f.cmd.trim() + "'>", suffix: '</click>' };
+    if (id === 'suggest_command') return { before: "<click:suggest_command:'" + f.cmd.trim() + "'>", suffix: '</click>' };
+    if (id === 'hover_text') return { before: "<hover:show_text:'" + f.hover.trim() + "'>", suffix: '</hover>' };
+    var d = detailTypeById(id);
+    if (!d || !d.tag) return { before: '', suffix: '' };
+    return { before: d.tag.before + d.tag.after, suffix: d.tag.suffix };
+  }
+  function openDetail(def) {
+    if (!inputEl) return;
+    var old = document.getElementById('mini-detail-overlay');
+    if (old) old.remove();
+    var selStart = inputEl.selectionStart || 0;
+    var selEnd = inputEl.selectionEnd || 0;
+    var curSel = inputEl.value.substring(selStart, selEnd);
+
+    var overlay = document.createElement('div');
+    overlay.id = 'mini-detail-overlay';
+    overlay.className = 'mini-overlay is-top';
+    overlay.innerHTML =
+      '<div class="mini-modal">' +
+        '<div class="mini-header">' +
+          '<span class="mini-title" id="mini-detail-title">✏️ ' + esc(t('minimessage.detailTitle', '详细添加')) + '</span>' +
+          '<button type="button" class="mini-close" id="mini-detail-close" title="' + esc(t('common.close', '关闭')) + '">✕</button>' +
+        '</div>' +
+        '<div class="mini-detail-body">' +
+          '<div class="mini-detail-row">' +
+            '<label class="mini-detail-label" for="mini-detail-content">' + esc(t('minimessage.detailContent', '文字内容')) + '</label>' +
+            '<textarea class="mini-detail-input" id="mini-detail-content" spellcheck="false" rows="3"></textarea>' +
+          '</div>' +
+          '<div class="mini-detail-row">' +
+            '<label class="mini-detail-label" for="mini-detail-type">' + esc(t('minimessage.detailType', '类型')) + '</label>' +
+            '<select class="mini-detail-input mini-detail-select" id="mini-detail-type"></select>' +
+          '</div>' +
+          '<div class="mini-detail-row" id="mini-detail-extra"></div>' +
+          '<div class="mini-detail-tag" id="mini-detail-tag"></div>' +
+        '</div>' +
+        '<div class="mini-footer">' +
+          '<button class="mini-btn" id="mini-detail-cancel">' + esc(t('common.cancel', '取消')) + '</button>' +
+          '<button class="mini-btn mini-btn-primary" id="mini-detail-ok">' + esc(t('minimessage.detailAdd', '添加')) + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var titleEl = overlay.querySelector('#mini-detail-title');
+    var contentTa = overlay.querySelector('#mini-detail-content');
+    var typeSel = overlay.querySelector('#mini-detail-type');
+    var extraBox = overlay.querySelector('#mini-detail-extra');
+    var tagHint = overlay.querySelector('#mini-detail-tag');
+    contentTa.value = curSel;
+
+    for (var i = 0; i < TAGS.length; i++) {
+      var o = document.createElement('option');
+      o.value = TAGS[i].id;
+      o.textContent = TAGS[i].label;
+      typeSel.appendChild(o);
+    }
+    typeSel.value = def.id;
+
+    function refresh() {
+      var d = detailTypeById(typeSel.value);
+      if (!d) return;
+      titleEl.textContent = '✏️ ' + t('minimessage.detailTitle', '详细添加') + ' — ' + d.label;
+      extraBox.innerHTML = detailExtraHtml(d.id);
+      var tag = buildDetailTag(d.id, detailFields(d.id));
+      tagHint.textContent = tag.before + contentTa.value + tag.suffix;
+    }
+    function closeDetail() { overlay.remove(); }
+
+    typeSel.addEventListener('change', refresh);
+    contentTa.addEventListener('input', refresh);
+    overlay.querySelector('#mini-detail-close').addEventListener('click', closeDetail);
+    overlay.querySelector('#mini-detail-cancel').addEventListener('click', closeDetail);
+    overlay.querySelector('#mini-detail-ok').addEventListener('click', function () {
+      var d = detailTypeById(typeSel.value);
+      if (!d) return;
+      var content = contentTa.value;
+      var tag = buildDetailTag(d.id, detailFields(d.id));
+      closeDetail();
+      insertDetail(content, tag);
+    });
+    overlay.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.stopPropagation(); closeDetail(); }
+    });
+    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeDetail(); });
+
+    refresh();
+    contentTa.focus();
+    contentTa.setSelectionRange(contentTa.value.length, contentTa.value.length);
+  }
+  // 用生成的标签包裹内容, 替换 textarea 当前选区
+  function insertDetail(content, tag) {
+    var ta = inputEl;
+    if (!ta) return;
+    ta.focus();
+    var s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+    ta.value = ta.value.substring(0, s) + tag.before + content + tag.suffix + ta.value.substring(e);
+    ta.setSelectionRange(s + tag.before.length, s + tag.before.length + content.length);
+    updatePreview();
   }
 
   root.MiniMessageEditor = { open: openEditor };
