@@ -51,5 +51,65 @@
     el.addEventListener('mouseleave', hide);
   }
 
-  root.RichTooltip = { bind: bind, show: show, hide: hide };
+  // 轻量富文本转换: `code` 代码, **粗体**, \n 换行, §x Minecraft 颜色码, 白名单 HTML 标签直通
+  var MD_COLORS = { '0': '#c9d1d9', '1': '#9ecbff', '2': '#56d364', '3': '#76e3ea', '4': '#ff9580', '5': '#bc8cff', '6': '#ffa657', '7': '#a8b1bd', '8': '#8b949e', '9': '#a5d6ff', 'a': '#7ee787', 'b': '#79c0ff', 'c': '#ff7b72', 'd': '#ff7bdd', 'e': '#e3b341', 'f': '#ffffff' };
+  var MD_ALLOWED = { b: 1, br: 1, span: 1, code: 1, i: 1, strong: 1, em: 1, u: 1, s: 1, sub: 1, sup: 1, details: 1, summary: 1, div: 1, p: 1, ul: 1, li: 1, ol: 1, table: 1, tr: 1, td: 1, th: 1, hr: 1, pre: 1, blockquote: 1, a: 1 };
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function md(text) {
+    if (text === null || text === undefined) return '';
+    var s = String(text);
+    var out = '';
+    var i = 0;
+    var n = s.length;
+    while (i < n) {
+      var c = s[i];
+      if (c === '`') {
+        var e = s.indexOf('`', i + 1);
+        if (e !== -1) { out += '<code>' + esc(s.slice(i + 1, e)) + '</code>'; i = e + 1; continue; }
+      }
+      if (c === '*' && s[i + 1] === '*') {
+        var b = s.indexOf('**', i + 2);
+        if (b !== -1) { out += '<b>' + md(s.slice(i + 2, b)) + '</b>'; i = b + 2; continue; }
+      }
+      if (c === '\n') { out += '<br>'; i++; continue; }
+      if (c === '\r') { i++; continue; }
+      if (c === '§' && i + 1 < n && MD_COLORS[s[i + 1]]) {
+        out += '<span style="color:' + MD_COLORS[s[i + 1]] + '">';
+        i += 2;
+        // 颜色持续到下一个颜色码 / 重置码 / 结束
+        var j = i;
+        while (j < n) {
+          if (s[j] === '§' && (s[j + 1] === 'r' || s[j + 1] === 'R' || MD_COLORS[s[j + 1]] || s[j + 1] === 'l' || s[j + 1] === 'L')) break;
+          j++;
+        }
+        out += esc(s.slice(i, j)).replace(/\n/g, '<br>');
+        out += '</span>';
+        i = j;
+        continue;
+      }
+      if (c === '§' && i + 1 < n && (s[i + 1] === 'r' || s[i + 1] === 'R')) { i += 2; continue; }
+      if (c === '§' && i + 1 < n && (s[i + 1] === 'l' || s[i + 1] === 'L')) {
+        var j2 = i + 2;
+        while (j2 < n && !(s[j2] === '§')) j2++;
+        out += '<b>' + esc(s.slice(i + 2, j2)).replace(/\n/g, '<br>') + '</b>';
+        i = j2;
+        continue;
+      }
+      if (c === '<') {
+        // 白名单标签直通, 其余 (<ns> <arg:...> 等占位符) 转义显示
+        var tm = /^<\/?([a-zA-Z][a-zA-Z0-9]*)\b/.exec(s.slice(i));
+        if (tm && MD_ALLOWED[tm[1].toLowerCase()]) { out += c; i++; continue; }
+        out += '&lt;';
+        i++;
+        continue;
+      }
+      out += c;
+      i++;
+    }
+    return out;
+  }
+
+  root.RichTooltip = { bind: bind, show: show, hide: hide, md: md };
 })();

@@ -910,6 +910,10 @@
     var lang = (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh_cn';
     return lang === 'en_us' ? (h.en || h.zh || '') : (h.zh || h.en || '');
   }
+  // 原生 title 用: 剥离富文本标记 (**粗体** / `代码` / §颜色码 / 换行)
+  function _sfPlain(t) {
+    return String(t || '').replace(/\*\*/g, '').replace(/`/g, '').replace(/§[0-9a-fk-orlmn]/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ');
+  }
   function _sfTipText(def, path) {
     var k = _sfHintKey(path);
     var h = null;
@@ -936,8 +940,9 @@
       icon.__ceTip = 1;
       var txt = icon.getAttribute('data-sf-hint');
       if (!txt) return;
-      RichTooltip.bind(icon, function () { return '<span class="rt-strong">' + txt + '</span>'; });
-      RichTooltip.show(e, '<span class="rt-strong">' + txt + '</span>');
+      var html = RichTooltip.md ? RichTooltip.md(txt) : ('<span class="rt-strong">' + txt + '</span>');
+      RichTooltip.bind(icon, function () { return html; });
+      RichTooltip.show(e, html);
     });
   }
   _sfBindHintIcons();
@@ -1117,7 +1122,7 @@
       var otip = '';
       if (hintPrefix && _sfCeHints) {
         var oh = _sfCeHints[hintPrefix + '.' + k];
-        if (oh) otip = ' title="' + _escHtml(_sfTipOf(oh)) + '"';
+        if (oh) otip = ' title="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
       }
       optHtml += '<option value="' + _escHtml(k) + '"' + otip + (cur.key === k && !cur.neg ? ' selected' : '') + '>' + _escHtml(lb) + '</option>';
       if (def.negatable) {
@@ -2043,7 +2048,7 @@
       var otip = '';
       if (titlePrefix && _sfCeHints) {
         var oh = _sfCeHints[titlePrefix + '.' + o];
-        if (oh) otip = ' title="' + _escHtml(_sfTipOf(oh)) + '"';
+        if (oh) otip = ' title="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
       }
       html += '<option value="' + _escHtml(o) + '"' + otip + (String(value) === o ? ' selected' : '') + '>' + _escHtml(o) + '</option>';
     }
