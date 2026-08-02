@@ -335,22 +335,26 @@
     return null;
   }
   function detailExtraHtml(id) {
+    function ph(key, fb) { return ' placeholder="' + esc(t('minimessage.' + key, fb)) + '"'; }
+    function inp(id2, phKey, fb, type) {
+      return '<input id="mini-detail-' + id2 + '" class="mini-detail-input"' + (type ? ' type="' + type + '"' : '') + ' spellcheck="false"' + ph(phKey, fb) + '>';
+    }
     switch (id) {
       case 'font':
-        return '<label>' + esc(t('minimessage.detailFont', '字体')) + '</label><input id="mini-detail-font" spellcheck="false" placeholder="textname">' +
-          '<label>' + esc(t('minimessage.detailNamespace', 'namespace（可空）')) + '</label><input id="mini-detail-ns" spellcheck="false" placeholder="minecraft">';
+        return '<label>' + esc(t('minimessage.detailFont', '字体')) + '</label>' + inp('font', 'phFont', 'unifont') +
+          '<label>' + esc(t('minimessage.detailNamespace', 'namespace（可空）')) + '</label>' + inp('ns', 'phNamespace', 'minecraft');
       case 'color':
-        return '<label>' + esc(t('minimessage.detailColor', '颜色（如 #ff0000 或 red）')) + '</label><input id="mini-detail-color" spellcheck="false" placeholder="#ff0000">';
+        return '<label>' + esc(t('minimessage.detailColor', '颜色（如 #ff0000 或 red）')) + '</label>' + inp('color', 'phColor', '#ff0000');
       case 'gradient':
-        return '<label>' + esc(t('minimessage.detailGradientA', '渐变色 1')) + '</label><input id="mini-detail-grad-a" spellcheck="false" placeholder="#ff0000">' +
-          '<label>' + esc(t('minimessage.detailGradientB', '渐变色 2')) + '</label><input id="mini-detail-grad-b" spellcheck="false" placeholder="#ffff00">';
+        return '<label>' + esc(t('minimessage.detailGradientA', '渐变色 1')) + '</label>' + inp('grad-a', 'phGradientA', '#ff0000') +
+          '<label>' + esc(t('minimessage.detailGradientB', '渐变色 2')) + '</label>' + inp('grad-b', 'phGradientB', '#ffff00');
       case 'open_url':
-        return '<label>' + esc(t('minimessage.detailUrl', '链接')) + '</label><input id="mini-detail-url" spellcheck="false" placeholder="https://...">';
+        return '<label>' + esc(t('minimessage.detailUrl', '链接')) + '</label>' + inp('url', 'phUrl', 'https://...', 'url');
       case 'run_command':
       case 'suggest_command':
-        return '<label>' + esc(t('minimessage.detailCommand', '命令')) + '</label><input id="mini-detail-cmd" spellcheck="false" placeholder="/command">';
+        return '<label>' + esc(t('minimessage.detailCommand', '命令')) + '</label>' + inp('cmd', 'phCommand', '/command');
       case 'hover_text':
-        return '<label>' + esc(t('minimessage.detailHoverText', '悬停文本')) + '</label><input id="mini-detail-hover" spellcheck="false" placeholder="text">';
+        return '<label>' + esc(t('minimessage.detailHoverText', '悬停文本')) + '</label>' + inp('hover', 'phHoverText', 'text');
       default:
         return '';
     }
