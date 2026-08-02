@@ -879,6 +879,7 @@ craftengine:
   yvList: "List"
   yvEmpty: "empty"
   yvOf: " is "
+  yvCase: "Case"
   syncedToSource: "Synced to source"
   fieldEmpty: "(empty)"
   type_config: "Plugin Config"

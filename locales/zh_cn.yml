@@ -879,6 +879,7 @@ craftengine:
   yvList: "列表"
   yvEmpty: "空"
   yvOf: "为"
+  yvCase: "情况"
   syncedToSource: "已同步到源码"
   fieldEmpty: "（空）"
   type_config: "插件配置"

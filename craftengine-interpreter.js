@@ -1000,6 +1000,27 @@
       e.stopPropagation();
       _sfOpenHintPopup(icon);
     });
+    // 编辑器方式树: 多种情况选项卡 — 点击切换
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || t.nodeType !== 1) return;
+      var tab = t.classList && t.classList.contains('ce-yv-tab') ? t : (t.closest ? t.closest('.ce-yv-tab') : null);
+      if (!tab) return;
+      var root = tab.parentNode ? tab.parentNode.parentNode : null;
+      if (!root || !root.classList || !root.classList.contains('ce-yv-tabs')) return;
+      _sfSwitchTab(root, parseInt(tab.getAttribute('data-ce-tab') || '0', 10));
+    });
+    // 左右键切换 (tooltip 或弹窗可见时)
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      var root = _sfCurrentTabs();
+      if (!root) return;
+      var cur = 0;
+      var tabs = root.querySelectorAll('.ce-yv-tab');
+      for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('is-active')) { cur = i; break; }
+      _sfSwitchTab(root, cur + (e.key === 'ArrowRight' ? 1 : -1));
+      e.preventDefault();
+    });
   }
   _sfBindHintIcons();
 
@@ -1050,7 +1071,7 @@
     if (t === 'boolean') return v ? 'true' : 'false';
     return String(v);
   }
-  // 递归生成只读「编辑器方式」结构: 对象=字段组(key 标签+控件), 列表=每行一个控件
+  // 递归生成只读「编辑器方式」结构: 对象=字段组(字段名标签+控件), 列表=每行一个控件 (无 YAML 语法)
   function _sfYvHtml(v, ind, isItem) {
     var t = _sfYvType(v);
     var pad = 'padding-left:' + (ind * 18) + 'px';
@@ -1062,7 +1083,7 @@
         if (item !== null && typeof item === 'object') {
           html += _sfYvHtml(item, ind, true);
         } else {
-          html += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">-</span> ' + _sfYvCtrl(item, false) + '</div>';
+          html += '<div class="ce-yv-row" style="' + pad + '">' + _sfYvCtrl(item, false) + '</div>';
         }
       }
       return '<div class="ce-yv-group">' + html + '</div>';
@@ -1074,7 +1095,7 @@
         var k = keys[j];
         var val = v[k];
         var vt = _sfYvType(val);
-        html += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">' + (isItem ? '- ' : '') + '</span><span class="ce-yv-key">' + _escHtml(k) + '</span>: ';
+        html += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-key">' + _escHtml(k) + '</span>';
         if (vt === 'obj' || vt === 'arr') {
           html += '<span class="ce-yv-type">' + (vt === 'arr' ? _escHtml(_t('craftengine.yvList')) : _escHtml(_t('craftengine.yvObject'))) + '</span></div>';
           html += _sfYvHtml(val, ind + 1, false);
@@ -1134,7 +1155,7 @@
       for (var i = 0; i < arr.length; i++) {
         var item = arr[i];
         if (item !== null && typeof item === 'object') rows += _sfYvHtml(item, ind, true);
-        else rows += '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-arrow">-</span> ' + _sfYvCtrl(item, false) + '</div>';
+        else rows += '<div class="ce-yv-row" style="' + pad + '">' + _sfYvCtrl(item, false) + '</div>';
       }
       if (!rows) rows = '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-type">' + _escHtml(_t('craftengine.yvList')) + '</span></div>';
       return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') + '<div class="ce-yv-group">' + rows + '</div>';
@@ -1162,32 +1183,211 @@
     }
     return '<div class="ce-yv-row" style="' + pad + '">' + _sfYvCtrl(val, false) + '</div>';
   }
-  function _sfYamlTreeHtml(yamlText, def) {
+  // 文本级切段: 多种情况 → 每个一段. 切点 = 重复容器键(多个 items 块)/直接条目键(含冒号);
+  // 容器段内多条目再按条目切. 段名取前导注释, 无注释取段内第一个行内注释, 再退条目键名/「情况 N」
+  function _sfSplitSections(yamlText) {
+    var lines = yamlText.replace(/\r/g, '').split('\n');
+    // 阶段1: 顶层切分
+    var tops = [];
+    var cur = null;
+    var nameBuf = [];
+    var lastTopKey = '';
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (/^```/.test(l)) continue;
+      var cm = /^#\s?(.*)$/.exec(l);
+      if (cm) { nameBuf.push(cm[1].trim()); continue; }
+      if (!l.trim()) { if (cur) cur.lines.push(''); continue; }
+      var topM = /^([A-Za-z0-9_.\-]+(?::[A-Za-z0-9_.\-]+)*):/.exec(l);
+      var isList = /^- /.test(l);
+      if (topM || isList) {
+        var key = isList ? '-' : topM[1];
+        var isContainer = !isList && SECTION_KEYS.indexOf(topM[1]) !== -1;
+        var isDirectEntry = !isList && topM[1].indexOf(':') !== -1;
+        var newTop = false;
+        if (!cur) newTop = true;
+        else if (key === lastTopKey) newTop = true;
+        else if (isDirectEntry && !cur.isContainer) newTop = true;
+        if (newTop) {
+          cur = { name: nameBuf.join(' ').trim(), isContainer: isContainer, lines: [], inline: '' };
+          tops.push(cur);
+          nameBuf = [];
+          lastTopKey = key;
+        }
+      }
+      if (!cur) { nameBuf.push(l.trim()); continue; }
+      cur.lines.push(l);
+      if (!cur.inline) {
+        var ic = /#\s?(.*)$/.exec(l);
+        if (ic) cur.inline = ic[1].trim();
+      }
+    }
+    // 阶段2: 段内条目切分 — 容器段(如 items)每条目一段; 非容器段仅当缩进2键重复(同键多写法)时切段;
+    // 输出段统一去公共缩进. 单条目/无条目时整段输出, 容器前注释作段名
+    function dedent(text) {
+      var ls = text.split('\n');
+      var minInd = -1;
+      for (var a = 0; a < ls.length; a++) {
+        if (!ls[a].trim()) continue;
+        var ind = /^\s*/.exec(ls[a])[0].length;
+        if (minInd === -1 || ind < minInd) minInd = ind;
+      }
+      if (minInd <= 0) return text;
+      for (var b = 0; b < ls.length; b++) if (ls[b]) ls[b] = ls[b].slice(minInd);
+      return ls.join('\n');
+    }
+    var out = [];
+    for (var j = 0; j < tops.length; j++) {
+      var t = tops[j];
+      // 该段是否需要条目切分: 容器段 / 含冒号条目名 / 缩进2键重复
+      var repKeys = {};
+      var hasRep = false;
+      var hasColon = false;
+      for (var r = 0; r < t.lines.length; r++) {
+        var rm = /^ {2}([A-Za-z0-9_.\-]+(?::[A-Za-z0-9_.\-]+)*):/.exec(t.lines[r]);
+        if (rm) {
+          if (rm[1].indexOf(':') !== -1) hasColon = true;
+          if (repKeys[rm[1]]) hasRep = true;
+          repKeys[rm[1]] = 1;
+        }
+      }
+      var splitEntries = t.isContainer || hasColon || hasRep;
+      if (!splitEntries) {
+        out.push({ name: t.name || t.inline || '', text: dedent(t.lines.join('\n')) });
+        continue;
+      }
+      var ents = [];
+      var ce = null;
+      var ename = [];
+      for (var k = 0; k < t.lines.length; k++) {
+        var l2 = t.lines[k];
+        if (/^```/.test(l2)) continue;
+        var cm2 = /^#\s?(.*)$/.exec(l2);
+        if (cm2) { ename.push(cm2[1].trim()); continue; }
+        var entM = /^ {2}([A-Za-z0-9_.\-]+(?::[A-Za-z0-9_.\-]+)*):/.exec(l2);
+        if (entM) {
+          ce = { key: entM[1], name: ename.join(' ').trim(), lines: [l2], inline: '' };
+          ents.push(ce);
+          ename = [];
+        } else if (ce) {
+          ce.lines.push(l2);
+          if (!ce.inline) {
+            var ic2 = /#\s?(.*)$/.exec(l2);
+            if (ic2) ce.inline = ic2[1].trim();
+          }
+        }
+      }
+      if (ents.length > 1) {
+        for (var m = 0; m < ents.length; m++) {
+          out.push({ name: ents[m].name || ents[m].inline || ents[m].key, text: dedent(ents[m].lines.join('\n')) });
+        }
+      } else if (ents.length === 1) {
+        out.push({ name: t.name || ents[0].name || ents[0].inline || '', text: dedent(t.lines.join('\n')) });
+      } else {
+        out.push({ name: t.name || '', text: dedent(t.lines.join('\n')) });
+      }
+    }
+    return out;
+  }
+  // 单段渲染: 解析 → 去容器 → 目标字段分情况渲染, 找不到目标字段则全结构编辑器化
+  function _sfSectionHtml(secText, def) {
     var obj;
-    try { obj = YAML.load(yamlText); } catch (e) { return ''; }
+    try { obj = YAML.load(secText); } catch (e) { return ''; }
     if (obj === null || obj === undefined || typeof obj !== 'object') return '';
     var root = _sfUnwrapSample(obj);
     var tgt = (def && def.key) ? _sfFindKey(root, def.key, 0) : null;
     if (tgt) {
-      return '<div class="ce-yv">' + _sfTargetHtml(def, tgt.val, tgt.ctx, 0) + '</div>';
+      return _sfTargetHtml(def, tgt.val, tgt.ctx, 0);
     }
-    return '<div class="ce-yv">' + _sfYvHtml(root, 0, false) + '</div>';
+    return _sfYvHtml(root, 0, false);
   }
-  // tooltip 全文: ```yaml 块用编辑器方式结构, 其余走 RichTooltip.md; 解析失败回退原文代码块
+  function _sfYamlTreeHtml(yamlText, def) {
+    var secs = _sfSplitSections(yamlText);
+    if (!secs.length) return '';
+    if (secs.length === 1) {
+      var h1 = _sfSectionHtml(secs[0].text, def);
+      return h1 ? '<div class="ce-yv">' + h1 + '</div>' : '';
+    }
+    // 多种情况 → 选项卡 (点击 / 左右键切换)
+    var tabs = '';
+    var panes = '';
+    for (var i = 0; i < secs.length; i++) {
+      var h = _sfSectionHtml(secs[i].text, def);
+      if (!h) h = '<pre class="rt-pre"><code>' + _escHtml(secs[i].text) + '</code></pre>';
+      var nm = secs[i].name || _t('craftengine.yvCase') + ' ' + (i + 1);
+      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" title="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
+      panes += '<div class="ce-yv-pane' + (i === 0 ? ' is-active' : '') + '" data-ce-pane="' + i + '">' + h + '</div>';
+    }
+    return '<div class="ce-yv ce-yv-tabs" data-ce-tabs="' + secs.length + '">' +
+      '<div class="ce-yv-tabbar">' + tabs + '</div>' +
+      '<div class="ce-yv-panes">' + panes + '</div>' +
+      '</div>';
+  }
+  function _sfSwitchTab(root, idx) {
+    var n = parseInt(root.getAttribute('data-ce-tabs') || '1', 10);
+    if (!n) return;
+    idx = ((idx % n) + n) % n;
+    var tabs = root.querySelectorAll('.ce-yv-tab');
+    var panes = root.querySelectorAll('.ce-yv-pane');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('is-active', i === idx);
+    for (var j = 0; j < panes.length; j++) panes[j].classList.toggle('is-active', j === idx);
+  }
+  function _sfCurrentTabs() {
+    var ov = document.getElementById('ce-hint-overlay');
+    if (ov) {
+      var p = ov.querySelector('.ce-yv-tabs');
+      if (p) return p;
+    }
+    var tip = document.querySelector('.rt-tooltip');
+    if (tip && tip.style.display !== 'none') {
+      var p2 = tip.querySelector('.ce-yv-tabs');
+      if (p2) return p2;
+    }
+    return null;
+  }
+  // tooltip 全文: ```yaml 块用编辑器方式结构, 其余走 RichTooltip.md; 解析失败回退原文代码块。
+  // 同一 tooltip 内相邻的多个 yaml 块(块间仅空文本)合并为一个选项卡组, 每个块一种情况
   function _sfTipEditorHtml(txt, def) {
     if (!txt) return '';
     if (typeof RichTooltip === 'undefined' || !RichTooltip.md) return '<span class="rt-strong">' + _escHtml(txt) + '</span>';
     var parts = _sfSplitTip(txt);
     var html = '';
+    var yamlBuf = [];
     for (var i = 0; i < parts.length; i++) {
-      if (parts[i].yaml) {
-        var tree = _sfYamlTreeHtml(parts[i].text, def);
-        html += tree || ('<pre class="rt-pre"><code>' + _escHtml(parts[i].text) + '</code></pre>');
-      } else {
-        html += RichTooltip.md(parts[i].text);
-      }
+      var p = parts[i];
+      if (p.yaml) { yamlBuf.push(p.text); continue; }
+      var t = p.text.replace(/[\n\r]+/g, ' ').trim();
+      if (!t && yamlBuf.length) continue;
+      if (yamlBuf.length) { html += _sfYamlBlocksHtml(yamlBuf, def); yamlBuf = []; }
+      html += RichTooltip.md(p.text);
     }
+    if (yamlBuf.length) html += _sfYamlBlocksHtml(yamlBuf, def);
     return html;
+  }
+  // 多个 yaml 块 → 选项卡组 (每个块一个情况, 块内首个 # 注释作选项卡名); 单块 → 编辑器结构
+  function _sfYamlBlocksHtml(blocks, def) {
+    if (!blocks.length) return '';
+    if (blocks.length === 1) {
+      var h1 = _sfYamlTreeHtml(blocks[0], def);
+      return h1 || ('<pre class="rt-pre"><code>' + _escHtml(blocks[0]) + '</code></pre>');
+    }
+    var tabs = '';
+    var panes = '';
+    for (var i = 0; i < blocks.length; i++) {
+      var h = _sfYamlTreeHtml(blocks[i], def);
+      if (!h) h = '<pre class="rt-pre"><code>' + _escHtml(blocks[i]) + '</code></pre>';
+      var nm = _sfYamlBlockName(blocks[i]) || (_t('craftengine.yvCase') + ' ' + (i + 1));
+      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" title="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
+      panes += '<div class="ce-yv-pane' + (i === 0 ? ' is-active' : '') + '" data-ce-pane="' + i + '">' + h + '</div>';
+    }
+    return '<div class="ce-yv ce-yv-tabs" data-ce-tabs="' + blocks.length + '">' +
+      '<div class="ce-yv-tabbar">' + tabs + '</div>' +
+      '<div class="ce-yv-panes">' + panes + '</div>' +
+      '</div>';
+  }
+  function _sfYamlBlockName(blockText) {
+    var m = /^\s*#\s?(.*)$/m.exec(blockText);
+    return m ? m[1].trim() : '';
   }
   function _sfHintPopupEsc(e) {
     if (e.key === 'Escape') _sfCloseHintPopup();
