@@ -328,6 +328,14 @@ function init() {
     setTimeout(function() { splash.classList.add('hidden'); }, 400);
   }
 
+  // 标题栏显示版本号（便于区分旧版/新版）
+  try {
+    if (window.electronAPI && window.electronAPI.appVersion) {
+      var tbt = document.querySelector('.title-bar-text');
+      if (tbt) tbt.textContent = 'Choten Editor v' + window.electronAPI.appVersion;
+    }
+  } catch (e) {}
+
   // 恢复上次的会话
   restoreAppState();
 
