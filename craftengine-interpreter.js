@@ -917,7 +917,7 @@
     if (isUnionItem) html += _sfUnionPickHtml(itemDef, uid);
     else html += '<button class="cv-btn cv-btn-sm cv-btn-secondary" data-sf-action="list-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.listAdd')) + '</button>';
     html += '</div>';
-    return html;
+    return html + '</div>';
   }
   function _sfUnionPickHtml(def, uid) {
     var types = _sfTypesOf(def);
@@ -951,7 +951,7 @@
     }
     if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.listEmpty')) + '</div>';
     html += '<div class="ce-sf-map-add"><button class="cv-btn cv-btn-sm cv-btn-secondary" data-sf-action="map-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.mapAdd')) + '</button></div>';
-    return html;
+    return html + '</div>';
   }
   function _sfUnionCurrent(def, value) {
     if (value === undefined || value === null) return { key: '', neg: false };
@@ -1110,7 +1110,7 @@
     }
     addSel += '</select>';
     html += '<div class="ce-sf-map-add">' + addSel + '</div>';
-    return html;
+    return html + '</div>';
   }
   // ---- item 模型编辑器: 简化 / 模型树 / 路径 三种模式 ----
   function _sfModelForms() {
