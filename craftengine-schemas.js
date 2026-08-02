@@ -448,19 +448,26 @@
           f('extra', '额外', 'Extra', 'number'), f('probability', '概率', 'Probability', 'number'),
         ] } },
       } }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     apply_data: { label: l('应用数据', 'Apply Data'), fields: [
       f('data', '数据', 'Data', 'kv'),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     set_count: { label: l('设置数量', 'Set Count'), fields: [
       f('count', '数量', 'Count', 'text'), f('add', '追加', 'Add', 'bool'),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
-    explosion_decay: { label: l('爆炸衰减', 'Explosion Decay') },
+    explosion_decay: { label: l('爆炸衰减', 'Explosion Decay'), fields: [
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
+    ] },
     drop_exp: { label: l('掉落经验', 'Drop Exp'), fields: [
       f('count', '经验', 'Count', 'text'),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     limit_count: { label: l('限制数量', 'Limit Count'), fields: [
       f('min', '最小', 'Min', 'number'), f('max', '最大', 'Max', 'number'),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
   };
   var LOOT_ENTRY_TYPES = {
@@ -473,15 +480,22 @@
     furniture_item: { label: l('家具物品', 'Furniture Item'), fields: [
       f('item', '物品 ID', 'Item ID', 'text', { hint: l('掉落放置时使用的物品', 'Drops the item used to place'), datalist: 'items' }),
       f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES_REF }, label: l('函数', 'Functions') }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     exp: { label: l('经验', 'Exp'), fields: [
       f('count', '经验', 'Count', 'text'),
+      f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES_REF }, label: l('函数', 'Functions') }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     alternatives: { label: l('备选 (alternatives)', 'Alternatives'), fields: [
       f('children', '子条目', 'Children', 'listOf', { itemType: { type: 'union', types: LOOT_ENTRY_TYPES_REF }, label: l('子条目', 'Children') }),
+      f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES_REF }, label: l('函数', 'Functions') }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
     loot_table: { label: l('引用战利品表', 'Loot Table'), fields: [
       f('id', 'ID', 'ID', 'text', { hint: l('如 minecraft:chests/simple_dungeon', 'e.g. minecraft:chests/simple_dungeon') }),
+      f('functions', '函数', 'Functions', 'listOf', { itemType: { type: 'union', types: LOOT_FN_TYPES_REF }, label: l('函数', 'Functions') }),
+      f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
   };
   function LOOT_FN_TYPES_REF() { return LOOT_FN_TYPES; }
@@ -536,9 +550,10 @@
   SECTIONS.equipment = {
     fields: [
       f('type', '类型', 'Type', 'select', { options: S.constants.equipmentTypes }),
-      f('layers', '层', 'Layers', 'mapOf', {
+      f('__root__', '层', 'Layers', 'mapOf', {
+        custom: 'root-map',
         label: l('层', 'Layers'),
-        hint: l('键为层类型: ' + S.constants.equipmentLayers.join(' / '), 'Key is layer type: ' + S.constants.equipmentLayers.join(' / ')),
+        hint: l('键为层类型 (直接写在条目下): ' + S.constants.equipmentLayers.join(' / '), 'Key is layer type (written directly under the entry): ' + S.constants.equipmentLayers.join(' / ')),
         valueType: { type: 'union', noTypeKey: true, label: l('层', 'Layer'), types: {
           string: { label: l('纹理路径', 'Texture Path'), widget: { type: 'text' } },
           map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
@@ -573,10 +588,10 @@
       f('file', '文件', 'File', 'text', { hint: l('如 assets/images/xxx.png', 'e.g. assets/images/xxx.png') }),
       f('height', '高度', 'Height', 'number'),
       f('ascent', '基线偏移', 'Ascent', 'number'),
-      f('font', '字体', 'Font', 'text', { hint: l('默认 minecraft:default', 'Default: minecraft:default') }),
+      f('font', '字体', 'Font', 'text', { hint: l('默认 namespace:default', 'Default: namespace:default') }),
       f('char', '字符', 'Char', 'text'),
       f('chars', '字符集', 'Chars', 'lines', { hint: l('每行一个字符', 'One char per line') }),
-      f('grid_size', '网格大小', 'Grid Size', 'number'),
+      f('grid_size', '网格大小', 'Grid Size', 'text', { hint: l('如 2,3 = 2 行 × 3 列', 'e.g. 2,3 = 2 rows × 3 columns') }),
       f('ref', '引用', 'Ref', 'text'),
       f('row', '行', 'Row', 'number'),
       f('column', '列', 'Column', 'number'),
@@ -627,6 +642,7 @@
       f('chat_completion', '聊天补全', 'Chat Completion', 'bool'),
       f('template', '模板', 'Template', 'text'),
       f('overrides', '覆盖', 'Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('覆盖', 'Overrides') }),
+      f('content_overrides', '按场景切换内容', 'Content Overrides', 'mapOf', { valueType: { type: 'scalar' }, label: l('按场景切换内容', 'Content Overrides'), hint: l('不同场景 (聊天/书本/铁砧/告示牌/指令) 使用不同格式, 键 = chat/book/anvil/sign/command', 'Different chat contexts (chat, book, anvil, sign, command) may need different formatting; key = chat/book/anvil/sign/command') }),
     ],
   };
 
@@ -701,6 +717,13 @@
       f('vertical_spread', '垂直散布', 'Vertical Spread', 'number'),
     ] },
     'minecraft:block_predictions': { label: l('方块预测 (block_predictions)', 'Block Predictions'), fields: [f('predicate', '谓词', 'Predicate', 'kv')] },
+    'minecraft:height_range': { label: l('高度范围 (height_range)', 'Height Range'), fields: [
+      f('height', '高度', 'Height', 'object', { fields: [
+        f('type', '类型', 'Type', 'text', { hint: l('如 minecraft:uniform', 'e.g. minecraft:uniform') }),
+        f('min_inclusive', '最小高度', 'Min Inclusive', 'number'),
+        f('max_inclusive', '最大高度', 'Max Inclusive', 'number'),
+      ] }),
+    ] },
   };
   var PLACED_FEATURE_UNION = {
     type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:patch', 'minecraft:patch') },
@@ -778,7 +801,7 @@
     return {
       type: 'object',
       fields: keys.map(function (k) {
-        var zh = { break: '破坏', step: '踩踏', place: '放置', hit: '挖掘', fall: '坠落', open: '打开', close: '关闭', put: '放入', take: '取出' }[k] || k;
+        var zh = { break: '破坏', step: '踩踏', place: '放置', hit: '挖掘', fall: '坠落', open: '打开', close: '关闭', put: '放入', take: '取出', on: '按下', off: '松开', chime: '风铃', land: '落地', destroy: '破坏', rotate: '旋转' }[k] || k;
         var en = k.charAt(0).toUpperCase() + k.slice(1);
         return soundRefField(k, zh, en);
       }),
@@ -794,7 +817,10 @@
     return (list || []).map(function (spec) {
       var p = spec[0], t = spec[1];
       if (p === 'conditions') return f(p, p, p, 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') });
-      if (p === 'sounds' && t === 'json') return f(p, p, p, 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') });
+      if (p === 'sounds' && t === 'json') {
+        var skeys = spec[2] ? String(spec[2]).split(',') : null;
+        return f(p, p, p, 'popup', { content: skeys ? soundObject(skeys) : BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') });
+      }
       if (t === 'number') return f(p, p, p, 'number');
       if (t === 'bool') return f(p, p, p, 'bool');
       if (t === 'lines') return f(p, p, p, 'lines');
@@ -806,11 +832,15 @@
 
   // ---- 通用小块 ----
   var CRAFT_REMAINDER_TYPES = {
-    fixed: { label: l('固定物品 (fixed)', 'Fixed Item'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
-    hurt_and_break: { label: l('损坏并破碎 (hurt_and_break)', 'Hurt And Break'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
-    recipe_based: { label: l('基于配方 (recipe_based)', 'Recipe Based'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' })] },
+    fixed: { label: l('固定物品 (fixed)', 'Fixed Item'), fields: [f('item', '物品', 'Item', 'text', { datalist: 'items' }), f('count', '数量', 'Count', 'number')] },
+    hurt_and_break: { label: l('损坏并破碎 (hurt_and_break)', 'Hurt And Break'), fields: [f('damage', '耐久消耗', 'Damage', 'number', { hint: l('消耗的耐久度', 'Durability consumed') })] },
+    recipe_based: { label: l('基于配方 (recipe_based)', 'Recipe Based'), fields: [f('terms', '条款', 'Terms', 'listOf', { itemType: { type: 'object', fields: [
+      f('recipes', '配方', 'Recipes', 'lines', { hint: l('每行一个配方 ID', 'One recipe ID per line') }),
+      f('craft_remainder', '合成残留', 'Craft Remainder', 'union', { allowScalar: { type: 'text', datalist: 'items' }, types: CRAFT_REMAINDER_TYPES_REF, label: l('合成残留', 'Craft Remainder') }),
+    ], label: l('条款', 'Term') }, label: l('条款', 'Terms') })] },
     same: { label: l('相同物品 (same)', 'Same Item') },
   };
+  function CRAFT_REMAINDER_TYPES_REF() { return CRAFT_REMAINDER_TYPES; }
   var ROTATION_TYPES = {
     quaternion: { label: l('四元数 (quaternion)', 'Quaternion'), fields: [f('quaternion', '四元数', 'Quaternion', 'lines', { hint: l('4 个数, 每行一个', '4 numbers, one per line') })] },
     axis_angle: { label: l('轴角 (axis_angle)', 'Axis Angle'), fields: [f('axis', '轴', 'Axis', 'text'), f('angle', '角度', 'Angle', 'number')] },
@@ -996,10 +1026,13 @@
     unbreakable: { label: l('不可破坏 (unbreakable)', 'Unbreakable'), widget: UNBREAKABLE_UNION },
     max_damage: { label: l('最大耐久 (max_damage)', 'Max Damage'), widget: { type: 'number', label: l('最大耐久', 'Max Damage') } },
     attribute_modifiers: { label: l('属性修饰 (attribute_modifiers)', 'Attribute Modifiers'), widget: { type: 'listOf', itemType: { type: 'object', fields: ATTR_MOD_FIELDS, label: l('修饰', 'Modifier') }, label: l('属性修饰', 'Attribute Modifiers') } },
-    enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), widget: { type: 'object', fields: [
-      f('effects', '效果', 'Effects', 'mapOf', { valueType: { type: 'scalar' }, label: l('效果', 'Effects'), hint: l('键: 附魔 ID, 值: 等级 (如 minecraft:sharpness: 3)', 'Key: enchantment id, value: level (e.g. minecraft:sharpness: 3)') }),
-      f('glow', '发光', 'Glow', 'bool'),
-    ], label: l('附魔', 'Enchantment') } },
+    enchantment: { label: l('附魔 (enchantment)', 'Enchantment'), widget: { type: 'union', noTypeKey: true, label: l('附魔', 'Enchantment'), types: {
+      map: { label: l('附魔映射', 'Enchantment Map'), widget: { type: 'mapOf', valueType: { type: 'scalar' }, label: l('附魔映射', 'Enchantments'), hint: l('键: 附魔 ID, 值: 等级 (如 minecraft:sharpness: 3)', 'Key: enchantment id, value: level (e.g. minecraft:sharpness: 3)') } },
+      merge: { label: l('合并附魔 (merge)', 'Merge'), widget: { type: 'object', fields: [
+        f('merge', '合并', 'Merge', 'bool', { hint: l('与已有附魔合并', 'Merge with existing enchantments') }),
+        f('enchantments', '附魔', 'Enchantments', 'mapOf', { valueType: { type: 'scalar' }, label: l('附魔', 'Enchantments'), hint: l('键: 附魔 ID, 值: 等级', 'Key: enchantment id, value: level') }),
+      ], label: l('合并附魔', 'Merge') } },
+    } } },
     painting_variant: { label: l('画变体 (painting_variant)', 'Painting Variant'), widget: { type: 'text', label: l('画变体', 'Painting Variant') } },
     jukebox_playable: { label: l('唱片 (jukebox_playable)', 'Jukebox Playable'), widget: JUKEBOX_UNION },
     block_state: { label: l('方块状态 (block_state)', 'Block State'), widget: BLOCK_STATE_WIDGET },
@@ -1074,89 +1107,108 @@
     f('textures', '纹理映射', 'Textures', 'mapOf', { valueType: { type: 'text' }, label: l('纹理映射', 'Textures') }),
     f('models', '模型映射', 'Models', 'mapOf', { valueType: { type: 'text' }, label: l('模型映射', 'Models') }),
     f('blueprint', '蓝图', 'Blueprint', 'text'),
-    f('legacy_model', '旧版模型', 'Legacy Model', 'union', { noTypeKey: true, allowScalar: { type: 'text' }, label: l('旧版模型', 'Legacy Model'), types: {
-      map: { label: l('映射', 'Map'), widget: { type: 'mapOf', label: l('映射', 'Map'), valueType: { type: 'text' } } },
-    } }),
     f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
   ];
-  // 特殊模型 (special 类型体)
+  // 旧版模型 (1.21.4 前兼容, 条目根级字段, wiki item/models.mdx#legacy-model)
+  var LEGACY_MODEL_FIELDS = [
+    f('path', '模型路径', 'Path', 'text', { hint: l('如 minecraft:item/custom/rod', 'e.g. minecraft:item/custom/rod') }),
+    f('generation', '自动生成', 'Generation', 'object', { fields: [
+      f('parent', '父模板', 'Parent', 'text', { hint: l('如 minecraft:item/fishing_rod', 'e.g. minecraft:item/fishing_rod') }),
+      f('textures', '纹理变量', 'Textures', 'mapOf', { valueType: { type: 'text' }, label: l('纹理变量', 'Textures') }),
+    ], label: l('自动生成', 'Generation') }),
+    f('overrides', '覆盖', 'Overrides', 'listOf', { itemType: { type: 'object', fields: [
+      f('path', '模型路径', 'Path', 'text'),
+      f('predicate', '谓词', 'Predicate', 'kv', { hint: l('如 cast: 1', 'e.g. cast: 1') }),
+    ], label: l('覆盖', 'Override') }, label: l('覆盖', 'Overrides') }),
+  ];
+  // 特殊模型 (special 类型体, wiki item/models/special.mdx)
   var SPECIAL_MODEL_TYPES = {
-    'minecraft:command_block': { label: l('命令方块', 'Command Block'), fields: [
-      f('command', '命令', 'Command', 'text'),
-      f('custom_name', '自定义名', 'Custom Name', 'text'),
-      f('last_execution', '上次执行', 'Last Execution', 'text'),
-      f('mode', '模式', 'Mode', 'select', { options: ['SEQUENCE', 'AUTO', 'REDSTONE', 'CYCLE'] }),
-      f('track_output', '记录输出', 'Track Output', 'bool'),
-      f('condition_met', '条件满足', 'Condition Met', 'bool'),
-      f('needs_redstone', '需要红石', 'Needs Redstone', 'bool'),
+    'minecraft:head': { label: l('头颅 (head)', 'Head'), fields: [
+      f('kind', '类型', 'Kind', 'select', { options: ['skeleton', 'wither_skeleton', 'player', 'zombie', 'creeper', 'piglin', 'dragon'], hint: l('skeleton | wither_skeleton | player | zombie | creeper | piglin | dragon', 'skeleton | wither_skeleton | player | zombie | creeper | piglin | dragon') }),
+      f('texture', '纹理', 'Texture', 'text', { hint: l('可选, 默认按类型; 省略 textures/entity/ 前缀与 .png 后缀', 'Optional, defaults per kind; omits textures/entity/ prefix and .png suffix') }),
+      f('animation', '动画', 'Animation', 'number', { hint: l('龙下巴: -2.5 (闭合) ~ 2.5 (张开); 猪灵耳朵摆动', 'Dragon jaw: -2.5 (closed) to 2.5 (open); piglin ear wiggle') }),
     ] },
-    'minecraft:shulker_box': { label: l('潜影盒', 'Shulker Box'), fields: [
-      f('color', '颜色', 'Color', 'text'),
-      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    'minecraft:player_head': { label: l('玩家头颅 (player_head)', 'Player Head'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('1.21.6+; 使用 minecraft:profile 组件作为皮肤纹理, 无额外字段', '1.21.6+; uses the minecraft:profile component for the skin, no extra fields') }),
     ] },
-    'minecraft:beehive': { label: l('蜂箱', 'Beehive'), fields: [
-      f('occupants', '住户', 'Occupants', 'kv'),
-      f('flower_pos', '花朵位置', 'Flower Pos', 'kv'),
+    'minecraft:chest': { label: l('箱子 (chest)', 'Chest'), fields: [
+      f('texture', '纹理', 'Texture', 'text', { hint: l('chests 图集中的路径, 无 .png 后缀', 'Path in the chests atlas, no .png suffix') }),
+      f('chest_type', '箱子类型', 'Chest Type', 'select', { options: ['single', 'left', 'right'], hint: l('"single" | "left" | "right" (26.1+)', '"single" | "left" | "right" (26.1+)') }),
+      f('openness', '开启程度', 'Openness', 'number', { hint: l('0.0 (关闭) ~ 1.0 (开启)', '0.0 (closed) to 1.0 (open)') }),
     ] },
-    'minecraft:chest': { label: l('箱子', 'Chest'), fields: [
-      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
-      f('loot_table', '战利品表', 'Loot Table', 'text'),
+    'minecraft:shulker_box': { label: l('潜影盒 (shulker_box)', 'Shulker Box'), fields: [
+      f('texture', '纹理', 'Texture', 'text', { hint: l('shulker 图集中的路径, 无 .png 后缀', 'Path in the shulker atlas, no .png suffix') }),
+      f('openness', '开启程度', 'Openness', 'number', { hint: l('0.0 (关闭) ~ 1.0 (开启)', '0.0 (closed) to 1.0 (open)') }),
     ] },
-    'minecraft:decorated_pot': { label: l('饰纹陶罐', 'Decorated Pot'), fields: [
-      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    'minecraft:shield': { label: l('盾牌 (shield)', 'Shield'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('读取 minecraft:banner_patterns 与 minecraft:base_color 组件, 无额外字段', 'Reads minecraft:banner_patterns and minecraft:base_color components, no extra fields') }),
     ] },
-    'minecraft:furnace': { label: l('熔炉', 'Furnace'), fields: [
-      f('lit', '燃烧', 'Lit', 'bool'),
-      f('items', '物品', 'Items', 'listOf', { itemType: { type: 'text' }, label: l('物品', 'Items') }),
+    'minecraft:banner': { label: l('旗帜 (banner)', 'Banner'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('读取 minecraft:banner_patterns 组件, 无额外字段', 'Reads the minecraft:banner_patterns component, no extra fields') }),
     ] },
-    'minecraft:jukebox': { label: l('唱片机', 'Jukebox'), fields: [
-      f('record', '唱片', 'Record', 'text'),
+    'minecraft:trident': { label: l('三叉戟 (trident)', 'Trident'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('渲染三叉戟, 无额外字段', 'Renders a trident, no extra fields') }),
     ] },
-    'minecraft:mob_effect': { label: l('药水效果', 'Mob Effect'), fields: [
-      f('color', '颜色', 'Color', 'text'),
-      f('effects', '效果', 'Effects', 'lines'),
+    'minecraft:conduit': { label: l('潮涌核心 (conduit)', 'Conduit'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('渲染潮涌核心, 无额外字段', 'Renders a conduit, no extra fields') }),
     ] },
-    'minecraft:potion_contents': { label: l('药水内容', 'Potion Contents'), fields: [
-      f('potion', '药水', 'Potion', 'text'),
-      f('custom_color', '自定义颜色', 'Custom Color', 'text'),
-      f('custom_effects', '自定义效果', 'Custom Effects', 'kv'),
+    'minecraft:decorated_pot': { label: l('饰纹陶罐 (decorated_pot)', 'Decorated Pot'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('读取 minecraft:pot_decorations 组件, 无额外字段', 'Reads the minecraft:pot_decorations component, no extra fields') }),
     ] },
-    'minecraft:skull': { label: l('头颅', 'Skull'), fields: [
-      f('kind', '类型', 'Kind', 'select', { options: S.constants.headKinds }),
-      f('profile', '皮肤', 'Profile', 'union', { types: PROFILE_TYPES, label: l('皮肤', 'Profile') }),
+    'minecraft:bell': { label: l('钟 (bell)', 'Bell'), fields: [
+      f('note', '说明', 'Note', 'text', { hint: l('26.1+; 渲染动画钟的方块部分, 无额外字段', '26.1+; renders the animated bell block part, no extra fields') }),
     ] },
-    'minecraft:suspicious_stew': { label: l('迷之炖菜', 'Suspicious Stew'), fields: [
-      f('effects', '效果', 'Effects', 'listOf', { itemType: { type: 'object', fields: FOOD_EFFECT_FIELDS, label: l('效果', 'Effect') }, label: l('效果', 'Effects') }),
+    'minecraft:book': { label: l('书 (book)', 'Book'), fields: [
+      f('open_angle', '打开角度', 'Open Angle', 'number', { hint: l('0 = 关闭, 90 = 平铺', '0 = closed, 90 = flat') }),
+      f('page1', '第 1 页进度', 'Page 1', 'number', { hint: l('翻页进度 0.0~1.0', 'Page turn progress 0.0-1.0') }),
+      f('page2', '第 2 页进度', 'Page 2', 'number', { hint: l('翻页进度 0.0~1.0', 'Page turn progress 0.0-1.0') }),
     ] },
-    'minecraft:tnt': { label: l('TNT', 'TNT'), fields: [
-      f('fuse', '引信', 'Fuse', 'number'),
-      f('block_state', '方块状态', 'Block State', 'text'),
+    'minecraft:end_cube': { label: l('末地立方 (end_cube)', 'End Cube'), fields: [
+      f('effect', '效果', 'Effect', 'select', { options: ['portal', 'gateway'], hint: l('portal = 末地传送门, gateway = 末地折跃门', '"portal" | "gateway"') }),
     ] },
-    'minecraft:composite': { label: l('复合', 'Composite'), widget: { type: 'listOf', itemType: { type: 'union', types: function () { return MODEL_TREE_TYPES; }, label: l('模型', 'Model') }, label: l('模型', 'Models') } },
+    'minecraft:copper_golem_statue': { label: l('铜傀儡雕像 (copper_golem_statue)', 'Copper Golem Statue'), fields: [
+      f('pose', '姿态', 'Pose', 'select', { options: ['standing', 'sitting', 'running', 'star'], hint: l('standing | sitting | running | star', '"standing" | "sitting" | "running" | "star"') }),
+      f('texture', '纹理', 'Texture', 'text', { hint: l('完整路径, 需要 .png 后缀', 'Full path, .png suffix required') }),
+    ] },
   };
-  // 模型树节点 (8+ 种, 递归引用自身 → 注册 + 函数延迟)
+  // 模型树节点 (8 种, 递归引用自身 → 注册 + 函数延迟)
   // 注意: 必须先于 SPECIAL_MODEL_TYPES 定义 (其 minecraft:composite 直接引用 MODEL_TREE_REF)
   var MODEL_TREE_TYPES = {
     'minecraft:model': { label: l('模型 (minecraft:model)', 'Model'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:model'] }),
-      f('model', '模型', 'Model', 'text', { hint: l('如 minecraft:item/custom/xxx', 'e.g. minecraft:item/custom/xxx') }),
+      f('path', '模型路径', 'Path', 'text', { hint: l('模型 JSON 的命名空间路径 (如 demo:item/sword); 设置 blueprint 时可省略, 作为生成模型的输出路径', 'Namespaced path to the model JSON (e.g. demo:item/sword); optional with blueprint, then used as the output path') }),
+      f('generation', '自动生成', 'Generation', 'object', { hint: l('从父模板自动生成模型 JSON, 无需模型文件', 'Auto-generate the model JSON from a parent template'), fields: [
+        f('parent', '父模板', 'Parent', 'text', { hint: l('必填, 如 minecraft:item/handheld', 'Required, e.g. minecraft:item/handheld') }),
+        f('textures', '纹理变量', 'Textures', 'mapOf', { valueType: { type: 'text' }, label: l('纹理变量', 'Textures'), hint: l('layer0/layer1 等变量覆盖', 'Texture variable overrides (layer0, layer1, ...)') }),
+        f('display', '显示变换', 'Display', 'object', { hint: l('各场景显示变换 (thirdperson_righthand/gui/ground/fixed/head...)', 'Per-context display transforms (thirdperson_righthand, gui, ground, fixed, head, ...)'), fields: [
+          f('thirdperson_righthand', '第三人称右手', 'Third Person Right Hand', 'text', { hint: l('rotation/translation/scale', 'rotation/translation/scale') }),
+          f('gui', 'GUI', 'GUI', 'text'),
+          f('ground', '地面', 'Ground', 'text'),
+          f('fixed', '固定', 'Fixed', 'text'),
+          f('head', '头部', 'Head', 'text'),
+          f('firstperson_righthand', '第一人称右手', 'First Person Right Hand', 'text'),
+        ] }),
+        f('gui_light', 'GUI 光照', 'Gui Light', 'select', { options: ['front', 'side'] }),
+      ] }),
+      f('blueprint', '蓝图', 'Blueprint', 'text', { hint: l('Blockbench .bbmodel 文件 (blueprint 文件夹, 相对路径, 扩展名可省略); 打包时自动转换为模型 JSON', 'Blockbench .bbmodel file converted into the model JSON (experimental)') }),
       f('tints', '色调', 'Tints', 'listOf', { itemType: { type: 'object', fields: [
-        f('type', '类型', 'Type', 'select', { options: ['minecraft:constant', 'minecraft:dye', 'minecraft:grass', 'minecraft:water', 'minecraft:fire', 'minecraft:potion', 'minecraft:map_color', 'minecraft:tint_source'] }),
-        f('value', '值', 'Value', 'text', { hint: l('constant 时为 #RRGGBB', '#RRGGBB for constant') }),
+        f('type', '类型', 'Type', 'select', { options: ['minecraft:constant', 'minecraft:dye', 'minecraft:firework', 'minecraft:grass', 'minecraft:map_color', 'minecraft:potion', 'minecraft:team', 'minecraft:custom_model_data'] }),
+        f('value', '值', 'Value', 'text', { hint: l('十进制 (16711680) / RGB 0-255 (255,0,0) / RGB 0.0-1.0 (1.0,0.0,0.0)', 'Decimal / RGB 0-255 / RGB 0.0-1.0') }),
         f('default', '默认色', 'Default', 'text'),
       ], label: l('色调', 'Tint') }, label: l('色调', 'Tints') }),
-      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:composite': { label: l('复合 (minecraft:composite)', 'Composite'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:composite'] }),
-      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
+      f('models', '子模型', 'Models', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child Model') }, label: l('子模型', 'Models'), hint: l('按顺序渲染的子模型列表', 'List of child item models to render in order') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:condition': { label: l('条件 (minecraft:condition)', 'Condition'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:condition'] }),
-      f('property', '属性', 'Property', 'text', { hint: l('如 custom_model_data / item_model', 'e.g. custom_model_data / item_model') }),
-      f('then', '满足时', 'Then', 'union', { types: MODEL_TREE_REF, label: l('满足时', 'Then') }),
-      f('else', '不满足时', 'Else', 'union', { types: MODEL_TREE_REF, label: l('不满足时', 'Else') }),
-      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+      f('property', '属性', 'Property', 'text', { hint: l('布尔属性类型, 如 custom_model_data / item_model', 'Boolean property type, e.g. custom_model_data / item_model') }),
+      f('on_true', '为真时', 'On True', 'union', { types: MODEL_TREE_REF, label: l('为真时', 'On True'), hint: l('属性为 true 时使用的模型', 'Model when property is true') }),
+      f('on_false', '为假时', 'On False', 'union', { types: MODEL_TREE_REF, label: l('为假时', 'On False'), hint: l('属性为 false 时使用的模型', 'Model when property is false') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:select': { label: l('选择 (minecraft:select)', 'Select'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:select'] }),
@@ -1166,32 +1218,32 @@
         f('model', '模型', 'Model', 'union', { types: MODEL_TREE_REF, label: l('模型', 'Model') }),
       ], label: l('分支', 'Case') }, label: l('分支', 'Cases') }),
       f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:range_dispatch': { label: l('区间分发 (minecraft:range_dispatch)', 'Range Dispatch'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:range_dispatch'] }),
-      f('property', '属性', 'Property', 'text', { hint: l('如 custom_model_data', 'e.g. custom_model_data') }),
+      f('property', '属性', 'Property', 'text', { hint: l('数值属性类型, 如 custom_model_data', 'Numeric property type, e.g. custom_model_data') }),
+      f('scale', '缩放系数', 'Scale', 'number', { hint: l('比较前与属性值相乘的系数; 默认 1.0', 'Multiplier applied to the property value before comparing; default 1.0') }),
       f('entries', '区间', 'Entries', 'listOf', { itemType: { type: 'object', fields: [
-        f('threshold', '阈值', 'Threshold', 'number'),
+        f('threshold', '阈值', 'Threshold', 'number', { hint: l('该模型的最小属性值', 'Minimum property value for this model') }),
         f('model', '模型', 'Model', 'union', { types: MODEL_TREE_REF, label: l('模型', 'Model') }),
       ], label: l('区间', 'Entry') }, label: l('区间', 'Entries') }),
-      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback'), hint: l('属性低于所有阈值时使用; 默认空', 'Model used when property < all thresholds; default empty') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:special': { label: l('特殊 (minecraft:special)', 'Special'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:special'] }),
+      f('base', '基础模型', 'Base', 'text', { hint: l('变换/粒子纹理/GUI 光照的基础模型路径; 设置 blueprint 时可省略, 作为生成模型的输出路径', 'Model path for transforms, particle texture, and GUI light; optional with blueprint') }),
+      f('blueprint', '蓝图', 'Blueprint', 'text', { hint: l('Blockbench .bbmodel 文件转换为基础模型 JSON (实验性)', 'Blockbench .bbmodel file converted into the base model JSON (experimental)') }),
       f('model', '特殊模型', 'Special Model', 'union', { types: SPECIAL_MODEL_TYPES, label: l('特殊模型', 'Special Model') }),
+      f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
     'minecraft:empty': { label: l('空 (minecraft:empty)', 'Empty'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:empty'] }),
     ] },
-    'minecraft:bundle': { label: l('收纳袋 (minecraft:bundle)', 'Bundle'), fields: [
-      f('type', '类型', 'Type', 'select', { options: ['minecraft:bundle'] }),
-      f('children', '子模型', 'Children', 'listOf', { itemType: { type: 'union', types: MODEL_TREE_REF, label: l('子模型', 'Child') }, label: l('子模型', 'Children') }),
-    ] },
-    'minecraft:selected_item': { label: l('手持物品 (minecraft:selected_item)', 'Selected Item'), fields: [
-      f('type', '类型', 'Type', 'select', { options: ['minecraft:selected_item'] }),
-      f('in_hand', '手持时', 'In Hand', 'union', { types: MODEL_TREE_REF, label: l('手持时', 'In Hand') }),
-      f('in_hand_high', '高举时', 'In Hand High', 'union', { types: MODEL_TREE_REF, label: l('高举时', 'In Hand High') }),
-      f('in_hand_third_person', '第三人称手持', 'Third Person Hand', 'union', { types: MODEL_TREE_REF, label: l('第三人称手持', 'Third Person Hand') }),
+    'minecraft:bundle/selected_item': { label: l('收纳袋选中物品 (minecraft:bundle/selected_item)', 'Bundle Selected Item'), fields: [
+      f('type', '类型', 'Type', 'select', { options: ['minecraft:bundle/selected_item'] }),
+      f('note', '说明', 'Note', 'text', { hint: l('渲染收纳袋打开时选中的物品堆叠; 无选中物品则渲染为空; 不支持 transformation', 'Renders the selected item stack when the bundle is open; nothing if none selected; transformation not supported') }),
     ] },
   };
   function MODEL_TREE_REF() { return MODEL_TREE_TYPES; }
@@ -1204,8 +1256,8 @@
   // ---- 行为 (wiki item/behaviors.mdx + behaviors/ 子文档) ----
   var FURNITURE_RULE_TYPES = {
     map: { label: l('详细规则', 'Detailed'), widget: { type: 'object', fields: [
-      f('rotation', '旋转', 'Rotation', 'select', { options: ['left', 'right'] }),
-      f('alignment', '对齐', 'Alignment', 'select', { options: S.constants.alignments }),
+      f('rotation', '旋转', 'Rotation', 'select', { options: ['any', 'four', 'eight', 'sixteen', 'north', 'east', 'west', 'south'], hint: l('家具可朝向的方向数; 对墙面变体无效', 'How many directions the furniture can face; no effect on wall variants') }),
+      f('alignment', '对齐', 'Alignment', 'select', { options: S.constants.alignments, hint: l('家具在方块网格上的对齐方式', 'How the furniture aligns to the block grid') }),
     ] } },
   };
   var INLINE_FURNITURE_SETTINGS = [
@@ -1272,7 +1324,7 @@
     multi_high_block_item: { label: l('多层方块 (multi_high_block_item)', 'Multi High Block Item'), fields: BLOCK_ITEM_FIELDS },
     range_mining_item: { label: l('连锁挖掘 (range_mining_item)', 'Range Mining'), fields: [
       f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
-      f('range', '范围', 'Range', 'lines', { hint: l('每行一个如 x:1 y:1 z:1', 'One per line, e.g. x:1 y:1 z:1') }),
+      f('range', '范围', 'Range', 'lines', { hint: l('每行一个 宽,高,深 偏移 (如 0,1,0), 自动随朝向旋转', 'One width,height,depth offset per line (e.g. 0,1,0), auto-rotates with facing') }),
     ] },
     wall_block_item: { label: l('墙上方块 (wall_block_item)', 'Wall Block Item'), fields: BLOCK_ITEM_FIELDS },
   };
@@ -1282,31 +1334,32 @@
     bouncing_block: { label: l('弹跳 (bouncing_block)', 'Bouncing Block'), fields: _bh([['bounce_height', 'number'], ['fall_damage_multiplier', 'number'], ['sync_player_position', 'bool']]) },
     budding_block: { label: l('芽 (budding_block)', 'Budding Block'), fields: _bh([['growth_chance', 'number'], ['blocks', 'lines']]) },
     bush_block: { label: l('灌木 (bush_block)', 'Bush Block'), fields: _bh([['blacklist', 'bool'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number'], ['bottom_blocks', 'lines'], ['bottom_block_tags', 'lines']]) },
-    button_block: { label: l('按钮 (button_block)', 'Button Block'), fields: _bh([['ticks_to_stay_pressed', 'number'], ['can_be_activated_by_arrows', 'bool'], ['sounds', 'json']]) },
+    button_block: { label: l('按钮 (button_block)', 'Button Block'), fields: _bh([['ticks_to_stay_pressed', 'number'], ['can_be_activated_by_arrows', 'bool'], ['sounds', 'json', 'on,off']]) },
     change_over_time_block: { label: l('随时间变化 (change_over_time_block)', 'Change Over Time Block'), fields: _bh([['change_speed', 'number'], ['next_block', 'text'], ['excluded_properties', 'lines']]) },
-    chime_block: { label: l('风铃 (chime_block)', 'Chime Block'), fields: _bh([['sounds', 'json']]) },
+    chime_block: { label: l('风铃 (chime_block)', 'Chime Block'), fields: _bh([['sounds', 'json', 'chime']]) },
     concrete_powder_block: { label: l('混凝土粉末 (concrete_powder_block)', 'Concrete Powder Block'), fields: _bh([['solid_block', 'text']]) },
     crop_block: { label: l('作物 (crop_block)', 'Crop Block'), fields: _bh([['grow_speed', 'number'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['spawn_light_requirement', 'number'], ['max_spawn_light_requirement', 'number'], ['is_bone_meal_target', 'bool'], ['bone_meal_age_bonus', 'json']]) },
     decay_block: { label: l('腐烂 (decay_block)', 'Decay Block'), fields: _bh([['decay_into', 'text'], ['delay', 'text'], ['chance', 'number'], ['required_light', 'number']]) },
     directional_attached_block: { label: l('定向附着 (directional_attached_block)', 'Directional Attached Block'), fields: _bh([['blacklist', 'bool'], ['attached_blocks', 'lines'], ['attached_block_tags', 'lines']]) },
-    display_item_block: { label: l('展示物品方块 (display_item_block)', 'Display Item Block'), fields: _bh([['position', 'text'], ['has_signal', 'bool'], ['data_key', 'text'], ['tint_source', 'bool'], ['sounds', 'json']]) },
-    door_block: { label: l('门 (door_block)', 'Door Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
-    drawer_block: { label: l('抽屉 (drawer_block)', 'Drawer Block'), fields: _bh([['max_stacks', 'number'], ['has_signal', 'bool'], ['allow_input', 'bool'], ['allow_output', 'bool'], ['item_position', 'text'], ['text_position', 'text'], ['item_scale', 'text'], ['text_scale', 'text'], ['data_key', 'text'], ['compatible_mode', 'bool'], ['sounds', 'json']]) },
+    double_high_block: { label: l('双层方块 (double_high_block)', 'Double High Block'), fields: _bh([['half', 'text']]) },
+    display_item_block: { label: l('展示物品方块 (display_item_block)', 'Display Item Block'), fields: _bh([['position', 'text'], ['has_signal', 'bool'], ['data_key', 'text'], ['tint_source', 'bool'], ['sounds', 'json', 'put,take']]) },
+    door_block: { label: l('门 (door_block)', 'Door Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json', 'open,close']]) },
+    drawer_block: { label: l('抽屉 (drawer_block)', 'Drawer Block'), fields: _bh([['max_stacks', 'number'], ['has_signal', 'bool'], ['allow_input', 'bool'], ['allow_output', 'bool'], ['item_position', 'text'], ['text_position', 'text'], ['item_scale', 'text'], ['text_scale', 'text'], ['data_key', 'text'], ['compatible_mode', 'bool'], ['sounds', 'json', 'put,take']]) },
     drop_exp_block: { label: l('经验掉落 (drop_exp_block)', 'Drop Exp Block'), fields: _bh([['amount', 'text'], ['conditions', 'json']]) },
     drop_experience_block: { label: l('经验掉落 (drop_experience_block)', 'Drop Experience Block'), fields: _bh([['amount', 'text'], ['conditions', 'json']]) },
     face_attached_horizontal_directional_block: { label: l('面附水平定向 (face_attached_horizontal_directional_block)', 'Face Attached Horizontal Directional'), fields: _bh([['blacklist', 'bool'], ['attached_blocks', 'lines'], ['attached_block_tags', 'lines']]) },
-    falling_block: { label: l('下落方块 (falling_block)', 'Falling Block'), fields: _bh([['hurt_amount', 'number'], ['max_hurt', 'number'], ['sounds', 'json']]) },
+    falling_block: { label: l('下落方块 (falling_block)', 'Falling Block'), fields: _bh([['hurt_amount', 'number'], ['max_hurt', 'number'], ['sounds', 'json', 'land,destroy']]) },
     fence_block: { label: l('栅栏 (fence_block)', 'Fence Block'), fields: _bh([['connectable_block_tag', 'text'], ['can_leash', 'bool']]) },
-    fence_gate_block: { label: l('栅栏门 (fence_gate_block)', 'Fence Gate Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
+    fence_gate_block: { label: l('栅栏门 (fence_gate_block)', 'Fence Gate Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json', 'open,close']]) },
     grass_block: { label: l('草方块 (grass_block)', 'Grass Block'), fields: _bh([['feature', 'text']]) },
     hanging_block: { label: l('悬挂 (hanging_block)', 'Hanging Block'), fields: _bh([['blacklist', 'bool'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number'], ['above_blocks', 'lines'], ['above_block_tags', 'lines']]) },
-    item_frame_block: { label: l('物品展示框 (item_frame_block)', 'Item Frame Block'), fields: _bh([['position', 'text'], ['glow', 'bool'], ['invisible', 'bool'], ['render_map_item', 'bool'], ['data_key', 'text'], ['sounds', 'json']]) },
+    item_frame_block: { label: l('物品展示框 (item_frame_block)', 'Item Frame Block'), fields: _bh([['position', 'text'], ['glow', 'bool'], ['invisible', 'bool'], ['render_map_item', 'bool'], ['data_key', 'text'], ['sounds', 'json', 'put,take,rotate']]) },
     liquid_flowable_block: { label: l('液体可流经 (liquid_flowable_block)', 'Liquid Flowable Block'), fields: _bh([['drop_item', 'bool']]) },
     multi_high_block: { label: l('多层 (multi_high_block)', 'Multi High Block'), fields: _bh([['property', 'text']]) },
     near_liquid_block: { label: l('液体附近 (near_liquid_block)', 'Near Liquid Block'), fields: _bh([['liquid_type', 'lines'], ['stackable', 'bool'], ['positions', 'lines']]) },
     on_liquid_block: { label: l('液体上 (on_liquid_block)', 'On Liquid Block'), fields: _bh([['liquid_type', 'lines'], ['stackable', 'bool']]) },
-    pressure_plate_block: { label: l('压力板 (pressure_plate_block)', 'Pressure Plate Block'), fields: _bh([['sensitivity', 'select', ['all', 'mob']], ['pressed_time', 'number'], ['sounds', 'json']]) },
-    sapling_block: { label: l('树苗 (sapling_block)', 'Sapling Block'), fields: _bh([['feature', 'text'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['grow_speed', 'number'], ['bone_meal_success_chance', 'number']]) },
+    pressure_plate_block: { label: l('压力板 (pressure_plate_block)', 'Pressure Plate Block'), fields: _bh([['sensitivity', 'select', ['all', 'mob']], ['pressed_time', 'number'], ['sounds', 'json', 'on,off']]) },
+    sapling_block: { label: l('树苗 (sapling_block)', 'Sapling Block'), fields: _bh([['feature', 'text'], ['structure', 'text'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['grow_speed', 'number'], ['bone_meal_success_chance', 'number']]) },
     seat_block: { label: l('座椅 (seat_block)', 'Seat Block'), fields: _bh([['seats', 'lines']]) },
     simple_particle_block: { label: l('简单粒子 (simple_particle_block)', 'Simple Particle Block'), fields: _bh([['tick_interval', 'number'], ['particles', 'json']]) },
     simple_storage_block: { label: l('简单存储 (simple_storage_block)', 'Simple Storage Block'), fields: _bh([['title', 'text'], ['rows', 'number'], ['has_signal', 'bool'], ['allow_input', 'bool'], ['allow_output', 'bool'], ['data_key', 'text'], ['sounds', 'json']]) },
@@ -1318,7 +1371,7 @@
     surface_spreading_block: { label: l('表面蔓延 (surface_spreading_block)', 'Surface Spreading Block'), fields: _bh([['light_requirement', 'number'], ['max_light_requirement', 'number'], ['base_block', 'text']]) },
     tint_source_block: { label: l('色调源 (tint_source_block)', 'Tint Source Block'), fields: _bh([['drop_item', 'bool'], ['data_key', 'text']]) },
     toggleable_lamp_block: { label: l('可切换灯 (toggleable_lamp_block)', 'Toggleable Lamp Block'), fields: _bh([['can_open_with_hand', 'bool']]) },
-    trapdoor_block: { label: l('活板门 (trapdoor_block)', 'Trapdoor Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json']]) },
+    trapdoor_block: { label: l('活板门 (trapdoor_block)', 'Trapdoor Block'), fields: _bh([['can_open_with_hand', 'bool'], ['can_open_by_wind_charge', 'bool'], ['sounds', 'json', 'open,close']]) },
     vertical_crop_block: { label: l('垂直作物 (vertical_crop_block)', 'Vertical Crop Block'), fields: _bh([['max_height', 'number'], ['grow_speed', 'number'], ['direction', 'select', ['up', 'down']]]) },
     wall_torch_particle_block: { label: l('墙上火把粒子 (wall_torch_particle_block)', 'Wall Torch Particle Block'), fields: _bh([['tick_interval', 'number'], ['particles', 'json']]) },
     // wiki 新增 (Phase 3 细化字段)
@@ -1332,52 +1385,98 @@
   };
 
   // ---- settings (wiki item/settings.mdx) ----
+  var ITEM_PROJECTILE_DISPLAY_FIELDS = [
+    f('item', '显示物品', 'Item', 'text', { datalist: 'items' }),
+    f('translation', '平移', 'Translation', 'text', { hint: l('x,y,z', 'x,y,z') }),
+    f('rotation', '旋转', 'Rotation', 'text', { hint: l('四元数 w,x,y,z', 'Quaternion w,x,y,z') }),
+    f('display_transform', '显示变换', 'Display Transform', 'text'),
+    f('scale', '缩放', 'Scale', 'number'),
+  ];
+  var ITEM_PROJECTILE_FIELDS = [
+    f('display', '显示', 'Display', 'object', { fields: ITEM_PROJECTILE_DISPLAY_FIELDS, label: l('显示', 'Display') }),
+    f('sounds', '音效', 'Sounds', 'object', { fields: [
+      f('throw', '投掷', 'Throw', 'text'),
+      f('hit_entity', '命中实体', 'Hit Entity', 'text'),
+      f('hit_block', '命中方块', 'Hit Block', 'text'),
+    ], label: l('音效', 'Sounds') }),
+    f('ignore_infinity_enchantment', '忽略无限附魔', 'Ignore Infinity Enchantment', 'bool', { hint: l('作为弹药使用时忽略 Infinity 附魔', 'Whether to ignore the Infinity enchantment when used as ammunition') }),
+    f('pickupable', '可拾取', 'Pickupable', 'bool', { hint: l('命中后是否可被拾取', 'Whether the projectile can be picked up after hitting a target') }),
+    f('remove_on_hit', '命中移除', 'Remove On Hit', 'bool'),
+    f('gravity', '重力', 'Gravity', 'bool'),
+    f('velocity', '速度', 'Velocity', 'number'),
+    f('damage', '基础伤害', 'Damage', 'number'),
+    f('pierce_level', '穿透次数', 'Pierce Level', 'number', { hint: l('箭可穿透的实体数量', 'Number of entities this arrow can pierce') }),
+  ];
   var ITEM_SETTINGS_FIELDS = [
     f('fuel_time', '燃料时间 (tick)', 'Fuel Time', 'number', { hint: l('>0 表示可作为燃料', '>0 = usable as fuel') }),
     f('tags', '标签', 'Tags', 'lines', { hint: l('每行一个标签, 如 minecraft:planks', 'One tag per line') }),
-    f('equipment', '装备槽位', 'Equipment', 'listOf', { itemType: { type: 'text', datalist: 'equipmentSlots' }, label: l('装备槽位', 'Equipment') }),
-    f('repairable', '可修复', 'Repairable', 'union', { allowScalar: { type: 'bool' }, label: l('可修复', 'Repairable'), types: {
-      items: { label: l('修复物品', 'Items'), widget: { type: 'lines', label: l('修复物品', 'Items') } },
+    f('equipment', '装备', 'Equipment', 'object', { hint: l('将装备定义应用到此物品', 'Apply the equipment to this item'), fields: [
+      f('asset_id', '资源 ID', 'Asset ID', 'text', { hint: l('必填, 如 default:topaz', 'Required, e.g. default:topaz') }),
+      f('client_bound_model', '客户端模型', 'Client Bound Model', 'bool', { hint: l('默认跟随 config.yml 的全局 client_bound_model 选项', 'Defaults to the global client_bound_model option in config.yml') }),
+      f('slot', '槽位', 'Slot', 'select', { options: ['head', 'chest', 'legs', 'feet', 'body', 'saddle'], hint: l('1.21.2+; 后续选项需要此值', '1.21.2+; required for the options below') }),
+      f('camera_overlay', '相机覆盖层', 'Camera Overlay', 'text', { hint: l('穿戴时叠加纹理的资源位置: assets/<namespace>/textures/<id>', 'Overlay texture when equipped: assets/<namespace>/textures/<id>') }),
+      f('dispensable', '可发射', 'Dispensable', 'bool', { hint: l('是否可由发射器发射', 'Whether the item can be dispensed by a dispenser') }),
+      f('damage_on_hurt', '受伤损坏', 'Damage On Hurt', 'bool', { hint: l('穿戴实体受伤时物品是否受损', 'Whether the item is damaged when the wearing entity is damaged') }),
+      f('swappable', '可右键穿戴', 'Swappable', 'bool', { hint: l('是否可通过右键穿入对应槽位', 'Whether the item can be equipped by right-clicking') }),
+      f('equip_on_interact', '可装备到生物', 'Equip On Interact', 'bool', { hint: l('>= 1.21.5: 对目标生物按下使用键是否可装备', '1.21.5+: equip onto a target mob by pressing use') }),
+    ] }),
+    f('repairable', '可修复', 'Repairable', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, hint: l('默认 true', 'Default: true'), label: l('可修复', 'Repairable'), types: {
+      map: { label: l('详细修复场景', 'Detailed'), widget: { type: 'object', fields: [
+        f('crafting_table', '工作台', 'Crafting Table', 'bool'),
+        f('anvil_repair', '铁砧修复', 'Anvil Repair', 'bool'),
+        f('anvil_combine', '铁砧合并', 'Anvil Combine', 'bool'),
+      ], label: l('详细修复场景', 'Detailed') } },
     } }),
-    f('anvil_repair_item', '铁砧修复物品', 'Anvil Repair Item', 'lines', { hint: l('每行一个物品 ID', 'One item ID per line') }),
-    f('renameable', '可重命名', 'Renameable', 'union', { allowScalar: { type: 'bool' }, label: l('可重命名', 'Renameable'), types: {
+    f('anvil_repair_item', '铁砧修复物品', 'Anvil Repair Item', 'listOf', { itemType: { type: 'object', fields: [
+      f('target', '目标', 'Target', 'union', { allowScalar: { type: 'text', hint: l('物品 ID 或标签 (如 #topaz_tools)', 'Item ID or tag (e.g. #topaz_tools)') }, label: l('目标', 'Target'), types: {
+        list: { label: l('列表', 'List'), widget: { type: 'lines', label: l('列表', 'List') } },
+      } }),
+      f('amount', '耐久恢复量', 'Amount', 'number', { hint: l('固定耐久度', 'Restores fixed durability') }),
+      f('percent', '百分比', 'Percent', 'number', { hint: l('0.25 = 恢复总耐久的 25%', '0.25 = 25% total durability') }),
+    ], label: l('修复项', 'Repair Entry') }, label: l('铁砧修复物品', 'Anvil Repair Item') }),
+    f('renameable', '可重命名', 'Renameable', 'union', { allowScalar: { type: 'bool' }, hint: l('默认 true', 'Default: true'), label: l('可重命名', 'Renameable'), types: {
       map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [f('anvil_requires_level', '铁砧需要等级', 'Anvil Requires Level', 'bool')] } },
     } }),
-    f('prevent_break', '不可破坏', 'Prevent Break', 'bool'),
-    f('can_place', '可放置方块', 'Can Place', 'lines', { hint: l('每行一个方块 ID/标签', 'One block ID/tag per line') }),
-    f('allowed_projectiles', '允许弹射物', 'Allowed Projectiles', 'lines'),
-    f('projectile', '弹射物', 'Projectile', 'text', { hint: l('实体 ID, 如 minecraft:fireball', 'Entity ID, e.g. minecraft:fireball') }),
-    f('dyeable', '可染色', 'Dyeable', 'bool'),
-    f('food', '食物', 'Food', 'bool', { hint: l('可用饥饿值吃下', 'Can be eaten') }),
-    f('consume_replacement', '消耗替换', 'Consume Replacement', 'select', { options: ['fixed', 'same'] }),
-    f('craft_remainder', '合成残留', 'Craft Remainder', 'union', { types: CRAFT_REMAINDER_TYPES, label: l('合成残留', 'Craft Remainder') }),
-    f('fuel_remainder', '燃料残留', 'Fuel Remainder', 'union', { types: CRAFT_REMAINDER_TYPES, label: l('燃料残留', 'Fuel Remainder') }),
-    f('invulnerable', '不可破坏', 'Invulnerable', 'bool'),
-    f('enchantable', '可附魔', 'Enchantable', 'bool'),
-    f('compost_probability', '堆肥概率', 'Compost Probability', 'number', { hint: l('0.1 = 10%', '0.1 = 10%') }),
-    f('dye_color', '染料颜色', 'Dye Color', 'bool'),
-    f('firework_color', '烟花颜色', 'Firework Color', 'bool'),
-    f('ingredient_substitute', '材料替代', 'Ingredient Substitute', 'bool'),
-    f('hat_height', '帽子高度', 'Hat Height', 'number'),
-    f('keep_on_death_chance', '死亡保留概率', 'Keep On Death Chance', 'number'),
-    f('destroy_on_death_chance', '死亡销毁概率', 'Destroy On Death Chance', 'number'),
-    f('drop_display', '掉落显示', 'Drop Display', 'bool'),
-    f('glow_color', '发光颜色', 'Glow Color', 'text', { placeholder: l('#FF0000', '#FF0000') }),
+    f('prevent_break', '不可破坏', 'Prevent Break', 'bool', { hint: l('耐久耗尽时保留最后一点耐久而不是销毁; 默认 false', 'Keeps its last durability point instead of being destroyed; default false') }),
+    f('can_place', '可放置方块', 'Can Place', 'bool', { hint: l('对应材质的原版方块能否被放置; 方块型材质做非方块物品时设为 false; 默认 false', 'Whether the vanilla block for this material can be placed; default false') }),
+    f('allowed_projectiles', '允许弹射物', 'Allowed Projectiles', 'lines', { hint: l('可装入弩/弓的物品, 每行一个', 'Items loadable into crossbows/bows, one per line') }),
+    f('projectile', '弹射物', 'Projectile', 'object', { hint: l('基于物品创建自定义弹射物实体 (支持 trident/arrow/snowball 等)', 'Creates a custom projectile entity (supports trident/arrow/snowball...)'), fields: ITEM_PROJECTILE_FIELDS }),
+    f('dyeable', '可染色', 'Dyeable', 'bool', { hint: l('是否可在工作台染色', 'Decides if the item can be dyed in crafting tables') }),
+    f('food', '食物', 'Food', 'object', { hint: l('基于插件的 food 组件替代实现', 'Plugin-based alternative implementation for the food component'), fields: [
+      f('nutrition', '饱食度', 'Nutrition', 'number', { hint: l('0~20 整数', '0~20, integer') }),
+      f('saturation', '饱和度', 'Saturation', 'number', { hint: l('0~10 小数', '0~10, float') }),
+    ] }),
+    f('consume_replacement', '消耗替换', 'Consume Replacement', 'text', { hint: l('消耗后返回的物品 ID, 如喝水后返还空瓶; 默认 null', 'Item returned after consuming (e.g. empty bottle); default null'), datalist: 'items' }),
+    f('craft_remainder', '合成残留', 'Craft Remainder', 'union', { allowScalar: { type: 'text', datalist: 'items', hint: l('物品 ID 简写', 'Item ID shorthand') }, label: l('合成残留', 'Craft Remainder'), types: CRAFT_REMAINDER_TYPES }),
+    f('fuel_remainder', '燃料残留', 'Fuel Remainder', 'union', { allowScalar: { type: 'text', datalist: 'items', hint: l('物品 ID 简写', 'Item ID shorthand') }, hint: l('作为燃料消耗后返还的物品; 仅堆叠数为 1 的物品生效', 'Returned after being consumed as fuel; only applies to stack size 1'), label: l('燃料残留', 'Fuel Remainder'), types: CRAFT_REMAINDER_TYPES }),
+    f('invulnerable', '免疫伤害', 'Invulnerable', 'lines', { hint: l('不被指定伤害类型摧毁; 如 lava/fire/fire_tick/block_explosion/entity_explosion/lightning/contact', 'Not destroyed by the listed damage types: lava/fire/fire_tick/block_explosion/entity_explosion/lightning/contact') }),
+    f('enchantable', '可附魔', 'Enchantable', 'bool', { hint: l('阻止某些物品在附魔台使用; 默认 true', 'Blocks items from the enchantment table; default true') }),
+    f('compost_probability', '堆肥概率', 'Compost Probability', 'number', { hint: l('堆肥成功的概率; 默认 0.5', 'Chance of composting success; default 0.5') }),
+    f('respect_repairable_component', '尊重 repairable 组件', 'Respect Repairable Component', 'bool', { hint: l('repairable 组件列出的物品能否在铁砧界面修复此物品; 默认 false', 'Whether repairable-component items can fix this item in anvil gui; default false') }),
+    f('dye_color', '染料颜色', 'Dye Color', 'text', { hint: l('染色配方中提供的颜色, 如 255,140,0', 'Color provided in the dyeing recipe, e.g. 255,140,0') }),
+    f('firework_color', '烟花颜色', 'Firework Color', 'text', { hint: l('烟花之星渐隐配方中提供的颜色, 如 255,140,0', 'Color provided in the firework star fade recipe, e.g. 255,140,0') }),
+    f('ingredient_substitute', '材料替代', 'Ingredient Substitute', 'lines', { hint: l('配方系统中可替代的原版物品, 每行一个', 'Vanilla items this item can substitute for in recipes, one per line') }),
+    f('hat_height', '帽子高度', 'Hat Height', 'number', { hint: l('需要 CustomNameplates; 影响名牌高度', 'Requires CustomNameplates; nametag height impact') }),
+    f('keep_on_death_chance', '死亡保留概率', 'Keep On Death Chance', 'number', { hint: l('0~1', '0~1') }),
+    f('destroy_on_death_chance', '死亡销毁概率', 'Destroy On Death Chance', 'number', { hint: l('0~1', '0~1') }),
+    f('drop_display', '掉落显示', 'Drop Display', 'union', { allowScalar: { type: 'bool' }, hint: l('false = 关闭; true = 显示物品名; 字符串 = 自定义模板 (<arg:count> = 数量, <name> = 物品名)', 'false = off; true = item name; string = custom template (<arg:count> = amount, <name> = name)'), label: l('掉落显示', 'Drop Display'), types: {
+      text: { label: l('自定义模板', 'Custom Template'), widget: { type: 'text', placeholder: l('<arg:count>x <name>', '<arg:count>x <name>') } },
+    } }),
+    f('glow_color', '发光颜色', 'Glow Color', 'text', { placeholder: l('white', 'white'), hint: l('black/dark_blue/.../white 等颜色名', 'black/dark_blue/.../white color names') }),
   ];
 
   // ---- updater (wiki item/updater.mdx) ----
-  var UPDATER_DATA_FIELDS = [
-    f('path', '路径', 'Path', 'text', { hint: l('如 item_model / data.custom_name', 'e.g. item_model / data.custom_name') }),
-    f('value', '值', 'Value', 'text'),
-  ];
   var UPDATER_STEP_TYPES = {
     apply_data: { label: l('应用数据 (apply_data)', 'Apply Data'), fields: [
-      f('data', '数据', 'Data', 'listOf', { itemType: { type: 'object', fields: UPDATER_DATA_FIELDS, label: l('数据', 'Data') }, label: l('数据', 'Data') }),
+      f('data', '数据', 'Data', 'kv', { hint: l('格式与物品 data 相同 (item_name/lore 等任意物品数据)', 'Same format as item data (item_name/lore etc.)') }),
     ] },
-    transmute: { label: l('转换物品 (transmute)', 'Transmute'), fields: [
-      f('to', '目标物品', 'To', 'text', { datalist: 'items' }),
+    transmute: { label: l('转换材质 (transmute)', 'Transmute'), fields: [
+      f('material', '基础材质', 'Material', 'text', { hint: l('替换基础材质, 保留所有组件与 NBT', 'Replace the base material, preserving components and NBT'), datalist: 'items' }),
     ] },
-    reset: { label: l('重置 (reset)', 'Reset') },
+    reset: { label: l('重置 (reset)', 'Reset'), fields: [
+      f('keep_components', '保留组件', 'Keep Components', 'lines', { hint: l('1.20.5+: 保留的组件 (如 minecraft:enchantments); 未列出的一律丢弃', '1.20.5+: components to keep; anything not listed is discarded') }),
+      f('keep_tags', '保留 NBT 路径', 'Keep Tags', 'lines', { hint: l('旧版 (< 1.20.5): 保留的 NBT 路径 (如 Enchantments)', 'Legacy (< 1.20.5): NBT paths to keep') }),
+    ] },
   };
   var UPDATER_VALUE_TYPES = {
     step: { label: l('单个步骤', 'Single Step'), widget: { type: 'union', types: UPDATER_STEP_TYPES, label: l('步骤', 'Step') } },
@@ -1858,7 +1957,13 @@
       f('value', '值 (NBT)', 'Value', 'text', { hint: l('NBT 标签值', 'NBT tag value') }),
     ] },
   };
-  // 变换处理器 / 结果后处理器 (wiki recipe.mdx#transform-processors)
+  // 结果后处理器 (wiki recipe.mdx: 目前只有 apply_data, 其余可经 API 注册)
+  var POST_PROCESSOR_TYPES = {
+    apply_data: { label: l('应用数据 (apply_data)', 'Apply Data'), fields: [
+      f('data', '数据', 'Data', 'kv', { hint: l('如 enchantment: {minecraft:efficiency: 5}', 'e.g. enchantment: {minecraft:efficiency: 5}') }),
+    ] },
+  };
+  // 变换处理器 (wiki recipe.mdx#transform-processors)
   var TRANSFORM_PROCESSOR_TYPES = {
     apply_data: { label: l('应用数据 (apply_data)', 'Apply Data'), fields: [
       f('data', '数据', 'Data', 'kv'),
@@ -1903,7 +2008,7 @@
   var RECIPE_RESULT_FIELDS = [
     f('id', '结果物品', 'Result Item', 'text', { datalist: 'items' }),
     f('count', '数量', 'Count', 'number'),
-    f('post_processors', '结果后处理器', 'Post Processors', 'listOf', { itemType: { type: 'union', types: TRANSFORM_PROCESSOR_TYPES, label: l('处理器', 'Processor') }, label: l('结果后处理器', 'Post Processors'), hint: l('对最终产物额外处理 (如附魔)', 'Extra processing on the final product') }),
+    f('post_processors', '结果后处理器', 'Post Processors', 'listOf', { itemType: { type: 'union', types: POST_PROCESSOR_TYPES, label: l('处理器', 'Processor') }, label: l('结果后处理器', 'Post Processors'), hint: l('对最终产物额外处理 (目前只有 apply_data 类型, 可经 API 注册新处理器)', 'Extra processing on the final product (only apply_data so far, more via API)') }),
   ];
   SECTIONS.recipe = {
     tabs: [
@@ -1920,7 +2025,7 @@
       recipeIngredientField('ingredient', '材料', 'Ingredient', { tab: 'basic', hint: l('烹饪/切石/酿造: 单个材料', 'Cooking/stonecutting/brewing: single ingredient') }),
       f('experience', '经验', 'Experience', 'number', { tab: 'basic', hint: l('烹饪配方 (smelting 系)', 'Cooking recipes (smelting family)') }),
       f('time', '时间 (tick)', 'Time', 'number', { tab: 'basic', hint: l('烹饪时间, 默认 200', 'Cooking time, default 200') }),
-      f('template-type', '模板', 'Template Type', 'text', { tab: 'basic', hint: l('smithing: 槽位 1 (可选)', 'Smithing slot 1 (optional)') }),
+      f('template_type', '模板', 'Template Type', 'text', { tab: 'basic', hint: l('smithing: 槽位 1 (可选)', 'Smithing slot 1 (optional)') }),
       recipeIngredientField('base', '基底', 'Base', { tab: 'basic', hint: l('smithing: 槽位 2 (必需)', 'Smithing slot 2 (required)') }),
       recipeIngredientField('addition', '附加', 'Addition', { tab: 'basic', hint: l('smithing: 槽位 3 (可选)', 'Smithing slot 3 (optional)') }),
       recipeIngredientField('container', '容器', 'Container', { tab: 'basic', hint: l('酿造: 药水瓶/水瓶', 'Brewing: bottle') }),
@@ -1958,13 +2063,23 @@
       f('template', '模板', 'Template', 'linesScalar', { hint: l('多行 = 多个模板', 'Multiple lines = several templates'), tab: 'basic' }),
       f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments'), tab: 'basic' }),
       f('client_bound_material', '客户端材质', 'Client Bound Material', 'text', { datalist: 'items', tab: 'basic' }),
+      // 可覆盖变体 (仅当物品没有对应数据时生效, 允许其他插件设置自己的值)
+      f('overwritable_lore', '可覆盖 Lore', 'Overwritable Lore', 'lines', { hint: l('仅当物品没有 lore 时生效', 'Only takes effect when no lore is present'), tab: 'basic' }),
+      f('overwritable_item_name', '可覆盖名称', 'Overwritable Item Name', 'text', { hint: l('仅当物品没有自定义名时生效', 'Only takes effect when no custom name is present'), tab: 'basic' }),
+      f('overwritable_item_model', '可覆盖模型', 'Overwritable Item Model', 'text', { hint: l('1.21.2+; 仅当物品没有模型时生效', '1.21.2+; only set if no model is present'), tab: 'basic' }),
+      f('overwritable_custom_model_data', '可覆盖 CMD', 'Overwritable Custom Model Data', 'scalar', { hint: l('仅当物品没有 CMD 时生效', 'Only set if no CMD is present'), tab: 'basic' }),
       // 数据 (六类子选项卡, 客户端数据 bind 根级 client_bound_data)
       f('data', '数据', 'Data', 'tabs', { tabs: ITEM_DATA_TABS_SIX, label: l('数据', 'Data'), tab: 'data' }),
       // 模型
+      f('hand_animation_on_swap', '切换时手部动画', 'Hand Animation On Swap', 'bool', { hint: l('持有物品变化时是否播放第一人称切换动画; 默认 true', 'Whether the first-person swap animation plays when the held item changes; default true'), tab: 'model' }),
+      f('oversized_in_gui', 'GUI 超界渲染', 'Oversized In GUI', 'bool', { hint: l('true = 禁用 GUI 槽位裁剪, 模型可渲染得比槽位大; 默认 true', 'Disables GUI slot clipping, model can render larger than the slot; default true'), tab: 'model' }),
+      f('swap_animation_scale', '切换动画速度', 'Swap Animation Scale', 'number', { hint: l('切换动画的速度倍率, 越大越快; 默认 1.0', 'Speed multiplier for the swap animation; larger = faster; default 1.0'), tab: 'model' }),
       f('item_model', '物品模型', 'Item Model', 'model', { tab: 'model' }),
       f('model', '模型 (旧键)', 'Model (legacy)', 'model', { tab: 'model' }),
+      f('legacy_model', '旧版模型', 'Legacy Model', 'object', { hint: l('1.21.4 前兼容; 通常自动转换, 仅在自动转换结果错误时使用', 'Pre-1.21.4 compatibility; auto-converted automatically, only use if the conversion is incorrect'), fields: LEGACY_MODEL_FIELDS, tab: 'model' }),
       // 行为
       f('behavior', '行为', 'Behavior', 'union', { types: ITEM_BEHAVIOR_TYPES, label: l('行为', 'Behavior'), tab: 'behavior' }),
+      f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: ITEM_BEHAVIOR_TYPES, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors'), tab: 'behavior' }),
       f('updater', '更新器', 'Updater', 'mapOf', { valueType: { type: 'union', noTypeKey: true, label: l('更新', 'Update'), types: UPDATER_VALUE_TYPES }, label: l('更新器', 'Updater'), hint: l('键: 版本号, 值: 步骤或步骤列表', 'Key: version, value: step or steps'), tab: 'behavior' }),
       // 设置
       f('settings', '设置', 'Settings', 'object', { fields: ITEM_SETTINGS_FIELDS, label: l('设置', 'Settings'), tab: 'settings' }),
@@ -2140,6 +2255,7 @@
       f('update-triggers', '更新触发器', 'Update Triggers', 'object', { hint: l('物品更新器的触发条件 (性能开销较大, 仅在需要时启用)', 'Item updater triggers (performance-intensive, enable only if needed)'), fields: [
         f('click-in-inventory', '背包内点击', 'Click In Inventory', 'bool', { hint: l('对创造模式玩家无效', "Won't work for players in creative mode") }),
         f('drop', '丢弃', 'Drop', 'bool'), f('pick-up', '拾取', 'Pick Up', 'bool'),
+        f('attack', '攻击', 'Attack', 'bool'),
       ] }),
       f('custom-model-data-starting-value', 'CMD 起始值', 'Custom Model Data Starting Value', 'object', { fields: [
         f('default', '默认', 'Default', 'number'),
@@ -2164,6 +2280,15 @@
       ] }),
     ] },
 
+    scripting: { fields: [
+      f('js', 'JS 引擎', 'JS', 'object', { hint: l('默认禁用; 启用后需重启服务器完全生效', 'Disabled by default; requires server restart to fully apply'), fields: [
+        f('enable', '启用', 'Enable', 'bool', { hint: l('启用 JavaScript 脚本系统 (需重启服务器完全生效)', 'Enables the JavaScript scripting system (requires server restart to fully apply)') }),
+        f('engine', '引擎', 'Engine', 'select', { options: ['graaljs', 'nashorn'], hint: l('graaljs (~68MB) 或 nashorn (~2.4MB)', 'graaljs (~68MB) or nashorn (~2.4MB)') }),
+        f('strict', '严格模式', 'Strict', 'bool', { hint: l('对常见 JS 错误 (如未声明变量) 抛错', 'Throws on common JS mistakes (undeclared variables etc.)') }),
+        f('nashorn-compat', 'Nashorn 兼容模式', 'Nashorn Compat', 'bool', { hint: l('仅 GraalJS: bean getter 映射 (event.block -> getBlock())', 'GraalJS only: Nashorn compatibility mode — bean getter mapping (event.block -> getBlock())') }),
+      ] }),
+    ] },
+
     block: { fields: [
       f('serverside-blocks', '服务端方块数', 'Serverside Blocks', 'number', { hint: l('需要重启生效, 建议每次增加 1000', 'Restart required; increase by 1000 at a time') }),
       f('sound-system', '音效系统', 'Sound System', 'object', { fields: [
@@ -2183,6 +2308,10 @@
     furniture: { fields: [
       f('hide-base-entity', '隐藏基础实体', 'Hide Base Entity', 'bool', { hint: l('隐藏用于存储家具数据的实体 (建议保持启用)', 'Hides the invisible furniture-tracking entity') }),
       f('collision-entity-type', '碰撞实体类型', 'Collision Entity Type', 'select', { options: ['interaction', 'boat'], hint: l('interaction = 最佳性能; boat = 兼容部分反作弊', 'interaction = best performance; boat = anti-cheat compatibility') }),
+      f('light-system', '光照系统', 'Light System', 'object', { hint: l('自定义发光方块 (glowing_furniture) 的必需设置', 'Required for glowing furniture blocks'), fields: [
+        f('enable', '启用', 'Enable', 'bool', { hint: l('自定义发光方块的必需设置', 'Required for glowing custom blocks') }),
+        f('async-update', '异步更新', 'Async Update', 'bool'),
+      ] }),
     ] },
 
     emoji: { fields: [
@@ -2194,7 +2323,7 @@
     ] },
 
     loot: { fields: [
-      f('entity-sources', '实体掉落源', 'Entity Sources', 'lines', { hint: l('每行一个实体 ID', 'One entity id per line') }),
+      f('entity-sources', '实体掉落源', 'Entity Sources', 'lines', { hint: l('每行一个插件名 (如 MythicMobs), 启用其实体掉落', 'One plugin name per line (e.g. MythicMobs), enables its entity drops') }),
     ] },
 
     image: { fields: [
@@ -2266,11 +2395,6 @@
           f('brewing', '酿造台', 'Brewing', 'object', { fields: [f('title', '标题', 'Title', 'miniText')] }),
         ] }),
       ] }),
-    ] },
-
-    'light-system': { fields: [
-      f('enable', '启用', 'Enable', 'bool', { hint: l('自定义发光方块的必需设置', 'Required for glowing custom blocks') }),
-      f('async-update', '异步更新', 'Async Update', 'bool'),
     ] },
 
     'chunk-system': { fields: [

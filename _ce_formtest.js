@@ -101,7 +101,7 @@ check(cmdPos !== -1 && h.slice(cmdPos, cmdPos + 900).includes('简单值'), '简
 check(cmdPos !== -1 && h.slice(cmdPos, cmdPos + 900).indexOf('value="__scalar"') !== -1 && h.slice(cmdPos, cmdPos + 900).indexOf('value="__scalar"') < h.slice(cmdPos, cmdPos + 900).indexOf('value="map"'), '简单值选项排在下拉框最前');
 check(!h.includes('data-ce-field-json'), 'item 表单无 JSON 字段编辑器');
 check(h.includes('unknown_field'), '未知字段进入其他选项卡');
-check(/ce-stack"><label class="ce-field-label"[^>]*>纹理<\/label>/.test(h), '纹理字段全宽堆叠布局 (layout: stack)');
+check(/ce-stack"><label class="ce-field-label"[^>]*>纹理/.test(h), '纹理字段全宽堆叠布局 (layout: stack)');
 
 // 2. block schema 表单 (Phase 3)
 const blockYaml = `
@@ -255,13 +255,14 @@ const eqYaml = `
 equipments:
   default:test:
     type: helmet
-    layers:
-      texture: minecraft:leather
+    texture: minecraft:leather
+    humanoid: "minecraft:entity/equipment/humanoid/leather"
 `;
 const h4 = render(eqYaml).innerHTML;
 check(h4.includes('data-sf-kind="field"') && h4.includes('data-sf-path="type"'), 'equipment type select 存在');
-check(h4.includes('data-sf-kind="map"') && h4.includes('data-sf-kind="map-key"'), 'equipment layers mapOf 渲染');
-check(h4.includes('data-sf-path="layers.texture"'), 'map 值 union (noTypeKey) 渲染');
+check(h4.includes('data-sf-kind="map"') && h4.includes('data-sf-kind="map-key"') && h4.includes('data-sf-path=""'), 'equipment 层 root-map 渲染 (键直接写在条目根下)');
+check(h4.includes('data-sf-okey="texture"') && h4.includes('data-sf-okey="humanoid"'), '层键 texture/humanoid 直接出现在根');
+check(!h4.includes('data-sf-path="layers.'), '不再有 layers 包装路径');
 check(!h4.includes('data-ce-field-json'), 'equipment 无 JSON 字段编辑器');
 check(h4.includes('data-ce-field="__key__"'), 'equipment 有 key 输入框');
 
@@ -570,11 +571,11 @@ check(Array.isArray(cEntry.data.conditions[0].id) && cEntry.data.conditions[0].i
 cL({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'conditions.0.id', 'data-sf-type': 'lines-scalar' }, 'minecraft:apple') });
 check(cEntry.data.conditions[0].id === 'minecraft:apple', '写回: lines-scalar 单行 → 字符串');
 
-// map-key 重命名 (equipment.layers)
+// map-key 重命名 (equipment 根层)
 const eqR = renderCap(eqYaml);
 const eqEntry = eqR.el._ceParsed.sections[0].entries[0];
-eqR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'map-key', 'data-sf-path': 'layers', 'data-sf-okey': 'texture' }, 'chestplate') });
-check(!eqEntry.data.layers.texture && eqEntry.data.layers.chestplate === 'minecraft:leather', '写回: map-key 重命名');
+eqR.listeners['change'][0]({ target: mk({ 'data-sf-kind': 'map-key', 'data-sf-path': '', 'data-sf-okey': 'texture' }, 'chestplate') });
+check(!eqEntry.data.texture && eqEntry.data.chestplate === 'minecraft:leather', '写回: map-key 重命名 (根层)');
 
 // ---------- 2.2 item 写回 (Phase 2) ----------
 const iR = renderCap(itemYaml);

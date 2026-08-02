@@ -882,20 +882,62 @@
     });
     return html;
   }
-  function _sfWrap(def, html) {
+  function _sfWrap(def, html, path) {
     var label = _labelOf(def);
+    var icon = _sfHintIcon(def, path);
     var hint = def.hint ? '<div class="ce-sf-hint">' + _escHtml(_labelOf(def.hint)) + '</div>' : '';
     if (_sfIsStack(def.type) || def.layout === 'stack') {
-      return '<div class="ce-stack"><label class="ce-field-label">' + _escHtml(label) + '</label>' + hint + html + '</div>';
+      return '<div class="ce-stack"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' + hint + html + '</div>';
     }
-    return '<div class="ce-row"><label class="ce-field-label" title="' + _escHtml(label) + '">' + _escHtml(label) + '</label>' +
+    return '<div class="ce-row"><label class="ce-field-label" title="' + _escHtml(label) + '">' + _escHtml(label) + icon + '</label>' +
       '<div class="ce-row-ctrl">' + html + hint + '</div></div>';
   }
   function _sfFieldHtml(def, path, value, opts) {
     var t = def.type || 'text';
     var inner = _sfIsStack(t) ? _sfItemHtml(def, path, value, opts) : _sfControl(def, path, value);
-    return _sfWrap(def, inner);
+    return _sfWrap(def, inner, path);
   }
+
+  // ---- 字段提示 (ℹ 图标 + RichTooltip) ----
+  // CEHints (craftengine-hints.js): 文档原文提示数据库, key = 字段完整路径
+  var _sfCeHints = (typeof CEHints !== 'undefined') ? CEHints : null;
+  function _sfHintKey(path) {
+    return String(path || '').replace(/^__popup__\.?/, '');
+  }
+  function _sfTipOf(h) {
+    if (h === null || h === undefined) return '';
+    if (typeof h === 'string') return h;
+    var lang = (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh_cn';
+    return lang === 'en_us' ? (h.en || h.zh || '') : (h.zh || h.en || '');
+  }
+  function _sfTipText(def, path) {
+    var k = _sfHintKey(path);
+    var h = null;
+    if (_sfCeHints && k) h = _sfCeHints[k];
+    if (!h && _sfCeHints && def && def.key) h = _sfCeHints[def.key];
+    if (!h && def) h = def.hint;
+    return _sfTipOf(h);
+  }
+  function _sfHintIcon(def, path) {
+    var tip = _sfTipText(def, path);
+    if (!tip) return '';
+    return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '">ℹ</span>';
+  }
+  function _sfBindHintIcons() {
+    if (typeof RichTooltip === 'undefined') return;
+    document.addEventListener('mouseover', function (e) {
+      var t = e.target;
+      if (!t || t.nodeType !== 1) return;
+      var icon = (t.classList && t.classList.contains('ce-sf-hint-icon')) ? t : (t.closest ? t.closest('.ce-sf-hint-icon') : null);
+      if (!icon || icon.__ceTip) return;
+      icon.__ceTip = 1;
+      var txt = icon.getAttribute('data-sf-hint');
+      if (!txt) return;
+      RichTooltip.bind(icon, function () { return '<span class="rt-strong">' + txt + '</span>'; });
+      RichTooltip.show(e, '<span class="rt-strong">' + txt + '</span>');
+    });
+  }
+  _sfBindHintIcons();
 
   // ---- 容器 (list/map/union/object) ----
   function _sfItemHtml(def, path, value, opts) {
@@ -1038,11 +1080,22 @@
     if (def.allowScalar) {
       optHtml += '<option value="__scalar"' + (cur.key === '__scalar' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.customValue')) + '</option>';
     }
+    var hintPrefix = '';
+    if (_sfSchemas) {
+      if (def.types === _sfSchemas.functions) hintPrefix = 'function';
+      else if (def.types === _sfSchemas.conditions) hintPrefix = 'condition';
+      else if (def.types === _sfSchemas.loot) hintPrefix = 'loot';
+    }
     var keys = Object.keys(types);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var lb = _labelOf(types[k]) || k;
-      optHtml += '<option value="' + _escHtml(k) + '"' + (cur.key === k && !cur.neg ? ' selected' : '') + '>' + _escHtml(lb) + '</option>';
+      var otip = '';
+      if (hintPrefix && _sfCeHints) {
+        var oh = _sfCeHints[hintPrefix + '.' + k];
+        if (oh) otip = ' title="' + _escHtml(_sfTipOf(oh)) + '"';
+      }
+      optHtml += '<option value="' + _escHtml(k) + '"' + otip + (cur.key === k && !cur.neg ? ' selected' : '') + '>' + _escHtml(lb) + '</option>';
       if (def.negatable) {
         optHtml += '<option value="!' + _escHtml(k) + '"' + (cur.key === k && cur.neg ? ' selected' : '') + '>' + _escHtml('!' + lb) + '</option>';
       }
@@ -1570,8 +1623,12 @@
     }
     if (action === 'map-add') {
       if (!rec || rec.kind !== 'map') return;
-      var obj = _getNested(entry.data, rec.path);
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) { obj = {}; _setNested(entry.data, rec.path, obj); }
+      var obj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+        obj = {};
+        if (rec.path) _setNested(entry.data, rec.path, obj);
+        else entry.data = obj;
+      }
       var base = 'new';
       var n = 1;
       var nk = base;
@@ -1740,6 +1797,13 @@
       modeled[fk] = 1;
       var fhtml;
       if (fld.custom === 'events') fhtml = _eventsPanel(entry, evKey);
+      else if (fld.custom === 'root-map') {
+        fhtml = _sfFieldHtml(fld, '', entry.data, { entryData: entry.data, keyStyle: keyStyle });
+        // 根键已由 root-map 渲染, 全部标记为已建模
+        if (entry.data && typeof entry.data === 'object' && !Array.isArray(entry.data)) {
+          for (var rk = 0; rk < Object.keys(entry.data).length; rk++) modeled[Object.keys(entry.data)[rk]] = 1;
+        }
+      }
       else fhtml = _sfFieldHtml(fld, fk, entry.data ? entry.data[fk] : undefined, { entryData: entry.data, keyStyle: keyStyle });
       if (tabs) {
         var tk = fld.tab || 'other';
@@ -1912,9 +1976,14 @@
     delete o[parts[parts.length - 1]];
   }
 
-  function _renderField(label, html, hint) {
+  function _renderField(label, html, hint, key) {
+    var icon = '';
+    var tip = hint || '';
+    var k = _sfHintKey(key);
+    if (_sfCeHints && k && _sfCeHints[k]) tip = _sfTipOf(_sfCeHints[k]);
+    if (tip) icon = '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '">ℹ</span>';
     return '<div class="ce-field">' +
-      '<label class="ce-field-label">' + _escHtml(label) + '</label>' +
+      '<label class="ce-field-label">' + _escHtml(label) + icon + '</label>' +
       (hint ? '<div class="ce-field-hint">' + _escHtml(hint) + '</div>' : '') +
       html + '</div>';
   }
@@ -1929,12 +1998,17 @@
     return '<input type="checkbox" class="ce-input" data-ce-field="' + _escHtml(path) + '" data-ce-type="bool"' +
       (value ? ' checked' : '') + '>';
   }
-  function _selectField(path, value, options) {
+  function _selectField(path, value, options, num, titlePrefix) {
     var html = '<select class="ce-input" data-ce-field="' + _escHtml(path) + '">' +
       '<option value="">-- ' + _escHtml(_t('craftengine.fieldEmpty')) + ' --</option>';
     for (var i = 0; i < options.length; i++) {
       var o = options[i];
-      html += '<option value="' + _escHtml(o) + '"' + (String(value) === o ? ' selected' : '') + '>' + _escHtml(o) + '</option>';
+      var otip = '';
+      if (titlePrefix && _sfCeHints) {
+        var oh = _sfCeHints[titlePrefix + '.' + o];
+        if (oh) otip = ' title="' + _escHtml(_sfTipOf(oh)) + '"';
+      }
+      html += '<option value="' + _escHtml(o) + '"' + otip + (String(value) === o ? ' selected' : '') + '>' + _escHtml(o) + '</option>';
     }
     return html + '</select>';
   }
@@ -2025,7 +2099,7 @@
     var bhv = behaviorObj && typeof behaviorObj === 'object' && !Array.isArray(behaviorObj) ? behaviorObj : {};
     var type = bhv.type;
     used[jsonKey || 'behavior'] = 1;
-    html += _renderField(_t('craftengine.behaviorType'), _selectField('behavior.type', type, typeOptions));
+    html += _renderField(_t('craftengine.behaviorType'), _selectField('behavior.type', type, typeOptions, null, 'behavior'));
     var fields = BEHAVIOR_FIELDS[type] || null;
     var modeled = ['type'];
     if (fields) {
@@ -2213,7 +2287,7 @@
     } else if (type === 'translation' || type === 'lang') {
       return _renderField(_t('craftengine.translationMap'), _kvWholeField(data), _t('craftengine.kvWholeHint'));
     } else if (type === 'lootSource') {
-      used['type'] = 1; html += _renderField(_t('craftengine.lootSourceType'), _selectField('type', data.type, LOOT_SOURCE_TYPES));
+      used['type'] = 1; html += _renderField(_t('craftengine.lootSourceType'), _selectField('type', data.type, LOOT_SOURCE_TYPES, null, 'loot_source'));
       used['target'] = 1; html += _renderField(_t('craftengine.target'), _textInput('target', data.target, 'default:block'));
       used['targets'] = 1; html += _renderField(_t('craftengine.targets'), _linesField('targets', data.targets, '每行一个目标'));
       used['overwrite'] = 1; html += _renderField(_t('craftengine.overwrite'), _selectField('overwrite', data.overwrite, LOOT_OVERWRITE));

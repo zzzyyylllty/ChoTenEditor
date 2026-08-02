@@ -3349,6 +3349,22 @@ textarea.ce-input {
   line-height: 1.4;
 }
 
+/* 字段提示信息图标: label 右侧, 悬停显示文档原文 tooltip */
+.ce-sf-hint-icon {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+  cursor: help;
+  vertical-align: middle;
+  border-radius: 50%;
+  transition: color .15s;
+}
+.ce-sf-hint-icon:hover {
+  color: var(--color-accent, #6ea8fe);
+}
+
 /* MiniMessage 快捷按钮: 输入框右侧留出小段距离 */
 .ce-sf-mini-wrap {
   display: flex;
