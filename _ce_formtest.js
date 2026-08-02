@@ -8,7 +8,8 @@ const zh = fs.readFileSync('locales/zh_cn.yml', 'utf8');
 const I18N = {
   lang: 'zh_cn',
   t: (k, p) => {
-    const m = zh.match(new RegExp('^  ' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ': "(.*)"', 'm'));
+    const kk = k.replace(/^craftengine\./, '');
+    const m = zh.match(new RegExp('^  ' + kk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ': "(.*)"', 'm'));
     return m ? m[1].replace(/\{(\w+)\}/g, (_, n) => p ? (p[n] !== undefined ? p[n] : '') : '') : k;
   },
 };
@@ -89,11 +90,18 @@ check(h.includes('ce-event-item') && h.includes('data-ce-ev="0"'), '事件行存
 check(h.includes('data-sf-kind="components"') && h.includes('data-sf-path="data"'), 'data 组件编辑器渲染');
 check(h.includes('data-sf-action="model-mode"') && h.includes('data-sf-path="item_model"'), 'item_model 模型编辑器渲染');
 check(h.includes('data-sf-action="union-set"') && h.includes('data-sf-path="behavior"'), 'behavior union 渲染');
+const bvPos = h.indexOf('data-sf-path="behavior"');
+check(bvPos !== -1 && h.slice(bvPos, bvPos + 400).includes('>不指定<'), 'union 下拉含"不指定"占位 (有值时也在)');
 check(h.includes('data-sf-path="behavior.block"'), 'block_item 的 block 字段存在 (union)');
 check(h.includes('data-sf-path="category"') && h.includes('data-sf-type="lines-scalar"'), 'category lines-scalar (多行数组)');
-check(h.includes('data-sf-path="custom-model-data"') && h.includes('data-sf-type="scalar"'), 'custom-model-data 未知字段 → other 折叠区');
+const cmdPos = h.indexOf('data-sf-path="custom-model-data"');
+check(cmdPos !== -1, 'custom-model-data union 渲染');
+check(cmdPos !== -1 && h.slice(cmdPos, cmdPos + 1000).includes('data-sf-type="scalar"'), 'custom-model-data 简单值输入框 (scalar)');
+check(cmdPos !== -1 && h.slice(cmdPos, cmdPos + 900).includes('简单值'), '简单值选项文案');
+check(cmdPos !== -1 && h.slice(cmdPos, cmdPos + 900).indexOf('value="__scalar"') !== -1 && h.slice(cmdPos, cmdPos + 900).indexOf('value="__scalar"') < h.slice(cmdPos, cmdPos + 900).indexOf('value="map"'), '简单值选项排在下拉框最前');
 check(!h.includes('data-ce-field-json'), 'item 表单无 JSON 字段编辑器');
 check(h.includes('unknown_field'), '未知字段进入其他选项卡');
+check(/ce-stack"><label class="ce-field-label"[^>]*>纹理<\/label>/.test(h), '纹理字段全宽堆叠布局 (layout: stack)');
 
 // 2. block schema 表单 (Phase 3)
 const blockYaml = `
@@ -354,6 +362,15 @@ if (listUid) {
   check(wEntry.data.conditions.length === 2, 'list-add 未选类型不添加');
 }
 
+// list-del / list-move: 按钮必须携带 data-sf-uid 才能定位容器
+check(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="[^"]+"/.test(h5), 'list-del 按钮带 data-sf-uid');
+check(/data-sf-action="list-move" data-sf-dir="up" data-sf-idx="0" data-sf-uid="[^"]+"/.test(h5), 'list-move 按钮带 data-sf-uid');
+const listDelUid = h5.match(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="([^"]+)"/);
+if (listDelUid) {
+  fire(mk({ 'data-sf-action': 'list-del', 'data-sf-idx': '0', 'data-sf-uid': listDelUid[1] }, null));
+  check(wEntry.data.conditions.length === 1, '写回: list-del 删除条目');
+}
+
 // kv 写回 (emoji overrides)
 const emojiYaml = `
 emoji:
@@ -411,6 +428,13 @@ check(!!compUid, 'comp-add uid 可定位');
 if (compUid) {
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, 'max_damage') });
   check(iEntry.data.data.max_damage === '', '写回: comp-add 添加组件 (默认空值)');
+  check(h.includes('__custom__'), '组件下拉含自定义 (键值对) 选项');
+  iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, '__custom__') });
+  check(iEntry.data.data.custom !== undefined && typeof iEntry.data.data.custom === 'object' && !Array.isArray(iEntry.data.data.custom), '写回: comp-add 自定义组件生成 custom 键');
+  iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'data.custom', 'data-sf-type': 'kv' }, 'foo: {"bar": 1}\n') });
+  check(iEntry.data.data.custom.foo && iEntry.data.data.custom.foo.bar === 1, '写回: 自定义组件 kv 嵌套值');
+  iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, '__custom__') });
+  check(iEntry.data.data.custom_2 !== undefined && typeof iEntry.data.data.custom_2 === 'object', '写回: 重复添加自定义组件 → custom_2');
 }
 
 // model-mode: 切换 item_model 为树模式 (原值 undefined → 补 type)
@@ -424,6 +448,15 @@ if (modelUid) {
   check(iEntry.data.item_model === undefined, '写回: model-mode → path 空值删除字段');
 }
 
+// model-clear: 模型编辑器清除按钮 (有值时显示)
+const modelClearRe = /data-sf-action="model-clear" data-sf-path="model" data-sf-uid="([^"]+)"/;
+const modelClearUid = h.match(modelClearRe);
+check(!!modelClearUid, '模型编辑器清除按钮 (有值时显示)');
+if (modelClearUid) {
+  iCh({ target: mk({ 'data-sf-action': 'model-clear', 'data-sf-path': 'model', 'data-sf-uid': modelClearUid[1] }, null) });
+  check(iEntry.data.model === undefined, '写回: model-clear 删除模型字段');
+}
+
 // union-set (noTypeKey): block 字符串 ↔ 内联方块
 const blkUidRe = /data-sf-action="union-set" data-sf-path="behavior\.block" data-sf-uid="([^"]+)"/;
 const blkUid = h.match(blkUidRe);
@@ -432,7 +465,18 @@ if (blkUid) {
   iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, 'inline') });
   check(iEntry.data.behavior.block !== null && typeof iEntry.data.behavior.block === 'object' && !Array.isArray(iEntry.data.behavior.block), '写回: noTypeKey union-set → inline 默认对象');
   iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, '__scalar') });
-  check(iEntry.data.behavior.block === undefined, '写回: noTypeKey union-set → __scalar 删除字段');
+  check(iEntry.data.behavior.block === '', '写回: noTypeKey union-set → __scalar 存空串显示输入框');
+}
+
+// union-set: 改回"不指定" → 删除字段
+const bvUidRe = /data-sf-action="union-set" data-sf-path="behavior" data-sf-uid="([^"]+)"/;
+const bvUid = h.match(bvUidRe);
+check(!!bvUid, 'behavior union-set uid 可定位 (不指定写回)');
+if (bvUid) {
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, '') });
+  check(iEntry.data.behavior === undefined, '写回: union-set 空值(不指定)删除字段');
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, 'plain') });
+  check(!!iEntry.data.behavior && iEntry.data.behavior.type === 'plain', '写回: 删除后仍可重新选择类型');
 }
 
 // ---------- 2.3 block 写回 (Phase 3) ----------

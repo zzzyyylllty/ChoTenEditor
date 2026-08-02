@@ -793,7 +793,7 @@ craftengine:
   listEmpty: "No entries — click the button below to add"
   listAdd: "Add"
   mapAdd: "+ Add key"
-  unionEmpty: "Not set — choose a type from the dropdown"
+  unionEmpty: "Not specified"
   unionClear: "Clear"
   customValue: "Simple value…"
   componentAdd: "Add component…"

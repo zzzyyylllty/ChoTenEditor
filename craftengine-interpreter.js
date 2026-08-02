@@ -1017,8 +1017,7 @@
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'union', def, opts);
     var types = _sfTypesOf(def);
     var cur = _sfUnionCurrent(def, value);
-    var optHtml = '';
-    if (!cur.key) optHtml += '<option value="">-- ' + _escHtml(_t('craftengine.unionEmpty')) + ' --</option>';
+    var optHtml = '<option value=""' + (!cur.key ? ' selected' : '') + '>' + _escHtml(_t('craftengine.unionEmpty')) + '</option>';
     if (def.allowScalar) {
       optHtml += '<option value="__scalar"' + (cur.key === '__scalar' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.customValue')) + '</option>';
     }
@@ -1180,7 +1179,13 @@
       if (!rec || rec.kind !== 'union') return;
       var path = el.getAttribute('data-sf-path') || rec.path;
       var v = el.value;
-      if (v === '') return;
+      if (v === '') {
+        // 改回"不指定": 删除字段值
+        if (path) _applyValue(entry, path, undefined, parsed, section);
+        _sfRerender(uid, containerEl);
+        if (ROOT.__keAutoSync) syncToSource(parsed);
+        return;
+      }
       var cur = path ? _getNested(entry.data, path) : entry.data;
       if (rec.def.noTypeKey) {
         // 形状推断 union: 切换类型时若当前值不匹配目标形状, 创建默认值

@@ -793,7 +793,7 @@ craftengine:
   listEmpty: "暂无条目 — 点击下方按钮添加"
   listAdd: "添加"
   mapAdd: "+ 添加键值"
-  unionEmpty: "未设置 — 从下拉框选择类型"
+  unionEmpty: "不指定"
   unionClear: "清除"
   customValue: "简单值…"
   componentAdd: "添加组件…"
