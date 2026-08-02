@@ -951,7 +951,7 @@
       var k = keys[i];
       html += '<div class="ce-sf-map-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">' +
-        '<div class="ce-sf-map-val">' + _sfItemHtml(valueDef, _sfKeyPath(path, k), obj[k], opts) + '</div>' +
+        '<div class="ce-sf-map-val">' + _sfItemHtml(valueDef, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList }) + '</div>' +
         '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '">✕</button>' +
         '</div>';
     }
@@ -996,13 +996,14 @@
   }
   function _sfTypeBody(td, path, value, opts) {
     var html = '';
-    if (td.widget) return _sfFieldHtml(td.widget, path, value, opts);
+    var sub = { inList: opts && opts.inList }; // 不向下传播 uid: 子容器/嵌套 union 需要自己的 uid
+    if (td.widget) return _sfFieldHtml(td.widget, path, value, sub);
     var modeled = {};
     if (td.fields) {
       html += '<div class="ce-sf-type-card">';
       td.fields.forEach(function (fld) {
         modeled[fld.key] = 1;
-        html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, opts);
+        html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, sub);
       });
       html += '</div>';
     }
@@ -1051,10 +1052,12 @@
     if (cur.key && !(opts && opts.inList)) {
       clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="union-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
-    return '<div class="ce-sf-union-head" data-sf-uid="' + uid + '">' +
+    return '<div class="ce-sf-union" data-sf-uid="' + uid + '">' +
+      '<div class="ce-sf-union-head">' +
       '<select class="ce-input" data-sf-action="union-set" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' + optHtml + '</select>' + clear +
       '</div>' +
-      '<div class="ce-sf-union-body">' + body + '</div>';
+      '<div class="ce-sf-union-body">' + body + '</div>' +
+      '</div>';
   }
   function _sfObjectHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'object', def, opts);
@@ -1062,7 +1065,7 @@
     var modeled = {};
     (def.fields || []).forEach(function (fld) {
       modeled[fld.key] = 1;
-      html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, opts);
+      html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, { inList: opts && opts.inList });
     });
     html += '</div>';
     // 未知字段: 折叠 kv
@@ -1093,7 +1096,7 @@
       var k = keys[i];
       var base = String(k).split('#')[0];
       var wd = comps[base];
-      var body = wd ? _sfItemHtml(wd, _sfKeyPath(path, k), obj[k], opts)
+      var body = wd ? _sfItemHtml(wd, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList })
         : '<div class="ce-stack">' + _sfKvTextarea({ type: 'kv' }, _sfKeyPath(path, k), obj[k]) + '</div>';
       html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<div class="ce-sf-comp-head">' +
@@ -1132,7 +1135,8 @@
     if (value !== undefined && value !== null) {
       clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="model-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
-    var html = '<div class="ce-sf-union-head" data-sf-uid="' + uid + '">' +
+    var html = '<div class="ce-sf-model" data-sf-uid="' + uid + '">' +
+      '<div class="ce-sf-union-head">' +
       '<select class="ce-input" data-sf-action="model-mode" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">' +
       '<option value="simplified"' + (mode === 'simplified' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelSimplified')) + '</option>' +
       '<option value="tree"' + (mode === 'tree' ? ' selected' : '') + '>' + _escHtml(_t('craftengine.modelTree')) + '</option>' +
@@ -1143,11 +1147,11 @@
     if (mode === 'path') {
       body = _sfInput({ type: 'text', placeholder: _sfL('minecraft:item/custom/xxx', 'minecraft:item/custom/xxx') }, path, value);
     } else if (mode === 'tree') {
-      body = forms && forms.tree ? _sfUnionHtml(forms.tree, path, value, opts) : _sfInput({ type: 'text' }, path, value);
+      body = forms && forms.tree ? _sfUnionHtml(forms.tree, path, value, { inList: opts && opts.inList }) : _sfInput({ type: 'text' }, path, value);
     } else {
       body = forms && forms.simplified ? _sfObjectHtml(forms.simplified, path, value, opts) : _sfKvTextarea({ type: 'kv' }, path, value);
     }
-    return html + body;
+    return html + '<div class="ce-sf-union-body">' + body + '</div></div>';
   }
   // 容器局部重渲染 (list/map/union/object/components/model 内容), 不整页刷新、不丢焦点
   function _sfRerender(uid, containerEl) {
@@ -1169,7 +1173,8 @@
     else if (rec.kind === 'components') html = _sfComponentsHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'model') html = _sfModelHtml(rec.def, rec.path, value, { uid: uid });
     else return;
-    wrap.innerHTML = html;
+    // html 含根节点, 必须替换节点本身 (innerHTML 会把新根嵌套进旧根, 每轮残留一层)
+    wrap.outerHTML = html;
   }
   // schema 动作: 点击按钮 (list/map/union) / select 变更 (union-set/list-add)
   function _sfHandleAction(action, el, containerEl) {
