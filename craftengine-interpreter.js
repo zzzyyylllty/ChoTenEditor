@@ -889,7 +889,7 @@
     if (_sfIsStack(def.type) || def.layout === 'stack') {
       return '<div class="ce-stack"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' + hint + html + '</div>';
     }
-    return '<div class="ce-row"><label class="ce-field-label" title="' + _escHtml(label) + '">' + _escHtml(label) + icon + '</label>' +
+    return '<div class="ce-row"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' +
       '<div class="ce-row-ctrl">' + html + hint + '</div></div>';
   }
   function _sfFieldHtml(def, path, value, opts) {
