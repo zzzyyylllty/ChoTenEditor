@@ -555,6 +555,8 @@ check(catH.includes('class="ce-field-label ce-cat-label">插入 Lore (insert_lor
 check(catH.includes('class="ce-field-label ce-cat-label">旧版模型'), 'legacy_model 标签为分类标题');
 // 叶子字段 (material) 标签不加分类样式
 check(catH.includes('class="ce-field-label">材质') || catH.includes('class="ce-field-label"'), '叶子字段标签不带 ce-cat-label');
+// v1.0.48: insert_lore 内部的 listOf (插入内容 Insert) 标签不加大
+check(!catH.includes('ce-cat-label">插入内容'), 'insert_lore 内部 Insert 列表标签不带 ce-cat-label');
 
 // v1.0.28: 自定义选项卡 (warning + kv-rest 折叠未建模键)
 check(miH.includes('data-ce-tab="custom"'), 'item 自定义选项卡存在');

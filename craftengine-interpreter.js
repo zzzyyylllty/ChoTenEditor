@@ -888,8 +888,9 @@
     });
     return html;
   }
-  // 容器类字段 (内含子字段): 标签作为分类标题加大加深, 与子字段区分 (如 INSERT LORE / LEGACY MODEL)
-  var _SF_CAT_TYPES = { union: 1, object: 1, listOf: 1, mapOf: 1, components: 1, model: 1, popup: 1, tabs: 1 };
+  // 容器类字段标签: object (内含子字段) 作为分类标题加大加深, 与子字段区分 (如 INSERT LORE / LEGACY MODEL)
+  // 仅 object; listOf/union 等数据容器不算分类, 避免 INSERT LORE 内部的 INSERT 列表标签也被加大
+  var _SF_CAT_TYPES = { object: 1 };
   function _sfWrap(def, html, path) {
     var label = _labelOf(def);
     var icon = _sfHintIcon(def, path);
