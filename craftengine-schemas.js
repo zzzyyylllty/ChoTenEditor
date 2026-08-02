@@ -710,6 +710,32 @@
   S.constants.modelRangeProps = ['component', 'custom_model_data', 'item_model'];
   S.constants.bookGenerations = ['ORIGINAL', 'COPY_OF_ORIGINAL', 'COPY_OF_COPY', 'TATTERED'];
 
+  // 音效值: 字符串 或 详细 {id, pitch, volume}
+  var SOUND_REF_TYPES = {
+    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
+      f('id', '音效 ID', 'Sound ID', 'text'),
+      f('pitch', '音调', 'Pitch', 'number'),
+      f('volume', '音量', 'Volume', 'text', { hint: l('支持 0.25~0.3 区间', 'Ranged values supported, e.g. 0.25~0.3') }),
+    ], label: l('音效', 'Sound') } },
+  };
+  function soundRefField(key, zh, en) {
+    return f(key, zh, en, 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:block.deepslate.break', 'minecraft:block.deepslate.break') }, label: l('音效', 'Sound'), types: SOUND_REF_TYPES });
+  }
+  // 音效对象 (弹窗 content): 方块五键 / 家具三键 / 其他键位 (须在 _bh 之前, 行为字段会引用)
+  function soundObject(keys) {
+    return {
+      type: 'object',
+      fields: keys.map(function (k) {
+        var zh = { break: '破坏', step: '踩踏', place: '放置', hit: '挖掘', fall: '坠落', open: '打开', close: '关闭', put: '放入', take: '取出' }[k] || k;
+        var en = k.charAt(0).toUpperCase() + k.slice(1);
+        return soundRefField(k, zh, en);
+      }),
+      label: l('音效', 'Sounds'),
+    };
+  }
+  var BLOCK_SOUND_OBJECT = soundObject(['break', 'step', 'place', 'hit', 'fall']);
+  var FURNITURE_SOUND_OBJECT = soundObject(['break', 'place', 'hit']);
+
   // legacy 行为字段 → 新 schema 字段 (数据源: 旧版 interpreter BEHAVIOR_FIELDS, 与 wiki behaviors 文档一致)
   // spec: [path, 'text'|'number'|'bool'|'lines'|'select'|'json']
   function _bh(list) {
@@ -1227,31 +1253,6 @@
   // 数据源: wiki block/states.mdx + settings.mdx + states/properties.mdx + states/entity_renderer.mdx + reference/loot_table.mdx
 
   // ---- 通用小块 ----
-  // 音效值: 字符串 或 详细 {id, pitch, volume}
-  var SOUND_REF_TYPES = {
-    map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
-      f('id', '音效 ID', 'Sound ID', 'text'),
-      f('pitch', '音调', 'Pitch', 'number'),
-      f('volume', '音量', 'Volume', 'text', { hint: l('支持 0.25~0.3 区间', 'Ranged values supported, e.g. 0.25~0.3') }),
-    ], label: l('音效', 'Sound') } },
-  };
-  function soundRefField(key, zh, en) {
-    return f(key, zh, en, 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:block.deepslate.break', 'minecraft:block.deepslate.break') }, label: l('音效', 'Sound'), types: SOUND_REF_TYPES });
-  }
-  // 音效对象 (弹窗 content): 方块五键 / 家具三键 / 其他键位
-  function soundObject(keys) {
-    return {
-      type: 'object',
-      fields: keys.map(function (k) {
-        var zh = { break: '破坏', step: '踩踏', place: '放置', hit: '挖掘', fall: '坠落', open: '打开', close: '关闭', put: '放入', take: '取出' }[k] || k;
-        var en = k.charAt(0).toUpperCase() + k.slice(1);
-        return soundRefField(k, zh, en);
-      }),
-      label: l('音效', 'Sounds'),
-    };
-  }
-  var BLOCK_SOUND_OBJECT = soundObject(['break', 'step', 'place', 'hit', 'fall']);
-  var FURNITURE_SOUND_OBJECT = soundObject(['break', 'place', 'hit']);
   // 实体剔除: 布尔 或 详细参数
   var ENTITY_CULLING_TYPES = {
     map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
