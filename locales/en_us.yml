@@ -24,6 +24,15 @@ common:
   approve: "Approve"
   reject: "Reject"
 
+minimessage:
+  title: "MiniMessage Editor"
+  editBtn: "MiniMessage Editor"
+  preview: "Preview"
+  previewEmpty: "(Empty preview)"
+  parseError: "Parse error"
+  restrictedTip: "Restricted tag, may not work everywhere"
+  useColor: "Use color"
+
 ui:
   ok: "OK"
   cancel: "Cancel"
@@ -255,6 +264,7 @@ settings:
   tabRemote: "Remote"
   tabShortcuts: "Shortcuts"
   tabAbout: "About"
+  aboutAuthor: "🎨 About the Author"
   sectionLanguage: "🌐 Language"
   language: "Language"
   languageRestartHint: "You may need to restart the app or refresh to see the language change."
@@ -864,6 +874,7 @@ craftengine:
   unlockOnIngredient: "Unlock on Ingredient (unlock_on_ingredient_obtained)"
   unlockOnJoin: "Unlock on Join (unlock_on_join)"
   otherFields: "Other Fields"
+  customTabWarning: "The Custom tab should only be used when editing plugin files for options not covered by the tabs. Using unsupported options in the editor's own settings may cause errors and crashes."
   type_item: "Item"
   type_block: "Block"
   type_furniture: "Furniture"

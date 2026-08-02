@@ -861,7 +861,14 @@
     if (t === 'linesScalar') return _sfLines(def, path, value, true);
     if (t === 'kv' || t === 'kvRest') return _sfKvTextarea(def, path, value);
     if (t === 'scalar') return _sfScalarInput(def, path, value);
-    return _sfInput(def, path, value, 'text');
+    var html = _sfInput(def, path, value, 'text');
+    return def.mini ? _sfMiniWrap(html) : html;
+  }
+  // MiniMessage 快捷按钮: 输入框右侧留出小段距离放置铅笔按钮
+  function _sfMiniWrap(html) {
+    return '<div class="ce-sf-mini-wrap">' + html +
+      '<button type="button" class="ce-sf-mini-btn" data-sf-action="mini-edit" title="' + _escHtml(_t('minimessage.editBtn', 'MiniMessage 编辑器')) + '">✏️</button>' +
+      '</div>';
   }
   function _sfDatalistHtml() {
     _sfInit();
@@ -1415,6 +1422,21 @@
       }
       return;
     }
+    if (action === 'mini-edit') {
+      // 打开 MiniMessage 编辑器; 沙箱/未加载时静默跳过
+      if (!ROOT.MiniMessageEditor) return;
+      var wrapEl = el.closest ? el.closest('.ce-sf-mini-wrap') : null;
+      var inp = wrapEl ? wrapEl.querySelector('input.ce-input, textarea.ce-input') : null;
+      if (!inp) return;
+      _sound('click');
+      ROOT.MiniMessageEditor.open(inp.value, function (out) {
+        if (out != null && String(out) !== inp.value) {
+          inp.value = out;
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+      return;
+    }
     _sfMarkDirty(parsed); // 所有 schema 动作都会修改数据
 
     if (action === 'union-set') {
@@ -1691,6 +1713,20 @@
         html += fhtml;
       }
     });
+    if (tabs && tabs.custom !== undefined) {
+      // 自定义选项卡: 警告 + 未建模键 kv 折叠 (写回保留 modeled 键)
+      var cdata = (entry.data && typeof entry.data === 'object' && !Array.isArray(entry.data)) ? entry.data : {};
+      var customRest = [];
+      var customKeys = _entryKeyOrder(entry);
+      for (var cr = 0; cr < customKeys.length; cr++) {
+        if (!modeled[customKeys[cr]]) customRest.push(customKeys[cr]);
+      }
+      var customText = _sfObjText((function () { var o = {}; customRest.forEach(function (k) { o[k] = cdata[k]; }); return o; })());
+      tabs.custom = '<div class="ce-sf-custom-warn">⚠ ' + _escHtml(_t('craftengine.customTabWarning')) + '</div>' +
+        '<div class="ce-stack"><textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="" data-sf-type="kv-rest"' +
+        ' data-sf-exclude="' + _escHtml(Object.keys(modeled).join(',')) + '"' +
+        ' rows="' + Math.max(3, Math.min(customRest.length + 1, 10)) + '" spellcheck="false">' + _escHtml(customText) + '</textarea></div>';
+    }
     var other = _sfOtherFieldsHtml(entry, modeled);
     if (tabs) {
       tabs.other += other;
@@ -2296,6 +2332,12 @@
     var ui = containerEl._ceUi;
     if (!parsed) return;
 
+    // 全量重建会重置 .ce-entry-scroll 滚动位置, 选中远处条目后视口会跳回顶部
+    var prevScroll = 0;
+    var prevSection = ui.section;
+    var scrollEl = containerEl.querySelector('.ce-entry-scroll');
+    if (scrollEl) prevScroll = scrollEl.scrollTop;
+
     if (parsed.error) {
       containerEl.innerHTML =
         '<div class="cv-error-banner"><span class="cv-error-icon">⚠️</span><div>' +
@@ -2376,6 +2418,12 @@
       '<div class="ce-entry-list">' + '<div class="ce-entry-scroll">' + entryHtml + '</div>' + addBtnHtml + '</div>' +
       '<div class="ce-main">' + mainHtml + '</div>' +
       '</div></div>';
+
+    // 同 section 内重建时恢复条目列表滚动位置
+    if (ui.section === prevSection && prevScroll > 0) {
+      var sc = containerEl.querySelector('.ce-entry-scroll');
+      if (sc) sc.scrollTop = prevScroll;
+    }
 
     // 工程归属徽章（异步）
     var badge = containerEl.querySelector('#ce-owner-badge');

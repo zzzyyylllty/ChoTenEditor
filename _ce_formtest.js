@@ -486,6 +486,64 @@ if (cbListUid) {
   check(cbEntry.data.client_bound_data.conditional.conditions.length === 2 && cbEntry.data.client_bound_data.conditional.conditions[1].type === 'permission', '写回: 条件块 list-add 追加条件');
 }
 
+// v1.0.28: MiniMessage 快捷按钮 (mini:true → .ce-sf-mini-wrap + ✏️按钮)
+const miniYaml = `
+items:
+  default:test:
+    material: paper
+    data:
+      item_name: "Hello"
+      custom_name: "Custom"
+      lore:
+        - "simple line"
+        - advanced:
+            content: "adv content"
+    client_bound_data:
+      item_name: "Client Name"
+      conditional:
+        data:
+          item_name: "Cond Name"
+    unknown_extra: hello
+`;
+const miR = renderCap(miniYaml);
+const miH = miR.el.innerHTML;
+const miEntry = miR.el._ceParsed.sections[0].entries[0];
+const miniBtns = (miH.match(/data-sf-action="mini-edit"/g) || []).length;
+check(miniBtns >= 5, 'mini 按钮数量 >= 5 (item_name/custom_name/lore/客户端/条件块)');
+check(miH.includes('class="ce-sf-mini-wrap"'), 'mini 输入框有 ce-sf-mini-wrap 包裹');
+function miniOf(path) {
+  // 匹配 text input（union 的 select 也携带相同 data-sf-path 且先出现，需排除）
+  const i = miH.indexOf('<input class="ce-input" data-sf-kind="field" data-sf-path="' + path + '"');
+  if (i < 0) return false;
+  return miH.slice(i, i + 500).includes('data-sf-action="mini-edit"');
+}
+check(miniOf('data.item_name') && miniOf('data.custom_name'), '外观面板: item_name/custom_name 带 mini 按钮');
+check(miniOf('data.lore.0'), 'lore 简单行 (union scalar) 带 mini 按钮');
+check(miniOf('data.lore.1.content'), 'lore 高级行 content 带 mini 按钮');
+check(miniOf('client_bound_data.item_name'), '客户端数据 item_name 带 mini 按钮');
+check(miniOf('client_bound_data.conditional.data.item_name'), '条件块内 data.item_name 带 mini 按钮');
+// mini-edit 点击: 沙箱无 MiniMessageEditor → 静默跳过, 不改数据
+const mmBtn = mk({ 'data-sf-action': 'mini-edit' }, null);
+mmBtn.closest = () => mmBtn;
+miR.listeners['click'][0]({ target: mmBtn });
+check(miEntry.data.data && miEntry.data.data.item_name === 'Hello', 'mini-edit: 无 MiniMessageEditor 时静默跳过不修改数据');
+
+// v1.0.28: 自定义选项卡 (warning + kv-rest 折叠未建模键)
+check(miH.includes('data-ce-tab="custom"'), 'item 自定义选项卡存在');
+check(h2.includes('data-ce-tab="custom"'), 'block 自定义选项卡存在');
+check(h3.includes('data-ce-tab="custom"'), 'recipe 自定义选项卡存在');
+// (furniture 自定义选项卡检查移到 furniture 渲染块内, 见 hf 定义处)
+const custPanelPos = miH.indexOf('data-ce-tabpanel="custom"');
+check(custPanelPos !== -1 && miH.slice(custPanelPos).includes('ce-sf-custom-warn'), '自定义选项卡面板含警告');
+const krRe = /data-sf-type="kv-rest" data-sf-exclude="([^"]+)"/g;
+const krExcl = [...miH.matchAll(krRe)].map(m => m[1]);
+check(krExcl.length >= 1 && krExcl.some(e => e.includes('material') && e.includes('data') && !e.includes('unknown_extra')), 'kv-rest exclude 列出 modeled 键且不含未知键');
+check(miH.includes('unknown_extra: hello'), '自定义选项卡 kv 内容含未建模键');
+// kv-rest 写回: 保留 modeled 键 + 合并新键
+const miCh = miR.listeners['change'][0];
+miCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': '', 'data-sf-type': 'kv-rest', 'data-sf-exclude': 'material,data' }, 'unknown_extra: hello\nmy_custom: 42') });
+check(miEntry.data.material === 'paper' && miEntry.data.unknown_extra === 'hello' && miEntry.data.my_custom === 42, '写回: 自定义 kv-rest 保留 modeled 键并合并新键');
+
 // recipe predicate enchantments mapOf (Phase 2 B 表)
 const predYaml = `
 recipes:
@@ -714,6 +772,7 @@ check(hf.includes('data-ce-tab="variants"'), 'furniture 选项卡 variants');
 check(hf.includes('data-ce-tab="settings"'), 'furniture 选项卡 settings');
 check(hf.includes('data-ce-tab="behaviors"'), 'furniture 选项卡 behaviors');
 check(hf.includes('data-ce-tab="loot"'), 'furniture 选项卡 loot');
+check(hf.includes('data-ce-tab="custom"'), 'furniture 自定义选项卡存在');
 check(hf.includes('data-ce-tab="events"'), 'furniture 选项卡 events');
 check(hf.includes('data-sf-action="popup-edit"') && hf.includes('data-sf-path="variants"'), 'variants 弹窗编辑按钮');
 check(hf.includes('ground, wall (2 个)'), 'variants 弹窗摘要 (键列表)');

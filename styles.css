@@ -1013,7 +1013,7 @@ body {
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: rgba(255, 23, 68, 0.08);
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
   border: 1px solid var(--color-error);
   border-radius: var(--radius-lg);
   margin: 20px;
@@ -1235,7 +1235,7 @@ body {
   transition: all var(--transition-fast);
 }
 .cv-btn-icon:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
-.cv-btn-icon-danger:hover { background: rgba(255, 23, 68, 0.1); color: var(--color-error); }
+.cv-btn-icon-danger:hover { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error); }
 
 /* 底部工具栏 */
 .cv-toolbar {
@@ -1977,14 +1977,7 @@ body {
   font-size: 10px;
 }
 
-/* ---- 子任务管理弹窗按钮 ---- */
-.cv-btn-danger {
-  color: var(--color-error) !important;
-  border-color: var(--color-error) !important;
-}
-.cv-btn-danger:hover {
-  background: rgba(255, 23, 68, 0.1) !important;
-}
+/* ---- 子任务管理弹窗按钮 (统一走 danger 组, 见下方按钮统一区) ---- */
 
 .cv-quest-container .cv-main-content {
   flex: 1;
@@ -2891,14 +2884,14 @@ body {
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-secondary);
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 .ce-section-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 4px 10px;
   cursor: pointer;
   font-size: 12px;
   color: var(--color-text-secondary);
@@ -2945,15 +2938,15 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 .ce-entry-list .ce-add-btn {
-  margin: 8px;
+  margin: 6px;
   flex-shrink: 0;
 }
 .ce-entry-item {
   flex-shrink: 0;
-  padding: 7px 12px;
+  padding: 4px 10px;
   cursor: pointer;
   font-size: 12px;
   color: var(--color-text-secondary);
@@ -3013,11 +3006,26 @@ body {
 }
 .ce-rm-btn { flex-shrink: 0; }
 
+/* 多列布局: 编辑区足够宽时字段自动排成多列 */
 .ce-form-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px 14px;
+  max-width: 1120px;
+}
+.ce-form-body > .ce-row {
+  grid-template-columns: 1fr;
+}
+.ce-form-body > .ce-row > .ce-sf-hint {
+  grid-column: auto;
+}
+.ce-form-body > .ce-stack,
+.ce-form-body > .ce-tabs,
+.ce-form-body > .ce-tab-panel.ce-tab-active,
+.ce-form-body > .ce-sf-collapse,
+.ce-form-body > .ce-field,
+.ce-form-body > .ce-sf-subtabs {
+  grid-column: 1 / -1;
 }
 
 /* 选项卡表单 */
@@ -3041,9 +3049,25 @@ body {
   display: none;
 }
 .ce-tab-panel.ce-tab-active {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px 14px;
+}
+.ce-tab-panel.ce-tab-active > .ce-row {
+  grid-template-columns: 1fr;
+}
+.ce-tab-panel.ce-tab-active > .ce-row > .ce-sf-hint {
+  grid-column: auto;
+}
+.ce-tab-panel.ce-tab-active > .ce-stack,
+.ce-tab-panel.ce-tab-active > .ce-sf-collapse,
+.ce-tab-panel.ce-tab-active > .ce-field,
+.ce-tab-panel.ce-tab-active > .ce-sf-subtabs,
+.ce-tab-panel.ce-tab-active > .ce-sf-map,
+.ce-tab-panel.ce-tab-active > .ce-sf-list,
+.ce-tab-panel.ce-tab-active > .ce-events-header,
+.ce-tab-panel.ce-tab-active > .ce-event-item {
+  grid-column: 1 / -1;
 }
 
 /* 子选项卡 (tabs widget, 如 item data 六类) */
@@ -3072,9 +3096,22 @@ body {
   display: none;
 }
 .ce-sf-subtab-panel.active {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px 14px;
+}
+.ce-sf-subtab-panel.active > .ce-row {
+  grid-template-columns: 1fr;
+}
+.ce-sf-subtab-panel.active > .ce-row > .ce-sf-hint {
+  grid-column: auto;
+}
+.ce-sf-subtab-panel.active > .ce-stack,
+.ce-sf-subtab-panel.active > .ce-field,
+.ce-sf-subtab-panel.active > .ce-sf-map,
+.ce-sf-subtab-panel.active > .ce-sf-list,
+.ce-sf-subtab-panel.active > .ce-sf-collapse {
+  grid-column: 1 / -1;
 }
 
 /* 事件选项卡 */
@@ -3201,7 +3238,7 @@ textarea.ce-input {
 }
 .ce-input.ce-invalid {
   border-color: var(--color-error);
-  box-shadow: 0 0 0 1px rgba(255, 23, 68, 0.25);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-error) 25%, transparent);
 }
 
 /* 空状态 */
@@ -3244,6 +3281,90 @@ textarea.ce-input {
   color: var(--color-text-tertiary);
   line-height: 1.4;
 }
+
+/* MiniMessage 快捷按钮: 输入框右侧留出小段距离 */
+.ce-sf-mini-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ce-sf-mini-wrap .ce-input {
+  flex: 1;
+  min-width: 0;
+}
+.ce-sf-mini-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+.ce-sf-mini-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-light);
+  color: var(--color-primary);
+}
+
+/* 自定义选项卡警告 */
+.ce-sf-custom-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* RichTooltip 富文本提示 (tooltip.js) */
+.rt-tooltip {
+  position: fixed;
+  z-index: 200000;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+  border-left: 3px solid var(--rt-accent, var(--color-primary));
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  line-height: 1.6;
+  max-width: 340px;
+  animation: rt-tooltip-in 0.12s ease;
+}
+.rt-tooltip code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+.rt-tooltip .rt-strong {
+  color: var(--rt-accent, var(--color-primary));
+}
+.rt-tooltip .rt-restricted {
+  color: var(--color-warning);
+}
+@keyframes rt-tooltip-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .ce-sf-input {
   width: 100%;
   box-sizing: border-box;

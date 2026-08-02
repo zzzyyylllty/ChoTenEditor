@@ -837,15 +837,15 @@
   // ---- data 组件 (wiki item/data.mdx) ----
   var LORE_LINE_TYPES = {
     advanced: { label: l('高级 (advanced)', 'Advanced'), fields: [
-      f('content', '内容', 'Content', 'text'),
+      f('content', '内容', 'Content', 'text', { mini: true }),
       f('priority', '优先级', 'Priority', 'number'),
       f('operation', '操作', 'Operation', 'select', { options: ['APPEND', 'PREPEND'] }),
       f('split_lines', '按行拆分', 'Split Lines', 'bool'),
       f('conditions', '条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('条件', 'Conditions') }),
     ] },
-    simple: { label: l('简单文本', 'Simple Text'), widget: { type: 'text' } },
+    simple: { label: l('简单文本', 'Simple Text'), widget: { type: 'text', mini: true } },
   };
-  var LORE_LINE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text' }, label: l('Lore 行', 'Lore Line'), types: LORE_LINE_TYPES };
+  var LORE_LINE_UNION = { type: 'union', noTypeKey: true, allowScalar: { type: 'text', mini: true }, label: l('Lore 行', 'Lore Line'), types: LORE_LINE_TYPES };
   // insert_lore (wiki): {position, pattern, lore, fallback{position, lore}}
   var INSERT_LORE_FIELDS = [
     f('position', '位置', 'Position', 'select', { options: ['HEAD', 'TAIL', 'BEFORE', 'AFTER'] }),
@@ -972,8 +972,8 @@
   var JUKEBOX_UNION = { type: 'union', noTypeKey: true, label: l('唱片', 'Jukebox Playable'), types: JUKEBOX_TYPES };
   // 外观
   var ITEM_APPEARANCE_TYPES = {
-    item_name: { label: l('物品名 (item_name)', 'Item Name'), widget: { type: 'textarea', rows: 2, label: l('物品名', 'Item Name') } },
-    custom_name: { label: l('自定义名 (custom_name)', 'Custom Name'), widget: { type: 'textarea', rows: 2, label: l('自定义名', 'Custom Name') } },
+    item_name: { label: l('物品名 (item_name)', 'Item Name'), widget: { type: 'text', label: l('物品名', 'Item Name'), mini: true } },
+    custom_name: { label: l('自定义名 (custom_name)', 'Custom Name'), widget: { type: 'text', label: l('自定义名', 'Custom Name'), mini: true } },
     lore: { label: l('Lore', 'Lore'), widget: { type: 'listOf', itemType: LORE_LINE_UNION, label: l('Lore', 'Lore') } },
     insert_lore: { label: l('插入 Lore (insert_lore)', 'Insert Lore'), widget: { type: 'object', fields: INSERT_LORE_FIELDS, label: l('插入 Lore', 'Insert Lore') } },
     remove_lore: { label: l('移除 Lore (remove_lore)', 'Remove Lore'), widget: REMOVE_LORE_UNION },
@@ -1659,6 +1659,7 @@
       { key: 'behavior', label: l('行为', 'Behavior') },
       { key: 'loot', label: l('掉落', 'Loot') },
       { key: 'events', label: l('事件', 'Events') },
+      { key: 'custom', label: l('自定义', 'Custom') },
     ],
     fields: [
       f('state', '单状态', 'State', 'popup', { content: { type: 'object', fields: blockAppearanceFields(true), label: l('单状态', 'State') }, label: l('单状态', 'State'), tab: 'state' }),
@@ -1830,6 +1831,7 @@
       { key: 'behaviors', label: l('行为', 'Behaviors') },
       { key: 'loot', label: l('掉落', 'Loot') },
       { key: 'events', label: l('事件', 'Events') },
+      { key: 'custom', label: l('自定义', 'Custom') },
     ],
     fields: [
       f('variants', '变体', 'Variants', 'popup', { content: FURNITURE_VARIANTS_MAP, label: l('变体', 'Variants'), tab: 'variants' }),
@@ -1909,6 +1911,7 @@
       { key: 'result', label: l('结果', 'Result') },
       { key: 'advanced', label: l('高级', 'Advanced') },
       { key: 'other', label: l('其他', 'Other') },
+      { key: 'custom', label: l('自定义', 'Custom') },
     ],
     fields: [
       f('type', '类型', 'Type', 'select', { options: RECIPE_TYPE_OPTIONS, tab: 'basic' }),
@@ -1943,6 +1946,7 @@
       { key: 'behavior', label: l('行为', 'Behavior') },
       { key: 'settings', label: l('设置', 'Settings') },
       { key: 'events', label: l('事件', 'Events') },
+      { key: 'custom', label: l('自定义', 'Custom') },
     ],
     fields: [
       // 基础

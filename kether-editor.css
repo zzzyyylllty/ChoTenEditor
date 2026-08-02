@@ -63,16 +63,11 @@
 .ke-auto-sync-label:hover { color: var(--color-text-primary); }
 .ke-auto-sync-label input { width: 14px; height: 14px; cursor: pointer; accent-color: var(--color-primary); }
 .ke-btn {
-  padding: 5px 12px; border: 1px solid var(--color-border); border-radius: 5px;
-  background: var(--color-bg-tertiary); color: var(--color-text-primary);
-  cursor: pointer; font-size: 11px; transition: all 0.12s; white-space: nowrap;
+  padding: 5px 12px; font-size: 11px;
 }
-.ke-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .ke-btn-primary {
-  background: var(--color-primary); color: #fff; border-color: var(--color-primary);
   font-weight: 600;
 }
-.ke-btn-primary:hover { background: var(--color-primary-hover); color: #fff; }
 .ke-btn-active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-glow); }
 
 /* ---- 主体 ---- */
@@ -546,8 +541,8 @@
   display: flex; align-items: center; gap: 8px;
 }
 .ke-ctx-item:hover { background: var(--color-bg-hover); }
-.ke-ctx-item-danger { color: #e74c3c; }
-.ke-ctx-item-danger:hover { background: rgba(231,76,60,0.1); }
+.ke-ctx-item-danger { color: var(--color-error); }
+.ke-ctx-item-danger:hover { background: color-mix(in srgb, var(--color-error) 10%, transparent); }
 .ke-ctx-sep { height: 1px; background: var(--color-border); margin: 4px 0; }
 .ke-ctx-shortcut { margin-left: auto; font-size: 9px; opacity: 0.35; }
 
@@ -573,7 +568,7 @@
 .ke-stash-item-del, .ke-saved-item-del {
   margin-left: auto; font-size: 9px; opacity: 0.3; cursor: pointer; background: none; border: none; color: var(--color-text-secondary);
 }
-.ke-stash-item-del:hover, .ke-saved-item-del:hover { opacity: 1; color: #e74c3c; }
+.ke-stash-item-del:hover, .ke-saved-item-del:hover { opacity: 1; color: var(--color-error); }
 .ke-stash-drop {
   padding: 8px 10px; margin: 4px 8px; border: 1.5px dashed var(--color-border);
   border-radius: 4px; text-align: center; font-size: 9px;

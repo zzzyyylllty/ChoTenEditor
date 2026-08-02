@@ -1,6 +1,6 @@
 {
   "name": "choteneditor",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "description": "ChoTenChan's plugin editor",
   "license": "MIT",
   "author": "AkaCandyKAngel",
@@ -38,6 +38,7 @@
   "dependencies": {
     "codemirror": "^5.65.21",
     "js-yaml": "^4.1.1",
+    "minimessage-js": "^2.0.1",
     "prismjs": "^1.30.0",
     "ws": "^8.20.1"
   }
