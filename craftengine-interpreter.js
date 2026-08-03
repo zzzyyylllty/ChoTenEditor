@@ -908,6 +908,11 @@
       ' rows="' + Math.max(3, Math.min(Object.keys(obj).length + 1, 12)) + '" spellcheck="false">' + _escHtml(_sfObjText(obj)) + '</textarea>';
   }
   // 整条 YAML 编辑: 任意键值对集合, 支持深层嵌套 / $$ 版本键 / !!type 值 (templates 等)
+  // 背景 pre 层高亮 ${xxx} 占位符: textarea 文字透明, pre 显示高亮文本, 滚动同步
+  function _ceYamlHighlight(txt) {
+    var esc = _escHtml(txt);
+    return esc.indexOf('${') === -1 ? esc : esc.replace(/(\$\{[^}]*\})/g, '<span class="ce-yaml-var">$1</span>');
+  }
   function _sfYamlWhole(value) {
     var obj = value;
     var txt;
@@ -916,8 +921,12 @@
     } else {
       txt = (obj === undefined || obj === null) ? '' : (typeof obj === 'string' ? obj : JSON.stringify(obj));
     }
-    return '<textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="yaml-whole"' +
-      ' rows="' + Math.max(6, Math.min(txt.split('\n').length + 1, 16)) + '" spellcheck="false">' + _escHtml(txt) + '</textarea>';
+    var rows = Math.max(6, Math.min(txt.split('\n').length + 1, 16));
+    return '<div class="ce-yaml-box">' +
+      '<pre class="ce-input ce-kv-field ce-yaml-hl" aria-hidden="true">' + _ceYamlHighlight(txt) + '</pre>' +
+      '<textarea class="ce-input ce-kv-field ce-yaml-ta" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="yaml-whole"' +
+      ' rows="' + rows + '" wrap="off" spellcheck="false">' + _escHtml(txt) + '</textarea>' +
+      '</div>';
   }
   function _sfControl(def, path, value) {
     var t = def.type || 'text';
@@ -3853,14 +3862,38 @@
       }
     };
 
+    // yaml-whole 高亮层: input 实时重绘, scroll 同步 (scroll 不冒泡, 用 capture)
+    var yamlHlHandler = function (e) {
+      var t = e.target;
+      if (!t || !t.getAttribute) return;
+      if (t.getAttribute('data-sf-type') === 'yaml-whole') {
+        var pre = t.parentNode.querySelector('.ce-yaml-hl');
+        if (pre) {
+          pre.innerHTML = _ceYamlHighlight(t.value);
+          pre.scrollTop = t.scrollTop;
+          pre.scrollLeft = t.scrollLeft;
+        }
+      }
+    };
+    var yamlScrollHandler = function (e) {
+      var t = e.target;
+      if (t && t.getAttribute && t.getAttribute('data-sf-type') === 'yaml-whole') {
+        var pre = t.parentNode.querySelector('.ce-yaml-hl');
+        if (pre) { pre.scrollTop = t.scrollTop; pre.scrollLeft = t.scrollLeft; }
+      }
+    };
     containerEl.addEventListener('click', clickHandler);
     containerEl.addEventListener('change', changeHandler);
     containerEl.addEventListener('change', keyChangeHandler);
     containerEl.addEventListener('change', autoSyncHandler);
+    containerEl.addEventListener('input', yamlHlHandler);
+    containerEl.addEventListener('scroll', yamlScrollHandler, true);
     containerEl._ceClickHandler = clickHandler;
     containerEl._ceChangeHandler = changeHandler;
     containerEl._ceKeyChangeHandler = keyChangeHandler;
     containerEl._ceAutoSyncHandler = autoSyncHandler;
+    containerEl._ceYamlHlHandler = yamlHlHandler;
+    containerEl._ceYamlScrollHandler = yamlScrollHandler;
   }
 
   function _ceRenderFn() {
@@ -4089,10 +4122,14 @@
       containerEl.removeEventListener('change', containerEl._ceChangeHandler);
       containerEl.removeEventListener('change', containerEl._ceKeyChangeHandler);
       containerEl.removeEventListener('change', containerEl._ceAutoSyncHandler);
+      containerEl.removeEventListener('input', containerEl._ceYamlHlHandler);
+      containerEl.removeEventListener('scroll', containerEl._ceYamlScrollHandler, true);
       containerEl._ceClickHandler = null;
       containerEl._ceChangeHandler = null;
       containerEl._ceKeyChangeHandler = null;
       containerEl._ceAutoSyncHandler = null;
+      containerEl._ceYamlHlHandler = null;
+      containerEl._ceYamlScrollHandler = null;
     }
     var parsed = parse(content);
     var fname2 = String(filePath || '').replace(/\\/g, '/').split('/').pop() || '';

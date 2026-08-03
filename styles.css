@@ -3303,6 +3303,37 @@ textarea.ce-input {
 .ce-lines-field, .ce-kv-field {
   min-height: 96px;
 }
+/* 整条 YAML 编辑 (templates 等): 背景 pre 层高亮 ${xxx} 占位符 */
+.ce-yaml-box {
+  position: relative;
+}
+.ce-yaml-hl {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: auto;
+  pointer-events: none;
+  white-space: pre;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+}
+.ce-yaml-ta {
+  position: relative;
+  background: transparent !important;
+  color: transparent;
+  caret-color: var(--color-text-primary);
+  overflow: auto;
+}
+.ce-yaml-ta::selection {
+  background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+.ce-yaml-var {
+  color: var(--color-success);
+  font-weight: 600;
+}
 .ce-input.ce-invalid {
   border-color: var(--color-error);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-error) 25%, transparent);
