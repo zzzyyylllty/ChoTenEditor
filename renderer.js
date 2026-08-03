@@ -144,22 +144,11 @@ async function restoreAppState() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[RENDERER] DOMContentLoaded fired');
 
   // 等待本地化字典就绪（首次启动时等待用户选择语言）
   try { await I18N.ready; } catch (e) {}
 
   setTimeout(async () => {
-    console.log('[RENDERER] 检查API可用性');
-    console.log('[RENDERER] window.testAPI:', window.testAPI);
-    console.log('[RENDERER] window.electronAPI:', window.electronAPI);
-
-    // 测试 testAPI
-    if (window.testAPI && window.testAPI.test) {
-      console.log('[RENDERER] testAPI 可用:', window.testAPI.test());
-    } else {
-      console.error('[RENDERER] testAPI 不可用');
-    }
 
     // 检查 electronAPI
     if (!window.electronAPI) {
@@ -171,7 +160,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    console.log('[RENDERER] electronAPI 可用，方法:', Object.keys(window.electronAPI));
     _electronAPI = window.electronAPI;
     init();
   }, 300);
@@ -240,7 +228,6 @@ function updateCodeMirrorTheme() {
   if (!codeMirrorEditor) return;
 
   const theme = getCodeMirrorTheme();
-  console.log('[RENDERER] 更新 CodeMirror 主题:', theme);
   codeMirrorEditor.setOption('theme', theme);
 }
 
@@ -249,7 +236,6 @@ function updateCodeMirrorTheme() {
 // ============================================
 
 function initCodeMirror() {
-  console.log('[RENDERER] 初始化 CodeMirror');
   if (!editorContainer) {
     console.error('[RENDERER] editorContainer 不存在');
     return;
@@ -275,19 +261,9 @@ function initCodeMirror() {
     autofocus: true,
   });
 
-  console.log('[RENDERER] CodeMirror 初始化完成，主题:', initialTheme);
 
   // 暴露给 ChemdahInterpreter（可视化编辑器需要同步到源码）
   window.codeMirrorEditor = codeMirrorEditor;
-
-  // 包装 setValue 以追踪所有写入 CodeMirror 的调用
-  var _origSetValue = codeMirrorEditor.setValue.bind(codeMirrorEditor);
-  codeMirrorEditor.setValue = function(content) {
-    var caller = new Error().stack.split('\n').slice(2, 5).join(' | ');
-    var preview = content ? content.substring(0, 60).replace(/\n/g, '\\n') : 'null';
-    console.log('[CM] setValue (len=' + (content ? content.length : 0) + ') preview="' + preview + '" caller:', caller);
-    return _origSetValue(content);
-  };
 }
 
 // ============================================
@@ -295,7 +271,6 @@ function initCodeMirror() {
 // ============================================
 
 function init() {
-  console.log('[RENDERER] 初始化开始');
   initCodeMirror();
   setupEventListeners();
   updateNavigationButtons();
@@ -317,7 +292,6 @@ function init() {
   // 监听 localStorage 变化，更新 CodeMirror 主题
   window.addEventListener('storage', (e) => {
     if (e.key === 'editorConfig') {
-      console.log('[RENDERER] editorConfig 更新，重新应用 CodeMirror 主题');
       updateCodeMirrorTheme();
     }
   });
@@ -359,7 +333,6 @@ function init() {
     }
   });
 
-  console.log('[RENDERER] 初始化完成');
 }
 
 // ============================================
@@ -367,7 +340,6 @@ function init() {
 // ============================================
 
 function setupEventListeners() {
-  console.log('[RENDERER] 设置事件监听器');
 
   // 检查元素是否存在
   if (!openProjectBtn) console.error('openProjectBtn 不存在');
@@ -398,16 +370,6 @@ function setupEventListeners() {
   // 导航按钮
   if (navUpBtn) navUpBtn.addEventListener('click', () => { playSound('click'); navigateUp(); });
   if (navBackBtn) navBackBtn.addEventListener('click', () => { playSound('back'); navigateBack(); });
-
-  // 主题选择器监听
-  const themeSelect = document.getElementById('theme');
-  if (themeSelect) {
-    themeSelect.addEventListener('change', () => {
-      playSound('click');
-      console.log('[RENDERER] 主题选择器变化，更新 CodeMirror 主题');
-      updateCodeMirrorTheme();
-    });
-  }
 
   // 解释器类型选择器
   const typeSelect = document.getElementById('interpreter-type-select');
@@ -551,7 +513,6 @@ function setupEventListeners() {
     });
   }
 
-  console.log('[RENDERER] 事件监听器设置完成');
 }
 
 // ============================================
@@ -559,7 +520,6 @@ function setupEventListeners() {
 // ============================================
 
 async function openProject() {
-  console.log('[RENDERER] 打开项目');
 
   if (!_electronAPI || !_electronAPI.openDirectory) {
     showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.openDirectoryApi'));
@@ -568,12 +528,10 @@ async function openProject() {
 
   try {
     const result = await _electronAPI.openDirectory();
-    console.log('[RENDERER] 打开目录结果:', result);
 
     if (result && result.length > 0) {
       await openProjectPath(result[0]);
     } else {
-      console.log('[RENDERER] 用户取消或未选择目录');
     }
   } catch (error) {
     console.error('[RENDERER] 打开项目错误:', error);
@@ -612,7 +570,6 @@ async function openProjectPath(path) {
 // ============================================
 
 async function loadDirectory(path, silent = false) {
-  console.log('[RENDERER] 加载目录:', path);
 
   if (!_electronAPI || !_electronAPI.readdir) {
     if (!silent) showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.readdirApi'));
@@ -621,7 +578,6 @@ async function loadDirectory(path, silent = false) {
 
   try {
     const result = await _electronAPI.readdir(path);
-    console.log('[RENDERER] readdir 结果:', result);
 
     if (result.success) {
       files = result.files;
@@ -647,7 +603,6 @@ async function loadDirectory(path, silent = false) {
 // ============================================
 
 function renderFileTree(files) {
-  console.log('[RENDERER] 渲染文件树，文件数:', files.length);
 
   if (!fileTreeEl) {
     console.error('[RENDERER] fileTreeEl 不存在');
@@ -675,7 +630,6 @@ function renderFileTree(files) {
 // ============================================
 
 async function handleFileClick(file) {
-  console.log('[RENDERER] 文件点击:', file.name);
 
   if (file.isDirectory) {
     if (_fmMode === 'remote') {
@@ -718,20 +672,17 @@ let _loadingFile = false;
 let _fileContents = {}; // 文件内容缓存，用于标签页切换
 
 async function openFile(filePath, content) {
-  console.log('[RENDERER] 打开文件:', filePath);
 
   // 防止重复打开同一文件
   if (_openingFile === filePath) {
     // 如果正在打开中但有内容到达（远程响应），先缓存内容供等待者使用
     if (content) {
       _fileContents[filePath] = content;
-      console.log('[RENDERER] 缓存远程到达的内容:', filePath);
     }
     return;
   }
   // 防止在关闭过程中重新打开
   if (_closingTabs[filePath]) {
-    console.log('[RENDERER] 文件正在关闭中，等待...');
     var _wait = 0;
     while (_closingTabs[filePath] && _wait < 20) {
       await new Promise(function(r) { setTimeout(r, 50); });
@@ -754,7 +705,6 @@ async function openFile(filePath, content) {
   // 无内容时尝试从缓存读取
   if (!content && _fileContents[filePath]) {
     content = _fileContents[filePath];
-    console.log('[RENDERER] 从缓存读取内容:', filePath);
   }
 
   // 仍无内容时为远程模式：向服务器请求并等待
@@ -767,7 +717,6 @@ async function openFile(filePath, content) {
         await new Promise(function(r) { setTimeout(r, 50); });
         if (_fileContents[filePath]) {
           content = _fileContents[filePath];
-          console.log('[RENDERER] 远程内容已加载');
           break;
         }
         if (_closingTabs[filePath]) {
@@ -815,7 +764,6 @@ async function openFile(filePath, content) {
       }
       content = result.content;
       _fileContents[filePath] = content; // 缓存本地读取的内容
-      console.log('[RENDERER] 读取文件成功');
     }
 
     // 添加标签页
@@ -895,7 +843,6 @@ function findTabByPath(filePath) {
 }
 
 function addTab(filePath) {
-  console.log('[RENDERER] 添加标签页:', filePath);
 
   if (!editorTabs) {
     console.error('[RENDERER] editorTabs 不存在');
@@ -904,7 +851,6 @@ function addTab(filePath) {
 
   // 防止重复标签
   if (findTabByPath(filePath)) {
-    console.log('[RENDERER] 标签页已存在，跳过添加:', filePath);
     return;
   }
 
@@ -946,7 +892,6 @@ function addTab(filePath) {
 }
 
 async function setActiveTab(filePath) {
-  console.log('[RENDERER] 设置活动标签页:', filePath);
 
   // 更新标签页样式
   document.querySelectorAll('.editor-tab').forEach((tab) => {
@@ -1094,7 +1039,6 @@ async function saveAllDirtyFiles() {
 }
 
 async function closeTab(filePath, force = false) {
-  console.log('[RENDERER] 关闭标签页:', filePath);
 
   // 标记正在关闭，防止并发重复打开
   _closingTabs[filePath] = true;
@@ -1233,7 +1177,6 @@ async function closeTabsDirection(filePath, direction) {
 // ============================================
 
 async function navigateToDirectory(dirPath) {
-  console.log('[RENDERER] 导航到目录:', dirPath);
 
   if (currentDirectoryPath) {
     directoryHistory.push(currentDirectoryPath);
@@ -1242,7 +1185,6 @@ async function navigateToDirectory(dirPath) {
 }
 
 async function navigateUp() {
-  console.log('[RENDERER] 导航到上一级');
 
   if (!currentDirectoryPath || currentDirectoryPath === currentProjectPath) {
     return;
@@ -1253,7 +1195,6 @@ async function navigateUp() {
 }
 
 async function navigateBack() {
-  console.log('[RENDERER] 返回上一个目录');
 
   if (directoryHistory.length === 0) return;
 
@@ -1349,7 +1290,6 @@ function getRelativePath(fromPath, toPath) {
 // ============================================
 
 async function createNewFile() {
-  console.log('[RENDERER] 创建新文件');
 
   if (!currentProjectPath) {
     await UI.alert({ message: I18N.t('alert.openProjectFirst') });
@@ -1377,7 +1317,6 @@ async function createNewFile() {
 }
 
 async function saveCurrentFile() {
-  console.log('[RENDERER] 保存当前文件');
 
   if (!currentFile) {
     await UI.alert({ message: I18N.t('alert.noFileOpen') });
@@ -1426,11 +1365,9 @@ async function switchEditorMode(visual) {
   var tabEl = document.querySelector('.editor-tab.active');
   var activeTabPath = tabEl ? tabEl.dataset.path : null;
   if (activeTabPath && activeTabPath !== currentFile) {
-    console.log('[RENDERER] 修正 currentFile: "' + currentFile + '" → "' + activeTabPath + '"');
     currentFile = activeTabPath;
   }
 
-  console.log('[RENDERER] 切换编辑器模式:', visual ? '可视化' : '源代码', 'currentFile=', currentFile, 'dirty=', dirtyTabs[currentFile] ? 'Y' : 'N');
 
   // 可视化编辑器有尚未同步到源码的更改: 切到源代码模式前先弹确认
   // (同步并继续 → 缓冲区更新后走保留+自动保存; 放弃 → 丢弃未同步的可视化更改)
@@ -1438,7 +1375,6 @@ async function switchEditorMode(visual) {
       visualEditor && visualEditor._ceParsed && visualEditor._ceParsed._visualDirty) {
     var usResult = await showUnsyncedConfirmDialog(getFileName(currentFile));
     if (usResult === 'cancel') {
-      console.log('[RENDERER] 用户取消模式切换 (未同步更改)');
       return;
     }
     if (usResult === 'sync' && typeof CraftEngineInterpreter !== 'undefined') {
@@ -1460,7 +1396,6 @@ async function switchEditorMode(visual) {
   if (!keepBuffer && currentFile && dirtyTabs[currentFile]) {
     var swResult = await showDirtyConfirmDialog(getFileName(currentFile));
     if (swResult === 'cancel') {
-      console.log('[RENDERER] 用户取消模式切换');
       return;
     }
     if (swResult === 'save') {
@@ -1472,16 +1407,12 @@ async function switchEditorMode(visual) {
   if (currentFile && !visual) {
     if (keepBuffer) {
       // 缓冲区已含"同步到源码"写入的最新内容: 保留并自动保存, 保证切回可视化不丢状态
-      console.log('[RENDERER] 源代码模式：保留缓冲区（可视化同步内容）并自动保存');
       saveCurrentFile();
     } else {
-      console.log('[RENDERER] 源代码模式：从磁盘重新加载:', currentFile);
       if (_fmMode !== 'remote' && _electronAPI && _electronAPI.readFile) {
         var reloadResult = await _electronAPI.readFile(currentFile);
-        console.log('[RENDERER] 读取结果:', reloadResult ? 'ok=' + reloadResult.success : 'null');
         if (reloadResult && reloadResult.success) {
           var freshContent = reloadResult.content;
-          console.log('[RENDERER] 内容长度:', freshContent ? freshContent.length : 0);
           _loadingFile = true;
           codeMirrorEditor.setValue(freshContent);
           _loadingFile = false;
@@ -1491,13 +1422,11 @@ async function switchEditorMode(visual) {
           updateCodeMirrorMode(currentFile);
         }
       } else if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
-        console.log('[RENDERER] 远程模式：请求服务器刷新');
         window.electronAPI.remote.requestFileRead({ filePath: currentFile });
       }
     }
   } else if (currentFile && visual && _fileContents[currentFile]) {
     // 切换到可视化模式：从缓存加载正确内容
-    console.log('[RENDERER] 可视化模式：从缓存加载内容:', currentFile);
     _loadingFile = true;
     codeMirrorEditor.setValue(_fileContents[currentFile]);
     _loadingFile = false;
@@ -1569,7 +1498,6 @@ function updateEditorModeForFile(filePath) {
 }
 
 function renderVisualEditor() {
-  console.log('[RENDERER] renderVisualEditor, currentFile=', currentFile);
   if (!codeMirrorEditor || !visualEditor) return;
   if (!currentFile) return;
 
@@ -1716,7 +1644,6 @@ function updateTabDirtyIndicator(filePath) {
 // ============================================
 
 function openSettings() {
-  console.log('[RENDERER] 打开设置弹窗');
   const overlay = document.getElementById('st-overlay');
   const frame = document.getElementById('st-frame');
   if (!overlay || !frame) {
@@ -1775,7 +1702,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 function openAIPanel() {
-  console.log('[RENDERER] 打开 AI 面板');
   if (typeof AIPanel !== 'undefined' && AIPanel.open) {
     // 更新当前文件上下文
     var ctx = currentFile || '';
@@ -1818,7 +1744,6 @@ async function prewarmStartup() {
               prewarmSize += result.content.length;
             }
           }
-          console.log('[RENDERER] 预热文件完成，已缓存 ' + Object.keys(_fileContents).length + ' 个文件，约 ' + Math.round(prewarmSize / 1024) + ' KB');
         } catch (_) {}
       }
     }
@@ -1826,7 +1751,6 @@ async function prewarmStartup() {
     // 预热 Kether 动作
     if (pw.kether !== false && window.KetherEditor && window.KetherEditor.loadActions) {
       window.KetherEditor.loadActions().then(function() {
-        console.log('[RENDERER] 预热 Kether 动作完成');
       }).catch(function() {});
     }
   } catch (_) {}
@@ -1856,7 +1780,6 @@ async function loadQuestDefinitions() {
     }
 
     const descPath = appPath + '\\desc';
-    console.log('[RENDERER] 加载 desc 目录:', descPath);
     const dirResult = await _electronAPI.readdir(descPath);
     if (!dirResult.success) {
       console.warn('[RENDERER] 读取 desc 目录失败:', descPath, dirResult.error);
@@ -1865,7 +1788,6 @@ async function loadQuestDefinitions() {
 
     let merged = {};
     const jsonFiles = dirResult.files.filter(f => f.name.endsWith('.json') && !f.isDirectory);
-    console.log('[RENDERER] 发现 desc 文件数:', jsonFiles.length);
 
     for (const file of jsonFiles) {
       const result = await _electronAPI.readFile(file.path);
@@ -1890,7 +1812,6 @@ async function loadQuestDefinitions() {
     ChemdahInterpreter.setDefinitions(merged);
     const objCount = Object.keys(merged?.minecraft?.objective || {}).length;
     const addonCount = Object.keys(merged?.minecraft?.addon || {}).length;
-    console.log('[RENDERER] 任务定义数据已加载, objective:', objCount, 'addon:', addonCount);
 
     // 如果已在可视化模式，刷新编辑器以显示新定义
     if (isVisualMode && visualEditor && currentFile) {
@@ -1903,7 +1824,6 @@ async function loadQuestDefinitions() {
 
 // 暴露 reload 函数到全局方便调试
 window.reloadQuestDefinitions = () => {
-  console.log('[RENDERER] 手动重新加载 desc 定义数据...');
   loadQuestDefinitions();
 };
 // ============================================
@@ -2002,7 +1922,6 @@ window.appState = {
     return isVisualMode;
   },
 };
-console.log('[RENDERER] DOM ready, saveBtn:', !!saveBtn, 'settingsBtn:', !!settingsBtn);
 // 重新应用存储的主题/颜色/背景（窗口重新聚焦或设置弹窗关闭时调用）
 function applyStoredConfig() {
   const stored = localStorage.getItem('editorConfig');
@@ -2537,7 +2456,6 @@ function initRemoteEvents() {
   if (!window.electronAPI || !window.electronAPI.remote) return;
 
   window.electronAPI.remote.onEvent(function(type, data) {
-    console.log('[REMOTE] 事件:', type, data);
     switch (type) {
 
       // 服务器事件

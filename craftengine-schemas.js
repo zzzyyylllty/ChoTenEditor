@@ -753,18 +753,6 @@
     ],
   };
 
-  SECTIONS.template = {
-    fields: [
-      f('type', '类型', 'Type', 'text'),
-      f('material', '材质', 'Material', 'text', { datalist: 'items' }),
-      f('content', '内容', 'Content', 'textarea'),
-      f('template', '模板', 'Template', 'linesScalar', { hint: l('多行 = 多个模板', 'Multiple lines = several templates') }),
-      f('arguments', '参数', 'Arguments', 'mapOf', { valueType: { type: 'scalar' }, label: l('参数', 'Arguments') }),
-      f('merges', '合并', 'Merges', 'kv'),
-      f('overrides', '覆盖', 'Overrides', 'kv'),
-    ],
-  };
-
   // ============ Item 可视化编辑 ============
   // 数据源: wiki item/data.mdx, item/models.mdx + models/ 子文档, item/settings.mdx,
   //         item/behaviors.mdx + behaviors/ 子文档, item/updater.mdx

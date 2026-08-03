@@ -82,7 +82,6 @@ ipcMain.handle('dialog:saveFile', async (event, options) => {
 });
 ipcMain.handle('fs:readFile', async (event, filePath) => {
   try {
-    console.log('[MAIN] readFile:', filePath);
     const content = await fs.promises.readFile(filePath, 'utf-8');
     return { success: true, content };
   } catch (error) {

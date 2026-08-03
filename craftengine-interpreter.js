@@ -17,7 +17,7 @@
     try { if (typeof playSound === 'function') playSound(name); } catch (e) {}
   }
   function _escHtml(str) {
-    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
   }
 
   // ============ 常量 ============
@@ -843,7 +843,7 @@
     return '<input class="ce-input" data-sf-kind="field" data-sf-path="' + _escHtml(path) + '" data-sf-type="' + (type || 'text') + '"' +
       (def.placeholder ? ' placeholder="' + _escHtml(_labelOf(def.placeholder)) + '"' : '') +
       (def.datalist ? ' list="ce-dl-' + _escHtml(def.datalist) + '"' : '') +
-      ' value="' + _escHtml(_sfScalarText(value)).replace(/"/g, '&quot;') + '" spellcheck="false">';
+      ' value="' + _escHtml(_sfScalarText(value)) + '" spellcheck="false">';
   }
   function _sfCheckbox(def, path, value) {
     return '<input type="checkbox" class="ce-input" data-sf-kind="field" data-sf-path="' + _escHtml(path) + '" data-sf-type="bool"' + (value ? ' checked' : '') + '>';
@@ -896,7 +896,7 @@
   function _sfScalarInput(def, path, value, type) {
     return '<input class="ce-input" data-sf-kind="field" data-sf-path="' + _escHtml(path) + '" data-sf-type="' + (type || 'scalar') + '"' +
       (def.placeholder ? ' placeholder="' + _escHtml(_labelOf(def.placeholder)) + '"' : '') +
-      ' value="' + _escHtml(_sfScalarText(value)).replace(/"/g, '&quot;') + '" spellcheck="false">';
+      ' value="' + _escHtml(_sfScalarText(value)) + '" spellcheck="false">';
   }
   function _sfWholeText(def, value, rows) {
     return '<textarea class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-text"' +
@@ -1650,7 +1650,7 @@
   }
   // entry 键输入框: 版本键 ($$...) 前加徽标
   function _sfEntryKeyCtrl(key) {
-    var inp = '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(key).replace(/"/g, '&quot;') + '" spellcheck="false">';
+    var inp = '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(key) + '" spellcheck="false">';
     return _sfVersionKeyRe.test(key) ? '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(key) + inp + '</div>' : inp;
   }
   function _sfMapHtml(def, path, value, opts) {
@@ -1666,7 +1666,7 @@
       _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
-      var keyCtrl = '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">';
+      var keyCtrl = '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k) + '" spellcheck="false">';
       if (_sfVersionKeyRe.test(k)) {
         keyCtrl = '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(k) + keyCtrl + '</div>';
       }
@@ -2165,8 +2165,8 @@
       try { vs = JSON.stringify(val); } catch (e) { vs = String(val); }
     } else vs = (val === undefined || val === null) ? '' : String(val);
     return '<div class="ce-spec-row" data-ce-okey="' + _escHtml(key) + '">' +
-      '<input class="ce-input ce-spec-key" value="' + _escHtml(key).replace(/"/g, '&quot;') + '" spellcheck="false" title="' + _escHtml(key) + '">' +
-      '<input class="ce-input ce-spec-val" value="' + _escHtml(vs).replace(/"/g, '&quot;') + '" spellcheck="false" placeholder="' + _escHtml(_t('craftengine.specEmptyVal')) + '">' +
+      '<input class="ce-input ce-spec-key" value="' + _escHtml(key) + '" spellcheck="false" title="' + _escHtml(key) + '">' +
+      '<input class="ce-input ce-spec-val" value="' + _escHtml(vs) + '" spellcheck="false" placeholder="' + _escHtml(_t('craftengine.specEmptyVal')) + '">' +
       '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger" data-ce-spec="del" title="' + _escHtml(_t('craftengine.specDel')) + '">✕</button>' +
       '</div>';
   }
@@ -2829,7 +2829,7 @@
       } else if (t === 'number') {
         html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-number" value="' + _escHtml(_sfScalarText(data)) + '" spellcheck="false">', '__whole__', data);
       } else {
-        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-text" value="' + _escHtml(_sfScalarText(data)).replace(/"/g, '&quot;') + '" spellcheck="false">', '__whole__', data);
+        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-text" value="' + _escHtml(_sfScalarText(data)) + '" spellcheck="false">', '__whole__', data);
       }
       return html;
     }
@@ -2941,7 +2941,7 @@
     return '<input class="ce-input" data-ce-field="' + _escHtml(path) + '"' +
       (type === 'number' ? ' type="number" data-ce-type="number"' : '') +
       (placeholder ? ' placeholder="' + _escHtml(placeholder) + '"' : '') +
-      ' value="' + _escHtml(v).replace(/"/g, '&quot;') + '">';
+      ' value="' + _escHtml(v) + '">';
   }
   function _checkbox(path, value) {
     return '<input type="checkbox" class="ce-input" data-ce-field="' + _escHtml(path) + '" data-ce-type="bool"' +

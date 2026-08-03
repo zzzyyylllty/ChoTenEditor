@@ -4399,7 +4399,6 @@ window.ChemdahInterpreter = (() => {
    * @param {object} options - { forceType, onSync }
    */
   function render(filePath, content, containerEl, options = {}) {
-    console.log('[CHEMDAH] render called:', filePath ? filePath.split(/[\\/]/).pop() : 'null', 'contentLen=' + (content ? content.length : 0));
     if (!containerEl) return;
 
     const forceType = options.forceType || null;

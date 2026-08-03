@@ -290,7 +290,6 @@ const presetThemes = {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[SETTINGS] DOMContentLoaded fired');
 
   await I18N.ready;
 
@@ -305,7 +304,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabNavigation();
 
 
-  console.log('[SETTINGS] 初始化完成?');
 });
 
 // ============================================
@@ -313,7 +311,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 
 function initializeDOMElements() {
-  console.log('[SETTINGS] 初始化DOM元素');
   
   themeSelect = document.getElementById('theme');
   backBtn = document.getElementById('back-btn');
@@ -420,21 +417,6 @@ function initializeDOMElements() {
   prewarmFilesMax = document.getElementById('prewarm-files-max');
   prewarmKether = document.getElementById('prewarm-kether');
 
-  console.log('  - themeSelect:', !!themeSelect);
-  console.log('  - backBtn:', !!backBtn);
-  console.log('  - saveBtn:', !!saveBtn);
-  console.log('  - resetBtn:', !!resetBtn);
-  console.log('  - exportBtn:', !!exportBtn);
-  console.log('  - importBtn:', !!importBtn);
-  console.log('  - importFile:', !!importFile);
-  console.log('  - presetBtns count:', presetBtns.length);
-  console.log('  - colorInputs count:', Object.keys(colorInputs).length);
-  console.log('  - editorFontSize:', !!editorFontSize);
-  console.log('  - editorTabSize:', !!editorTabSize);
-  console.log('  - editorLineNumbers:', !!editorLineNumbers);
-  console.log('  - editorLineWrapping:', !!editorLineWrapping);
-  console.log('  - editorTheme:', !!editorTheme);
-  console.log('  - shortcutInputs count:', Object.keys(shortcutInputs).filter(key => shortcutInputs[key]).length);
 }
 
 // ============================================
@@ -477,13 +459,11 @@ function initTabNavigation() {
 // ============================================
 
 function setupEventListeners() {
-  console.log('[SETTINGS] 设置事件监听');
 
   // 主题选择
   if (themeSelect) {
     themeSelect.addEventListener('change', (e) => {
       playSound('click');
-      console.log('[SETTINGS] 主题改变:', e.target.value);
       applyTheme(e.target.value);
       updateColorInputs();
     });
@@ -501,7 +481,6 @@ function setupEventListeners() {
   if (backBtn) {
     backBtn.addEventListener('click', () => {
       playSound('back');
-      console.log('[SETTINGS] 返回到编辑器');
       if (IS_EMBEDDED) {
         // 弹窗模式：通知父页面关闭弹窗
         window.parent.postMessage({ type: 'closeSettings' }, '*');
@@ -515,7 +494,6 @@ function setupEventListeners() {
   Object.values(colorInputs).forEach((input) => {
     if (input) {
       input.addEventListener('input', (e) => {
-        console.log('[SETTINGS] 颜色变更:', e.target.id, e.target.value);
         updateCSSVariable(e.target.id, e.target.value);
         updateColorValue(e.target.id);
       });
@@ -538,7 +516,6 @@ function setupEventListeners() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       playSound('save');
-      console.log('[SETTINGS] 保存设置');
       await saveSettings();
     });
   }
@@ -547,7 +524,6 @@ function setupEventListeners() {
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
       playSound('update');
-      console.log('[SETTINGS] 重置设置');
       resetSettings();
     });
   }
@@ -556,7 +532,6 @@ function setupEventListeners() {
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
       playSound('click');
-      console.log('[SETTINGS] 导出设置');
       exportSettings();
     });
   }
@@ -565,7 +540,6 @@ function setupEventListeners() {
   if (importBtn) {
     importBtn.addEventListener('click', () => {
       playSound('click');
-      console.log('[SETTINGS] 导入设置');
       if (importFile) {
         importFile.click();
       }
@@ -583,7 +557,6 @@ function setupEventListeners() {
       btn.addEventListener('click', (e) => {
         playSound('click');
         const preset = e.target.dataset.preset;
-        console.log('[SETTINGS] 应用预设:', preset);
         applyPreset(preset);
       });
     });
@@ -611,11 +584,11 @@ function setupEventListeners() {
   // 快捷键按钮
   const resetShortcutBtn = document.getElementById('reset-shortcuts');
   if (resetShortcutBtn) {
-    resetShortcutBtn.addEventListener('click', () => { playSound('update'); console.log('[SETTINGS] 重置快捷键'); });
+    resetShortcutBtn.addEventListener('click', () => { playSound('update'); });
   }
   const editShortcutBtn = document.getElementById('edit-shortcuts');
   if (editShortcutBtn) {
-    editShortcutBtn.addEventListener('click', () => { playSound('click'); console.log('[SETTINGS] 编辑快捷键'); });
+    editShortcutBtn.addEventListener('click', () => { playSound('click'); });
   }
 
   // AI 模型切换
@@ -731,7 +704,6 @@ function setupEventListeners() {
     });
   });
 
-  console.log('[SETTINGS] 事件监听器设置完成?');
 }
 
 // ============================================
@@ -739,12 +711,10 @@ function setupEventListeners() {
 // ============================================
 
 function applyTheme(theme) {
-  console.log('[SETTINGS] 应用主题:', theme);
   document.body.setAttribute('data-theme', theme);
 }
 
 function applyPreset(presetName) {
-  console.log('[SETTINGS] 应用预设主题:', presetName);
   
   const preset = presetThemes[presetName];
   if (!preset) {
@@ -820,7 +790,6 @@ function updateColorInputs() {
       updateColorValue(input.id);
     }
   });
-  console.log('[SETTINGS] 更新颜色输入，当前主题', themeSelect ? themeSelect.value : 'dark');
 }
 
 // 应用复选框标记显示开关 (body class: cb-mark-on 选中√ / cb-mark-off 未选中X)
@@ -1033,7 +1002,6 @@ async function hashPassword(pw) {
 }
 
 async function saveSettings() {
-  console.log('[SETTINGS] 保存设置');
 
   // 读取现有配置以保留未修改的字段
   var existingRaw = localStorage.getItem('editorConfig');
@@ -1117,7 +1085,6 @@ async function saveSettings() {
     config.background = { filename: '', opacity: 0.3 };
   }
 
-  console.log('[SETTINGS] 配置对象:', config);
 
   // 保留语言设置（由 i18n.js 管理，不在此表单范围内）
   if (existing && existing.language) {
@@ -1298,12 +1265,10 @@ function escHtml(str) {
 }
 
 function loadSettings() {
-  console.log('[SETTINGS] 加载设置');
   
   const stored = localStorage.getItem('editorConfig');
   const config = stored ? JSON.parse(stored) : defaultConfig;
 
-  console.log('[SETTINGS] 加载的配置', config);
 
   // 应用主题
   if (themeSelect) {
@@ -1426,7 +1391,6 @@ function loadSettings() {
 }
 
 function resetSettings() {
-  console.log('[SETTINGS] 重置设置');
 
   UI.confirm({ message: I18N.t('settings.resetConfirm'), danger: true }).then(function(ok) {
     if (!ok) return;
@@ -1438,7 +1402,6 @@ function resetSettings() {
 
 
 function exportSettings() {
-  console.log('[SETTINGS] 导出设置');
   
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
@@ -1464,11 +1427,9 @@ function exportSettings() {
 }
 
 function importSettings(e) {
-  console.log('[SETTINGS] 导入设置');
   
   const file = e.target.files[0];
   if (!file) {
-    console.log('[SETTINGS] 未选择文件');
     return;
   }
 
@@ -1476,7 +1437,6 @@ function importSettings(e) {
   reader.onload = (event) => {
     try {
       const config = JSON.parse(event.target.result);
-      console.log('[SETTINGS] 导入配置', config);
 
       // 验证配置结构
       if (!config.theme || !config.colors) {
@@ -1525,7 +1485,6 @@ function kebabToCamel(str) {
 }
 
 function showNotification(message, type = 'info') {
-  console.log('[SETTINGS] 显示通知:', message, type);
   
   // 创建通知元素
   const notification = document.createElement('div');
@@ -1600,7 +1559,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[SETTINGS] 页面 DOMContentLoaded');
   await I18N.ready;
   loadSettings();
   I18N.applyDOM();
@@ -1626,5 +1584,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
-
-console.log('[SETTINGS] settings.js 已加载');
+
