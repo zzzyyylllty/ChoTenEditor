@@ -18,7 +18,7 @@
 
   const DEFAULT_CAT_COLOR = '#7f8c8d';
 
-  var SLOT_HELP = '点击或者拖拽到此处以添加动作<br>CTRL+点击 快速添加文本<br>SHIFT+点击 快速添加动作组<br>CTRL+SHIFT+点击 快速添加列表';
+  function slotHelp() { return I18N.t('kether.slotHelp'); }
 
   // 原始分类 → 合并后的大类
   const CAT_GROUP = {
@@ -66,20 +66,28 @@
     message: '消息', permission: '权限', list: '列表',
   };
 
+  function builtinNameEn(id) {
+    if (id === '__text__') return I18N.t('kether.builtinText');
+    if (id === '__list__') return I18N.t('kether.builtinList');
+    if (id === '__brace__') return I18N.t('kether.builtinBrace');
+    return '';
+  }
+
   function blockLabelHtml(block, semanticOverride) {
     const cn = semanticOverride || NAME_CN[block.actionId];
+    const enName = builtinNameEn(block.actionId) || block.name;
     const nameMode = (_state && _state.settings) ? _state.settings.nameMode : 'cn-en';
     if (nameMode === 'cn') {
       return '<span class="ke-b-label">' + esc(cn || block.name) + '</span>';
     }
     if (nameMode === 'en') {
-      return '<span class="ke-b-label">' + esc(block.name) + '</span>';
+      return '<span class="ke-b-label">' + esc(enName) + '</span>';
     }
     // 'cn-en' (default)
     if (cn) {
-      return '<span class="ke-b-label">' + esc(cn) + '</span><span class="ke-b-label-sub">' + esc(block.name) + '</span>';
+      return '<span class="ke-b-label">' + esc(cn) + '</span><span class="ke-b-label-sub">' + esc(enName) + '</span>';
     }
-    return '<span class="ke-b-label">' + esc(block.name) + '</span>';
+    return '<span class="ke-b-label">' + esc(enName) + '</span>';
   }
 
   // 显式定义控制流语句的参数结构
@@ -1798,18 +1806,18 @@
     const h = document.createElement('div');
     h.className = 'ke-header';
     h.innerHTML = `
-      <button class="ke-btn" id="ke-back">← 返回</button>
-      <h2>Kether 积木编辑器</h2>
-      <span style="font-size:10px;opacity:0.4;margin-right:auto;">${_actions.length} 动作</span>
+      <button class="ke-btn" id="ke-back">${I18N.t('kether.back')}</button>
+      <h2>${I18N.t('kether.title')}</h2>
+      <span style="font-size:10px;opacity:0.4;margin-right:auto;">${I18N.t('kether.actionCount', {count: _actions.length})}</span>
       <div class="ke-header-actions">
         <button class="ke-btn" id="ke-undo" disabled>↩</button>
         <button class="ke-btn" id="ke-redo" disabled>↪</button>
-        <button class="ke-btn ${state.mode === 'visual' ? 'ke-btn-active' : ''}" id="ke-mode-visual">🧊 积木</button>
-        <button class="ke-btn ${state.mode === 'code' ? 'ke-btn-active' : ''}" id="ke-mode-code">📝 代码</button>
+        <button class="ke-btn ${state.mode === 'visual' ? 'ke-btn-active' : ''}" id="ke-mode-visual">${I18N.t('kether.blocks')}</button>
+        <button class="ke-btn ${state.mode === 'code' ? 'ke-btn-active' : ''}" id="ke-mode-code">${I18N.t('kether.code')}</button>
         <label class="ke-auto-sync-label">
           <input type="checkbox" id="ke-auto-sync" ${state.autoSync ? 'checked' : ''}> 🔄
         </label>
-        <button class="ke-btn ke-btn-primary" id="ke-confirm">✓ 确定</button>
+        <button class="ke-btn ke-btn-primary" id="ke-confirm">${I18N.t('kether.confirm')}</button>
       </div>
       <div class="ke-header-winctrl">
         <button class="tb-btn tb-btn-minimize" id="ke-win-minimize">─</button>
@@ -1818,12 +1826,12 @@
       </div>`;
     overlay.appendChild(h);
 
-    bindTooltip(h.querySelector('#ke-undo'), '撤销 (Ctrl+Z)');
-    bindTooltip(h.querySelector('#ke-redo'), '重做 (Ctrl+Shift+Z)');
-    bindTooltip(h.querySelector('.ke-auto-sync-label'), '自动同步积木到 Kether 代码');
-    bindTooltip(h.querySelector('#ke-win-minimize'), '最小化');
-    bindTooltip(h.querySelector('#ke-win-maximize'), '最大化');
-    bindTooltip(h.querySelector('#ke-win-close'), '关闭');
+    bindTooltip(h.querySelector('#ke-undo'), I18N.t('kether.undo'));
+    bindTooltip(h.querySelector('#ke-redo'), I18N.t('kether.redo'));
+    bindTooltip(h.querySelector('.ke-auto-sync-label'), I18N.t('kether.autoSync'));
+    bindTooltip(h.querySelector('#ke-win-minimize'), I18N.t('kether.minimize'));
+    bindTooltip(h.querySelector('#ke-win-maximize'), I18N.t('kether.maximize'));
+    bindTooltip(h.querySelector('#ke-win-close'), I18N.t('kether.close'));
 
     h.querySelector('#ke-back').onclick = () => { playSound('back'); if (state.onCancel) state.onCancel(); overlay.remove(); };
     h.querySelector('#ke-undo').onclick = () => { playSound('click'); _undo(state, overlay); };
@@ -1869,67 +1877,67 @@
   function renderVisualMode(overlay, body, state) {
     body.innerHTML = `
       <div class="ke-sidebar">
-        <div class="ke-sidebar-search"><input type="text" id="ke-search" placeholder="搜索动作..."></div>
+        <div class="ke-sidebar-search"><input type="text" id="ke-search" placeholder="${I18N.t('kether.searchActions')}"></div>
         <div class="ke-cat-list" id="ke-cat-list"></div>
         <div class="ke-action-list" id="ke-action-list"></div>
       </div>
       <div class="ke-workspace">
         <div class="ke-workspace-header">
-          <span>入口 (<span id="ke-ec">${state.blocks.length}</span>) · 积木 (<span id="ke-count">${countBlocks(state)}</span>)</span>
+          <span>${I18N.t('kether.workspaceInfo', {entries: '<span id="ke-ec">' + state.blocks.length + '</span>', blocks: '<span id="ke-count">' + countBlocks(state) + '</span>'})}</span>
           <div class="ke-workspace-actions">
             <div class="ke-settings-wrapper">
               <button class="ke-btn" id="ke-settings-btn">⚙️</button>
               <div class="ke-settings-dropdown" id="ke-settings-dd" style="display:none;">
                 <div class="ke-settings-row">
-                  <span class="ke-settings-label">积木颜色</span>
+                  <span class="ke-settings-label">${I18N.t('kether.blockColor')}</span>
                   <select id="ke-setting-color">
-                    <option value="provider">提供者</option>
-                    <option value="category">分类</option>
+                    <option value="provider">${I18N.t('kether.provider')}</option>
+                    <option value="category">${I18N.t('kether.category')}</option>
                   </select>
                 </div>
                 <div class="ke-settings-row">
-                  <span class="ke-settings-label">显示名称</span>
+                  <span class="ke-settings-label">${I18N.t('kether.displayName')}</span>
                   <select id="ke-setting-name">
-                    <option value="cn-en">中文+英文</option>
-                    <option value="cn">仅中文</option>
-                    <option value="en">仅英文</option>
+                    <option value="cn-en">${I18N.t('kether.nameCnEn')}</option>
+                    <option value="cn">${I18N.t('kether.nameCn')}</option>
+                    <option value="en">${I18N.t('kether.nameEn')}</option>
                   </select>
                 </div>
                 <div class="ke-settings-row">
-                  <span class="ke-settings-label">引号按钮</span>
+                  <span class="ke-settings-label">${I18N.t('kether.quoteBtn')}</span>
                   <input type="checkbox" id="ke-setting-quote" ${_savedSettings.showQuoteBtn ? 'checked' : ''}>
                 </div>
                 <div class="ke-settings-row">
-                  <span class="ke-settings-label">语义化显示</span>
+                  <span class="ke-settings-label">${I18N.t('kether.semanticDisplay')}</span>
                   <select id="ke-setting-semantic">
-                    <option value="on" ${_savedSettings.semanticMode !== false ? 'selected' : ''}>开启</option>
-                    <option value="off" ${_savedSettings.semanticMode === false ? 'selected' : ''}>关闭</option>
+                    <option value="on" ${_savedSettings.semanticMode !== false ? 'selected' : ''}>${I18N.t('kether.on')}</option>
+                    <option value="off" ${_savedSettings.semanticMode === false ? 'selected' : ''}>${I18N.t('kether.off')}</option>
                   </select>
                 </div>
               </div>
             </div>
-            <button class="ke-btn" id="ke-add">+ 添加积木</button>
-            <button class="ke-btn" id="ke-add-entry">📥 新入口</button>
-            <button class="ke-btn" id="ke-add-def">📦 新定义</button>
-            <button class="ke-btn" id="ke-clear">🗑 清空</button>
+            <button class="ke-btn" id="ke-add">${I18N.t('kether.addBlock')}</button>
+            <button class="ke-btn" id="ke-add-entry">${I18N.t('kether.newEntry')}</button>
+            <button class="ke-btn" id="ke-add-def">${I18N.t('kether.newDef')}</button>
+            <button class="ke-btn" id="ke-clear">${I18N.t('kether.clear')}</button>
           </div>
         </div>
         <div class="ke-canvas"><div class="ke-canvas-inner" id="ke-canvas"></div></div>
         <div class="ke-footer">
-          <div class="ke-footer-toggle" id="ke-ft">▶ 代码预览</div>
+          <div class="ke-footer-toggle" id="ke-ft">${I18N.t('kether.codePreview')}</div>
           <div class="ke-footer-code" id="ke-fc"></div>
         </div>
       </div>
       <div class="ke-sidebar-right" id="ke-sidebar-right">
-        <div class="ke-sidebar-right-toggle" id="ke-sidebar-right-toggle">📦 <span class="ke-sr-label">暂存</span><span class="ke-sr-arrow">◀</span></div>
+        <div class="ke-sidebar-right-toggle" id="ke-sidebar-right-toggle">📦 <span class="ke-sr-label">${I18N.t('kether.stash')}</span><span class="ke-sr-arrow">◀</span></div>
         <div class="ke-sidebar-right-content" id="ke-sidebar-right-content">
           <div class="ke-stash" id="ke-stash">
-            <div class="ke-stash-header">📦 暂存区 <span class="ke-stash-count">${_stashBlocks.length}</span></div>
+            <div class="ke-stash-header">📦 ${I18N.t('kether.stashArea')} <span class="ke-stash-count">${_stashBlocks.length}</span></div>
             <div class="ke-stash-list" id="ke-stash-list"></div>
-            <div class="ke-stash-drop" id="ke-stash-drop">拖入积木暂存</div>
+            <div class="ke-stash-drop" id="ke-stash-drop">${I18N.t('kether.stashDrop')}</div>
           </div>
           <div class="ke-saved" id="ke-saved-section" style="${_savedBlocks.length ? '' : 'display:none'}">
-            <div class="ke-stash-header">💾 已保存 <span class="ke-stash-count">${_savedBlocks.length}</span></div>
+            <div class="ke-stash-header">💾 ${I18N.t('kether.saved')} <span class="ke-stash-count">${_savedBlocks.length}</span></div>
             <div class="ke-saved-list" id="ke-saved-list"></div>
           </div>
         </div>
@@ -1972,8 +1980,8 @@
       playSound('collapse');
       const fc = overlay.querySelector('#ke-fc');
       const open = fc.classList.toggle('ke-footer-open');
-      overlay.querySelector('#ke-ft').textContent = open ? '▼ 代码预览' : '▶ 代码预览';
-      fc.textContent = generateCode(state.blocks) || '(空)';
+      overlay.querySelector('#ke-ft').textContent = open ? I18N.t('kether.codePreviewOpen') : I18N.t('kether.codePreview');
+      fc.textContent = generateCode(state.blocks) || I18N.t('kether.empty');
     };
 
     // 设置面板
@@ -2049,7 +2057,7 @@
       var cb = blocks[i];
       var item = document.createElement('div');
       item.className = 'ke-action-item ke-action-warn';
-      item.innerHTML = '<span class="ke-action-color" style="background:#ff69b4"></span><span class="ke-action-name">' + esc(cb.name) + '</span><span class="ke-action-provider">' + (cb.isUser ? '自定义' : '常用') + '</span>';
+      item.innerHTML = '<span class="ke-action-color" style="background:#ff69b4"></span><span class="ke-action-name">' + esc(cb.name) + '</span><span class="ke-action-provider">' + (cb.isUser ? I18N.t('kether.custom') : I18N.t('kether.common')) + '</span>';
       item.onclick = function(cb) {
         return function() {
           playSound('select');
@@ -2072,17 +2080,18 @@
           return function(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (confirm('删除常用积木 "' + cb.name + '"？')) {
+            UI.confirm({ message: I18N.t('kether.deleteCommonConfirm', {name: cb.name}) }).then(function(ok) {
+              if (!ok) return;
               removeUserCommonBlock(cb.id);
               renderActions(overlay, state, _COMMON_CAT, '');
-            }
+            });
           };
         }(cb);
       }
       list.appendChild(item);
     }
     if (blocks.length === 0) {
-      list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">暂无常用积木<br><small>右键积木可添加为常用</small></div>';
+      list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">' + I18N.t('kether.noCommonBlocks') + '</div>';
     }
   }
 
@@ -2111,8 +2120,8 @@
     }
     html += '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
-      '<button class="ke-btn" id="ke-param-cancel" style="padding:6px 16px;">取消</button>' +
-      '<button class="ke-btn ke-btn-primary" id="ke-param-ok" style="padding:6px 16px;">插入</button>' +
+      '<button class="ke-btn" id="ke-param-cancel" style="padding:6px 16px;">' + I18N.t('kether.cancel') + '</button>' +
+      '<button class="ke-btn ke-btn-primary" id="ke-param-ok" style="padding:6px 16px;">' + I18N.t('kether.insert') + '</button>' +
       '</div></div>';
     modal.innerHTML = html;
     document.body.appendChild(modal);
@@ -2176,18 +2185,18 @@
     const list = overlay.querySelector('#ke-cat-list');
     list.innerHTML = '';
     // ⭐ 常用
-    var favItem = mk('div', 'ke-cat-item' + (state.activeCategory === _COMMON_CAT ? ' ke-cat-active' : ''), '<span style="font-weight:600;">' + _COMMON_CAT + '</span><span class="ke-cat-count">' + _commonBlocks.length + '</span>');
+    var favItem = mk('div', 'ke-cat-item' + (state.activeCategory === _COMMON_CAT ? ' ke-cat-active' : ''), '<span style="font-weight:600;">' + I18N.t('kether.catCommon') + '</span><span class="ke-cat-count">' + _commonBlocks.length + '</span>');
     favItem.onclick = function() { playSound('lightclick'); state.activeCategory = _COMMON_CAT; list.querySelectorAll('.ke-cat-item').forEach(function(el) { el.classList.remove('ke-cat-active'); }); favItem.classList.add('ke-cat-active'); renderActions(overlay, state, _COMMON_CAT, ''); };
     list.appendChild(favItem);
 
-    const allItem = mk('div', 'ke-cat-item' + (state.activeCategory == null ? ' ke-cat-active' : ''), '<span style="font-weight:600;">全部</span><span class="ke-cat-count">' + _actions.length + '</span>');
+    const allItem = mk('div', 'ke-cat-item' + (state.activeCategory == null ? ' ke-cat-active' : ''), '<span style="font-weight:600;">' + I18N.t('kether.catAll') + '</span><span class="ke-cat-count">' + _actions.length + '</span>');
     allItem.onclick = () => { playSound('lightclick'); state.activeCategory = null; list.querySelectorAll('.ke-cat-item').forEach(el => el.classList.remove('ke-cat-active')); allItem.classList.add('ke-cat-active'); renderActions(overlay, state, null, ''); };
     list.appendChild(allItem);
 
     for (const cat of _categoryList) {
       const color = catColor(cat);
       const count = (_categorizedActions[cat] || []).length;
-      const item = mk('div', 'ke-cat-item' + (state.activeCategory === cat ? ' ke-cat-active' : ''), '<span class="ke-cat-dot" style="background:' + color + '"></span>' + esc(cat) + '<span class="ke-cat-count">' + count + '</span>');
+      const item = mk('div', 'ke-cat-item' + (state.activeCategory === cat ? ' ke-cat-active' : ''), '<span class="ke-cat-dot" style="background:' + color + '"></span>' + esc(I18N.desc('categories', cat, cat)) + '<span class="ke-cat-count">' + count + '</span>');
       item.onclick = () => { playSound('lightclick'); state.activeCategory = cat; list.querySelectorAll('.ke-cat-item').forEach(el => el.classList.remove('ke-cat-active')); item.classList.add('ke-cat-active'); renderActions(overlay, state, cat, ''); };
       list.appendChild(item);
     }
@@ -2224,7 +2233,7 @@
       const def = isDefaultProvider(act.provider);
       const item = mk('div', 'ke-action-item' + (def ? '' : ' ke-action-warn'), '');
       const aColor = actionColor(act, state.activeCategory);
-      item.innerHTML = '<span class="ke-action-color" style="background:' + aColor + '"></span><span class="ke-action-name">' + esc(act.name) + '</span><span class="ke-action-provider">' + esc(act.provider) + '</span>';
+      item.innerHTML = '<span class="ke-action-color" style="background:' + aColor + '"></span><span class="ke-action-name">' + esc(builtinNameEn(act.id) || act.name) + '</span><span class="ke-action-provider">' + esc(act.provider) + '</span>';
       item.onclick = () => { playSound('select'); addBlock(overlay, state, act, null, null, state.activeCategory); };
       item.draggable = true;
       item.ondragstart = (e) => {
@@ -2234,7 +2243,7 @@
         e.dataTransfer.setData('text/ke-new', act.id);
         e.dataTransfer.effectAllowed = 'copy';
       };
-      bindTooltip(item, highlightBraces(act.description), true);
+      bindTooltip(item, highlightBraces(I18N.desc('kether', act._variantOf || act.id, act.description)), true);
       item.oncontextmenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2245,11 +2254,11 @@
         menu.style.left = e.clientX + 'px';
         menu.style.top = e.clientY + 'px';
         menu.innerHTML =
-          '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
+          '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> ' + I18N.t('kether.copyBlock') + '</div>' +
           '<div class="ke-ctx-sep"></div>' +
-          '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>' +
+          '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> ' + I18N.t('kether.viewDetail') + '</div>' +
           '<div class="ke-ctx-sep"></div>' +
-          '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> 添加为常用积木</div>';
+          '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> ' + I18N.t('kether.addFavorite') + '</div>';
         menu.querySelector('[data-act="copy-block"]').onclick = function() {
           playSound('click');
           _clipboard = { _type: 'act', action: act };
@@ -2274,7 +2283,7 @@
       };
       list.appendChild(item);
     }
-    if (acts.length === 0) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:11px;">无匹配动作</div>';
+    if (acts.length === 0) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:11px;">' + I18N.t('kether.noMatchActions') + '</div>';
   }
 
   // ============================================
@@ -2380,7 +2389,7 @@ document.addEventListener('dragover', function (e) {
   // 语义化渲染
   // ============================================
   function renderSemanticBlock(body, block, actionDef, state, overlay) {
-    const sm = actionDef.semantic;
+    const sm = I18N.desc('ketherSem', actionDef._variantOf || actionDef.id, actionDef.semantic);
     if (!sm) { body.innerHTML = blockLabelHtml(block); return; }
 
     // collect non-keyword params in order
@@ -2409,7 +2418,7 @@ document.addEventListener('dragover', function (e) {
           const SYM_OPS = ['>', '>=', '==', '<=', '<', '!=', '=!', 'in', 'is'];
           const curVal = block.values[p.key || p.label] || '';
           const sel = mk('select', 'ke-b-select', '');
-          sel.innerHTML = '<option value="">?</option>' + SYM_OPS.map(o => '<option value="' + esc(o) + '"' + (curVal === o ? ' selected' : '') + '>' + esc(o) + '</option>') + '<option value="__custom__"' + (curVal && !SYM_OPS.includes(curVal) ? ' selected' : '') + '>✎ 自定义</option>';
+          sel.innerHTML = '<option value="">?</option>' + SYM_OPS.map(o => '<option value="' + esc(o) + '"' + (curVal === o ? ' selected' : '') + '>' + esc(o) + '</option>') + '<option value="__custom__"' + (curVal && !SYM_OPS.includes(curVal) ? ' selected' : '') + '>' + I18N.t('kether.customSymbol') + '</option>';
           const sk = p.key, slb = p.label;
           sel.onchange = () => {
             if (sel.value === '__custom__') {
@@ -2424,7 +2433,7 @@ document.addEventListener('dragover', function (e) {
           body.appendChild(sel);
           const custInp = mk('input', 'ke-b-input', '');
           custInp.value = curVal && !SYM_OPS.includes(curVal) ? curVal : '';
-          custInp.placeholder = '自定义符号';
+          custInp.placeholder = I18N.t('kether.customSymbolPlaceholder');
           custInp.style.display = curVal && !SYM_OPS.includes(curVal) ? '' : 'none';
           custInp.style.maxWidth = '80px';
           const ck = p.key, clb = p.label;
@@ -2434,7 +2443,7 @@ document.addEventListener('dragover', function (e) {
           const v = block.values[p.key || p.label] || '';
           const ip = mk('input', 'ke-b-input', '');
           ip.value = v;
-          ip.placeholder = p.label || p.key;
+          ip.placeholder = I18N.desc('param', p.label, p.label) || p.key;
           ip.style.maxWidth = '80px';
           const ik = p.key, ilb = p.label;
           ip.oninput = () => { block.values[ik || ilb] = ip.value; updatePreview(overlay, state); };
@@ -2442,7 +2451,7 @@ document.addEventListener('dragover', function (e) {
           const invActs = ['inventory_check','inventory_count','inventory_take','equipment_check','inventory_slot_check'];
           if (invActs.indexOf(block.actionId) !== -1 && p.label === 'token') {
             const eb = mk('button', 'ke-b-helper', '📦');
-            bindTooltip(eb, '可视化物品编辑');
+            bindTooltip(eb, I18N.t('kether.itemEdit'));
             const ev = v, ek = p.key || p.label;
             eb.onclick = (e) => {
               e.stopPropagation();
@@ -2453,7 +2462,7 @@ document.addEventListener('dragover', function (e) {
             body.appendChild(eb);
           } else if (block.actionId === 'position' && p.label === 'token') {
             const eb2 = mk('button', 'ke-b-helper', '📍');
-            bindTooltip(eb2, '可视化坐标编辑');
+            bindTooltip(eb2, I18N.t('kether.posEdit'));
             const ev2 = v, ek2 = p.key || p.label;
             eb2.onclick = (e) => {
               e.stopPropagation();
@@ -2481,7 +2490,7 @@ document.addEventListener('dragover', function (e) {
     const c = overlay.querySelector('#ke-canvas');
     if (!c) return;
     if (state.blocks.length === 0) {
-      c.innerHTML = '<div class="ke-empty-state"><p style="font-size:32px;opacity:0.15;">🧊</p><p>点击 <strong>+ 添加积木</strong> 开始</p><p style="font-size:10px;opacity:0.3;">或切换到代码模式直接输入</p></div>';
+      c.innerHTML = '<div class="ke-empty-state"><p style="font-size:32px;opacity:0.15;">🧊</p><p>' + I18N.t('kether.emptyState') + '</p><p style="font-size:10px;opacity:0.3;">' + I18N.t('kether.emptyStateHint') + '</p></div>';
       return;
     }
     const inner = document.createElement('div');
@@ -2580,7 +2589,7 @@ document.addEventListener('dragover', function (e) {
           const val = block.values[p.key || p.label] || '';
           const inp = mk('input', 'ke-b-input', '');
           inp.value = val;
-          inp.placeholder = PARAM_LABEL_CN[p.label] || p.label;
+          inp.placeholder = I18N.desc('param', p.label, PARAM_LABEL_CN[p.label] || p.label);
           inp.oninput = () => { block.values[p.key || p.label] = inp.value; updatePreview(overlay, state); };
           body.appendChild(inp);
         } else if (p.type === 'keyword') {
@@ -2598,12 +2607,12 @@ document.addEventListener('dragover', function (e) {
 
       if (block.actionId === 'if_else') {
         // then slot
-        const thenLabel = mk('div', 'ke-b-slot-label', '执行');
+        const thenLabel = mk('div', 'ke-b-slot-label', I18N.t('kether.then'));
         cbody.appendChild(thenLabel);
         const thenSlot = mkSlot(block, 'then', state, overlay);
         cbody.appendChild(thenSlot);
         // else slot
-        const elseLabel = mk('div', 'ke-b-slot-label ke-slot-else-label', '否则');
+        const elseLabel = mk('div', 'ke-b-slot-label ke-slot-else-label', I18N.t('kether.else'));
         cbody.appendChild(elseLabel);
         const elseSlot = mkSlot(block, 'else', state, overlay);
         cbody.appendChild(elseSlot);
@@ -2622,8 +2631,8 @@ document.addEventListener('dragover', function (e) {
         const conds = block.condBlocks || [];
         if (conds.length === 0) {
           listSlot.classList.add('ke-b-slot-empty');
-          listSlot.textContent = '+ 添加条件';
-          bindTooltip(listSlot, SLOT_HELP, true);
+          listSlot.textContent = I18N.t('kether.addCondition');
+          bindTooltip(listSlot, slotHelp(), true);
         } else {
           for (const child of conds) {
             listSlot.appendChild(renderBlock(child, state, overlay, true));
@@ -2631,7 +2640,7 @@ document.addEventListener('dragover', function (e) {
           var addBtn = document.createElement('span');
           addBtn.className = 'ke-slot-add-btn';
           addBtn.textContent = '+';
-          bindTooltip(addBtn, SLOT_HELP, true);
+          bindTooltip(addBtn, slotHelp(), true);
           listSlot.appendChild(addBtn);
         }
         listSlot.onclick = (e) => {
@@ -2667,7 +2676,7 @@ document.addEventListener('dragover', function (e) {
           if (condItems.length === 0) {
             condSlot.classList.add('ke-b-slot-empty');
             condSlot.textContent = '+';
-            bindTooltip(condSlot, SLOT_HELP, true);
+            bindTooltip(condSlot, slotHelp(), true);
           } else {
             for (const child of condItems) {
               condSlot.appendChild(renderBlock(child, state, overlay, true));
@@ -2684,7 +2693,7 @@ document.addEventListener('dragover', function (e) {
             const addBtn = document.createElement('span');
             addBtn.className = 'ke-slot-add-btn';
             addBtn.textContent = '+';
-            bindTooltip(addBtn, SLOT_HELP, true);
+            bindTooltip(addBtn, slotHelp(), true);
             addBtn.onclick = (e) => {
               e.stopPropagation();
               handleSlotClick(e, block, 'wcond-' + bi, state, overlay);
@@ -2697,7 +2706,7 @@ document.addEventListener('dragover', function (e) {
           if (block._whenBranches.length > 1) {
             const delBtn = mk('button', 'ke-branch-del', '✕');
             delBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:10px;padding:0 2px;line-height:1;margin-left:auto;';
-            bindTooltip(delBtn, '删除此分支');
+            bindTooltip(delBtn, I18N.t('kether.deleteBranch'));
             delBtn.onclick = (e) => {
               e.stopPropagation();
               playSound('close');
@@ -2716,7 +2725,7 @@ document.addEventListener('dragover', function (e) {
           if (br.blocks.length === 0) {
             branchSlot.classList.add('ke-b-slot-empty');
             branchSlot.textContent = '+';
-            bindTooltip(branchSlot, SLOT_HELP, true);
+            bindTooltip(branchSlot, slotHelp(), true);
           } else {
             for (const child of br.blocks) {
               branchSlot.appendChild(renderBlock(child, state, overlay, true));
@@ -2724,7 +2733,7 @@ document.addEventListener('dragover', function (e) {
             var addBtn = document.createElement('span');
             addBtn.className = 'ke-slot-add-btn';
             addBtn.textContent = '+';
-            bindTooltip(addBtn, SLOT_HELP, true);
+            bindTooltip(addBtn, slotHelp(), true);
             addBtn.onclick = (e) => {
               e.stopPropagation();
               handleSlotClick(e, block, 'branch-' + bi, state, overlay);
@@ -2741,7 +2750,7 @@ document.addEventListener('dragover', function (e) {
           cbody.appendChild(branchEl);
         }
         // 添加分支按钮
-        const addBranchBtn = mk('button', 'ke-branch-add', '+ 添加 when 分支');
+        const addBranchBtn = mk('button', 'ke-branch-add', I18N.t('kether.addWhenBranch'));
         addBranchBtn.style.cssText = 'background:rgba(255,255,255,0.1);border:1px dashed rgba(255,255,255,0.25);border-radius:4px;color:rgba(255,255,255,0.6);cursor:pointer;font-size:10px;padding:3px 10px;margin-bottom:6px;width:100%;';
         addBranchBtn.onclick = () => {
           playSound('lightclick');
@@ -2758,12 +2767,12 @@ document.addEventListener('dragover', function (e) {
       } else {
         // while/repeat/foreach - body slot
         if (block.actionId === 'while' || block.actionId === 'repeat') {
-          const bodyLabel = mk('div', 'ke-b-slot-label', '执行');
+          const bodyLabel = mk('div', 'ke-b-slot-label', I18N.t('kether.then'));
           cbody.appendChild(bodyLabel);
           const bodySlot = mkSlot(block, 'then', state, overlay);
           cbody.appendChild(bodySlot);
         } else if (block.actionId === 'foreach') {
-          const bodyLabel = mk('div', 'ke-b-slot-label', '执行');
+          const bodyLabel = mk('div', 'ke-b-slot-label', I18N.t('kether.then'));
           cbody.appendChild(bodyLabel);
           const bodySlot = mkSlot(block, 'then', state, overlay);
           cbody.appendChild(bodySlot);
@@ -2824,7 +2833,7 @@ document.addEventListener('dragover', function (e) {
             const SYM_OPS = ['>', '>=', '==', '<=', '<', '!=', '=!', 'in', 'is'];
             const curVal = block.values[p.key || p.label] || '';
             const sel = mk('select', 'ke-b-select', '');
-            sel.innerHTML = '<option value="">?</option>' + SYM_OPS.map(o => '<option value="' + esc(o) + '"' + (curVal === o ? ' selected' : '') + '>' + esc(o) + '</option>') + '<option value="__custom__"' + (curVal && !SYM_OPS.includes(curVal) ? ' selected' : '') + '>✎ 自定义</option>';
+            sel.innerHTML = '<option value="">?</option>' + SYM_OPS.map(o => '<option value="' + esc(o) + '"' + (curVal === o ? ' selected' : '') + '>' + esc(o) + '</option>') + '<option value="__custom__"' + (curVal && !SYM_OPS.includes(curVal) ? ' selected' : '') + '>' + I18N.t('kether.customSymbol') + '</option>';
             sel.onchange = () => {
               if (sel.value === '__custom__') {
                 custInp.style.display = '';
@@ -2838,7 +2847,7 @@ document.addEventListener('dragover', function (e) {
             body.appendChild(sel);
             const custInp = mk('input', 'ke-b-input', '');
             custInp.value = curVal && !SYM_OPS.includes(curVal) ? curVal : '';
-            custInp.placeholder = '自定义符号';
+            custInp.placeholder = I18N.t('kether.customSymbolPlaceholder');
             custInp.style.display = curVal && !SYM_OPS.includes(curVal) ? '' : 'none';
             custInp.oninput = () => { block.values[p.key || p.label] = custInp.value; updatePreview(overlay, state); };
             body.appendChild(custInp);
@@ -2854,7 +2863,7 @@ document.addEventListener('dragover', function (e) {
           const invActions = ['inventory_check','inventory_count','inventory_take','equipment_check','inventory_slot_check'];
           if (invActions.includes(block.actionId) && p.label === 'token') {
             const editBtn = mk('button', 'ke-b-helper', '📦');
-            bindTooltip(editBtn, '可视化物品编辑');
+            bindTooltip(editBtn, I18N.t('kether.itemEdit'));
             editBtn.onclick = (e) => {
               e.stopPropagation();
               const current = block.values[p.key || p.label] || '';
@@ -2871,7 +2880,7 @@ document.addEventListener('dragover', function (e) {
             body.appendChild(editBtn);
           } else if (block.actionId === 'position' && p.label === 'token') {
             const editBtn = mk('button', 'ke-b-helper', '📍');
-            bindTooltip(editBtn, '可视化坐标编辑');
+            bindTooltip(editBtn, I18N.t('kether.posEdit'));
             editBtn.onclick = (e) => {
               e.stopPropagation();
               const current = block.values[p.key || p.label] || '';
@@ -2910,10 +2919,10 @@ document.addEventListener('dragover', function (e) {
     el.dataset.bid = block.id;
     const body = document.createElement('div');
     body.className = 'ke-b-body';
-    body.innerHTML = '<span class="ke-b-label">⧉ 自定义</span>';
+    body.innerHTML = '<span class="ke-b-label">' + I18N.t('kether.customBlock') + '</span>';
     const inp = mk('input', 'ke-b-input', '');
     inp.value = block.values.code || block.customCode || '';
-    inp.placeholder = 'Kether 代码...';
+    inp.placeholder = I18N.t('kether.ketherCode');
     inp.style.flex = '1';
     inp.oninput = () => { block.values.code = inp.value; updatePreview(overlay, state); };
     body.appendChild(inp);
@@ -2989,22 +2998,22 @@ document.addEventListener('dragover', function (e) {
     const quoteBtn = document.createElement('button');
     quoteBtn.textContent = '""';
     quoteBtn.className = 'ke-quote-btn-inline';
-    bindTooltip(quoteBtn, quoted ? '点击取消引号' : '点击添加引号');
-    quoteBtn.style.cssText = 'background:' + (quoted ? '#2ecc71' : 'rgba(255,255,255,0.1)') + ';border:none;border-radius:2px;color:#fff;font-size:9px;padding:0 4px;cursor:pointer;line-height:1.6;flex-shrink:0;font-weight:' + (quoted ? '700' : '400') + ';margin-right:2px;';
+    bindTooltip(quoteBtn, quoted ? I18N.t('kether.removeQuote') : I18N.t('kether.addQuote'));
+    quoteBtn.style.cssText = 'background:' + (quoted ? 'var(--color-success)' : 'var(--color-bg-tertiary)') + ';border:none;border-radius:2px;color:#fff;font-size:9px;padding:0 4px;cursor:pointer;line-height:1.6;flex-shrink:0;font-weight:' + (quoted ? '700' : '400') + ';margin-right:2px;';
     quoteBtn.onclick = (e) => {
       e.stopPropagation();
       playSound("lightclick");
       block._quoted = block._quoted === false ? true : false;
       const q = block._quoted !== false;
-      quoteBtn.style.background = q ? '#2ecc71' : 'rgba(255,255,255,0.1)';
+      quoteBtn.style.background = q ? 'var(--color-success)' : 'var(--color-bg-tertiary)';
       quoteBtn.style.fontWeight = q ? '700' : '400';
-      bindTooltip(quoteBtn, q ? '点击取消引号' : '点击添加引号');
+      bindTooltip(quoteBtn, q ? I18N.t('kether.removeQuote') : I18N.t('kether.addQuote'));
       updatePreview(overlay, state);
     };
     body.appendChild(quoteBtn);
     const inp = mk('input', 'ke-b-input', '');
     inp.value = block.values.text || '';
-    inp.placeholder = '文本值...';
+    inp.placeholder = I18N.t('kether.textValue');
     inp.style.fontSize = '10px';
     inp.style.padding = '1px 4px';
     inp.style.minWidth = '40px';
@@ -3069,10 +3078,10 @@ document.addEventListener('dragover', function (e) {
     const body = document.createElement('div');
     body.className = 'ke-b-body';
     body.style.padding = '2px 6px';
-    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;"># 无引号</span>';
+    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;">' + I18N.t('kether.unquoted') + '</span>';
     const inp = mk('input', 'ke-b-input', '');
     inp.value = block.values.text || '';
-    inp.placeholder = '值...';
+    inp.placeholder = I18N.t('kether.value');
     inp.style.fontSize = '10px';
     inp.style.padding = '1px 4px';
     inp.style.minWidth = '40px';
@@ -3097,7 +3106,7 @@ document.addEventListener('dragover', function (e) {
     const body = document.createElement('div');
     body.className = 'ke-b-body';
     body.style.padding = '2px 6px';
-    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;">[ ] 列表</span>';
+    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;">' + I18N.t('kether.list') + '</span>';
     // 子项插槽
     const slot = document.createElement('div');
     slot.className = 'ke-b-slot';
@@ -3113,7 +3122,7 @@ document.addEventListener('dragover', function (e) {
     if (items.length === 0) {
       slot.classList.add('ke-b-slot-empty');
       slot.textContent = '+';
-      bindTooltip(slot, SLOT_HELP, true);
+      bindTooltip(slot, slotHelp(), true);
     } else {
       for (const child of items) {
         slot.appendChild(renderBlock(child, state, overlay, true));
@@ -3121,7 +3130,7 @@ document.addEventListener('dragover', function (e) {
       var addBtn = document.createElement('span');
       addBtn.className = 'ke-slot-add-btn';
       addBtn.textContent = '+';
-      bindTooltip(addBtn, SLOT_HELP, true);
+      bindTooltip(addBtn, slotHelp(), true);
       addBtn.onclick = (e) => {
         e.stopPropagation();
         handleSlotClick(e, block, 'then', state, overlay);
@@ -3154,7 +3163,7 @@ document.addEventListener('dragover', function (e) {
     const body = document.createElement('div');
     body.className = 'ke-b-body';
     body.style.padding = '2px 6px';
-    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;">{ } 动作组</span>';
+    body.innerHTML = '<span class="ke-b-label" style="font-size:9px;opacity:0.7;">' + I18N.t('kether.actionGroup') + '</span>';
     // 子动作插槽
     const slot = document.createElement('div');
     slot.className = 'ke-b-slot';
@@ -3170,7 +3179,7 @@ document.addEventListener('dragover', function (e) {
     if (items.length === 0) {
       slot.classList.add('ke-b-slot-empty');
       slot.textContent = '+';
-      bindTooltip(slot, SLOT_HELP, true);
+      bindTooltip(slot, slotHelp(), true);
     } else {
       for (const child of items) {
         slot.appendChild(renderBlock(child, state, overlay, true));
@@ -3178,7 +3187,7 @@ document.addEventListener('dragover', function (e) {
       var addBtn = document.createElement('span');
       addBtn.className = 'ke-slot-add-btn';
       addBtn.textContent = '+';
-      bindTooltip(addBtn, SLOT_HELP, true);
+      bindTooltip(addBtn, slotHelp(), true);
       addBtn.onclick = (e) => {
         e.stopPropagation();
         handleSlotClick(e, block, 'then', state, overlay);
@@ -3220,7 +3229,7 @@ document.addEventListener('dragover', function (e) {
       header.appendChild(nameInp);
       header.appendChild(mk('span', '', '='));
     } else {
-      header.innerHTML = '<span class="ke-entry-icon">📥</span> 入口 <span class="ke-entry-sub">普通</span>';
+      header.innerHTML = '<span class="ke-entry-icon">📥</span> ' + I18N.t('kether.entry') + ' <span class="ke-entry-sub">' + I18N.t('kether.normal') + '</span>';
     }
     var delBtn = mk("button", "ke-b-del", "✕");
     delBtn.onclick = () => { playSound("lightclick"); removeBlock(state, entry.id, overlay); };
@@ -3245,8 +3254,8 @@ document.addEventListener('dragover', function (e) {
     const items = entry.thenBlocks || [];
     if (items.length === 0) {
       slot.classList.add('ke-entry-slot-empty');
-      slot.textContent = '+ 拖入或点击添加积木';
-      bindTooltip(slot, SLOT_HELP, true);
+      slot.textContent = I18N.t('kether.entrySlotHint');
+      bindTooltip(slot, slotHelp(), true);
     } else {
       for (const item of items) {
         slot.appendChild(renderBlock(item, state, overlay, true));
@@ -3347,17 +3356,17 @@ document.addEventListener('dragover', function (e) {
       const isQuoted = block._actionQuoted && block._actionQuoted[key] === true;
       quoteBtn.textContent = '""';
       quoteBtn.className = 'ke-quote-btn';
-      bindTooltip(quoteBtn, isQuoted ? '点击取消引号' : '点击添加引号');
-      quoteBtn.style.cssText = 'background:' + (isQuoted ? '#2ecc71' : 'rgba(255,255,255,0.1)') + ';border:none;border-radius:2px;color:#fff;font-size:9px;padding:0 4px;cursor:pointer;line-height:1.6;flex-shrink:0;font-weight:' + (isQuoted ? '700' : '400') + ';';
+      bindTooltip(quoteBtn, isQuoted ? I18N.t('kether.removeQuote') : I18N.t('kether.addQuote'));
+      quoteBtn.style.cssText = 'background:' + (isQuoted ? 'var(--color-success)' : 'var(--color-bg-tertiary)') + ';border:none;border-radius:2px;color:#fff;font-size:9px;padding:0 4px;cursor:pointer;line-height:1.6;flex-shrink:0;font-weight:' + (isQuoted ? '700' : '400') + ';';
       quoteBtn.onclick = (e) => {
         e.stopPropagation();
         playSound('lightclick');
         if (!block._actionQuoted) block._actionQuoted = {};
         const current = block._actionQuoted[key] === true;
         block._actionQuoted[key] = current ? false : true;
-        quoteBtn.style.background = block._actionQuoted[key] === true ? '#2ecc71' : 'rgba(255,255,255,0.1)';
+        quoteBtn.style.background = block._actionQuoted[key] === true ? 'var(--color-success)' : 'var(--color-bg-tertiary)';
         quoteBtn.style.fontWeight = block._actionQuoted[key] === true ? '700' : '400';
-        bindTooltip(quoteBtn, block._actionQuoted[key] === true ? '点击取消引号' : '点击添加引号');
+        bindTooltip(quoteBtn, block._actionQuoted[key] === true ? I18N.t('kether.removeQuote') : I18N.t('kether.addQuote'));
         updatePreview(overlay, state);
       };
       wrapper.appendChild(quoteBtn);
@@ -3391,7 +3400,7 @@ document.addEventListener('dragover', function (e) {
     if (items.length === 0) {
       slot.classList.add('ke-b-slot-empty');
       slot.textContent = '+';
-      bindTooltip(slot, SLOT_HELP, true);
+      bindTooltip(slot, slotHelp(), true);
     } else {
       for (const item of items) {
         slot.appendChild(renderBlock(item, state, overlay, true));
@@ -3400,7 +3409,7 @@ document.addEventListener('dragover', function (e) {
       var addBtn = document.createElement('span');
       addBtn.className = 'ke-slot-add-btn';
       addBtn.textContent = '+';
-      bindTooltip(addBtn, SLOT_HELP, true);
+      bindTooltip(addBtn, slotHelp(), true);
       addBtn.onclick = (e) => {
         e.stopPropagation();
         if (e.ctrlKey && e.shiftKey) {
@@ -3689,14 +3698,14 @@ document.addEventListener('dragover', function (e) {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
         menu.innerHTML =
-      '<div class="ke-ctx-item" data-action="detail"><span>📋</span> 查看描述</div>' +
+      '<div class="ke-ctx-item" data-action="detail"><span>📋</span> ' + I18N.t('kether.ctxDetail') + '</div>' +
       '<div class="ke-ctx-sep"></div>' +
-      '<div class="ke-ctx-item" data-action="copy"><span>📋</span> 复制<span class="ke-ctx-shortcut">Ctrl+C</span></div>' +
-      '<div class="ke-ctx-item" data-action="paste"><span>📄</span> 粘贴<span class="ke-ctx-shortcut">Ctrl+V</span></div>' +
+      '<div class="ke-ctx-item" data-action="copy"><span>📋</span> ' + I18N.t('kether.ctxCopy') + '<span class="ke-ctx-shortcut">Ctrl+C</span></div>' +
+      '<div class="ke-ctx-item" data-action="paste"><span>📄</span> ' + I18N.t('kether.ctxPaste') + '<span class="ke-ctx-shortcut">Ctrl+V</span></div>' +
       '<div class="ke-ctx-sep"></div>' +
-      '<div class="ke-ctx-item" data-action="save"><span>💾</span> 保存语句</div>' +
+      '<div class="ke-ctx-item" data-action="save"><span>💾</span> ' + I18N.t('kether.ctxSave') + '</div>' +
       '<div class="ke-ctx-sep"></div>' +
-      '<div class="ke-ctx-item ke-ctx-item-danger" data-action="delete"><span>🗑</span> 删除<span class="ke-ctx-shortcut">Del</span></div>';
+      '<div class="ke-ctx-item ke-ctx-item-danger" data-action="delete"><span>🗑</span> ' + I18N.t('kether.ctxDelete') + '<span class="ke-ctx-shortcut">Del</span></div>';
     menu.querySelector('[data-action="copy"]').onclick = () => {
       playSound('click');
       _clipboard = { _type: 'block', block: cloneBlock(block) };
@@ -3741,10 +3750,13 @@ document.addEventListener('dragover', function (e) {
       menu.remove();
       showBlockDetail(block, state);
     };
-    menu.querySelector('[data-action="save"]').onclick = () => {
+    menu.querySelector('[data-action="save"]').onclick = async () => {
       menu.remove();
       const code = blockToCode(block, '');
-      const name = prompt('保存语句名称:', block.name || block.actionId || '积木');
+      const name = await UI.prompt({
+        message: I18N.t('kether.saveStmtPrompt'),
+        defaultValue: block.name || block.actionId || I18N.t('kether.saveStmtDefault')
+      });
       if (name && code) {
         playSound('save');
         _savedBlocks.push({ name, code, id: Date.now().toString(36) });
@@ -3819,19 +3831,19 @@ document.addEventListener('dragover', function (e) {
     overlay2.className = 'ke-detail-overlay';
     var modal = document.createElement('div');
     modal.className = 'ke-detail-modal';
-    var html = '<div class="ke-detail-header"><span class="ke-detail-title">积木详情</span><button class="ke-detail-close">✕</button></div><div class="ke-detail-body">';
+    var html = '<div class="ke-detail-header"><span class="ke-detail-title">' + I18N.t('kether.blockDetail') + '</span><button class="ke-detail-close">✕</button></div><div class="ke-detail-body">';
     if (actionDef) {
       var fields = [];
       fields.push({ label: 'ID', value: actionDef.id });
-      fields.push({ label: '名称', value: actionDef.name });
-      fields.push({ label: '提供者', value: actionDef._module || actionDef.provider });
-      fields.push({ label: '类型', value: actionDef.type === 'private' ? '私有' : '公有' });
-      var catStr = (actionDef.categories || []).map(function(c) { var g = CAT_GROUP[c] || c; return g + '-' + c; }).join(', ');
-      fields.push({ label: '分类', value: catStr });
-      fields.push({ label: '语法', value: actionDef.syntax, mono: true, highlight: true });
-      if (actionDef.example) fields.push({ label: '示例', value: actionDef.example, mono: true });
-      if (actionDef.semantic) fields.push({ label: '语义', value: actionDef.semantic });
-      if (actionDef.description) fields.push({ label: '描述', value: actionDef.description, highlight: true });
+      fields.push({ label: I18N.t('kether.fieldName'), value: actionDef.name });
+      fields.push({ label: I18N.t('kether.fieldProvider'), value: actionDef._module || actionDef.provider });
+      fields.push({ label: I18N.t('kether.fieldType'), value: actionDef.type === 'private' ? I18N.t('kether.private') : I18N.t('kether.public') });
+      var catStr = (actionDef.categories || []).map(function(c) { var g = CAT_GROUP[c] || c; return I18N.desc('categories', g, g) + '-' + I18N.desc('categories', c, c); }).join(', ');
+      fields.push({ label: I18N.t('kether.fieldCategory'), value: catStr });
+      fields.push({ label: I18N.t('kether.fieldSyntax'), value: actionDef.syntax, mono: true, highlight: true });
+      if (actionDef.example) fields.push({ label: I18N.t('kether.fieldExample'), value: actionDef.example, mono: true });
+      if (actionDef.semantic) fields.push({ label: I18N.t('kether.fieldSemantic'), value: I18N.desc('ketherSem', actionDef._variantOf || actionDef.id, actionDef.semantic) });
+      if (actionDef.description) fields.push({ label: I18N.t('kether.fieldDescription'), value: I18N.desc('kether', actionDef._variantOf || actionDef.id, actionDef.description), highlight: true });
       for (var i = 0; i < fields.length; i++) {
         var f = fields[i];
         if (!f.value) continue;
@@ -3897,7 +3909,7 @@ document.addEventListener('dragover', function (e) {
 
   function updatePreview(overlay, state) {
     const fc = overlay.querySelector('#ke-fc');
-    if (fc) fc.textContent = generateCode(state.blocks) || '(空)';
+    if (fc) fc.textContent = generateCode(state.blocks) || I18N.t('kether.empty');
   }
 
   function countBlocks(state) {
@@ -3922,7 +3934,7 @@ document.addEventListener('dragover', function (e) {
 
     const tb = document.createElement('div');
     tb.className = 'ke-toolbox';
-    tb.innerHTML = '<div class="ke-toolbox-header">选择动作</div><button class="ke-toolbox-close">✕</button><div class="ke-toolbox-search"><input id="ke-tb-s" placeholder="搜索..." autofocus></div><div class="ke-toolbox-list" id="ke-tb-list"></div>';
+    tb.innerHTML = '<div class="ke-toolbox-header">' + I18N.t('kether.selectAction') + '</div><button class="ke-toolbox-close">✕</button><div class="ke-toolbox-search"><input id="ke-tb-s" placeholder="' + I18N.t('kether.search') + '" autofocus></div><div class="ke-toolbox-list" id="ke-tb-list"></div>';
     playSound('click');
 
     function render(q) {
@@ -3945,7 +3957,7 @@ document.addEventListener('dragover', function (e) {
           return score(a) - score(b);
         });
       }
-      list.innerHTML = acts.map(a => '<div class="ke-toolbox-item" data-id="' + a.id + '"><span style="width:4px;height:14px;border-radius:2px;background:' + a._providerColor + ';flex-shrink:0;"></span><span style="font-weight:500;">' + esc(a.name) + '</span><span style="opacity:0.4;font-size:9px;">' + esc(a.provider) + '</span></div>').join('') || '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);">无匹配</div>';
+      list.innerHTML = acts.map(a => '<div class="ke-toolbox-item" data-id="' + a.id + '"><span style="width:4px;height:14px;border-radius:2px;background:' + a._providerColor + ';flex-shrink:0;"></span><span style="font-weight:500;">' + esc(a.name) + '</span><span style="opacity:0.4;font-size:9px;">' + esc(a.provider) + '</span></div>').join('') || '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);">' + I18N.t('kether.noMatch') + '</div>';
       list.querySelectorAll('.ke-toolbox-item').forEach(el => {
         el.onclick = () => {
           if (clearLiteralKey && parentId) {
@@ -3968,11 +3980,11 @@ document.addEventListener('dragover', function (e) {
           menu.style.left = e.clientX + 'px';
           menu.style.top = e.clientY + 'px';
           menu.innerHTML =
-            '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> 复制积木</div>' +
+            '<div class="ke-ctx-item" data-act="copy-block"><span>📋</span> ' + I18N.t('kether.copyBlock') + '</div>' +
             '<div class="ke-ctx-sep"></div>' +
-            '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> 查看描述</div>' +
+            '<div class="ke-ctx-item" data-act="view-detail"><span>📖</span> ' + I18N.t('kether.viewDetail') + '</div>' +
             '<div class="ke-ctx-sep"></div>' +
-            '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> 添加为常用积木</div>';
+            '<div class="ke-ctx-item" data-act="fav-block"><span>⭐</span> ' + I18N.t('kether.addFavorite') + '</div>';
           menu.querySelector('[data-act="copy-block"]').onclick = function() {
             playSound('click');
             _clipboard = { _type: 'act', action: act };
@@ -4097,7 +4109,7 @@ document.addEventListener('dragover', function (e) {
         const block = findBlock(state.blocks, bid);
         if (block) {
           const code = blockToCode(block, '');
-          const name = block.name || block.actionId || '积木';
+          const name = block.name || block.actionId || I18N.t('kether.saveStmtDefault');
           _stashBlocks.push({ name, code, id: Date.now().toString(36) });
           saveStashBlocks();
           removeBlock(state, bid, overlay);
@@ -4112,7 +4124,7 @@ document.addEventListener('dragover', function (e) {
   // 代码模式
   // ============================================
   function renderCodeMode(overlay, body, state) {
-    body.innerHTML = '<div class="ke-code-panel"><div class="ke-workspace-header"><span>Kether 代码</span><div class="ke-workspace-actions"><button class="ke-btn" id="ke-parse">🔄 解析为积木</button></div></div><div class="ke-code-editor"><textarea id="ke-code-ta">' + esc(generateCode(state.blocks) || '') + '</textarea></div></div>';
+    body.innerHTML = '<div class="ke-code-panel"><div class="ke-workspace-header"><span>' + I18N.t('kether.codeTitle') + '</span><div class="ke-workspace-actions"><button class="ke-btn" id="ke-parse">🔄 ' + I18N.t('kether.parseToBlocks') + '</button></div></div><div class="ke-code-editor"><textarea id="ke-code-ta">' + esc(generateCode(state.blocks) || '') + '</textarea></div></div>';
     body.querySelector('#ke-parse').onclick = () => {
       playSound('update');
       _pushUndo(state);
@@ -4298,14 +4310,15 @@ document.addEventListener('dragover', function (e) {
       const label = parent ? parent.querySelector('label') : null;
       const lt = label ? label.textContent.toLowerCase() : '';
 
-      if (!ph.includes('kether') && !lt.includes('kether') && !lt.includes('脚本') && !f.includes('kether') && !f.includes('script')) return;
+      if (!ph.includes('kether') && !lt.includes('kether') && !lt.includes('脚本') && !lt.includes('script') && !f.includes('kether') && !f.includes('script')) return;
 
       el.dataset.keHooked = '1';
       if (parent && !parent.querySelector('.ke-open-btn')) {
         const btn = mk('button', '', '🧊');
         btn.className = 'ke-open-btn';
-        bindTooltip(btn, 'Kether 积木编辑器');
-        btn.style.cssText = 'padding:2px 8px;font-size:13px;cursor:pointer;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg-tertiary);color:var(--color-text-primary);flex-shrink:0;';
+        bindTooltip(btn, I18N.t('kether.title'));
+        btn.classList.add('cv-btn-secondary');
+        btn.style.cssText = 'padding:2px 8px;font-size:13px;flex-shrink:0;';
         btn.onclick = async (e) => {
           e.preventDefault();
           playSound("click");

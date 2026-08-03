@@ -2,6 +2,12 @@
 // 弹窗模式（嵌入主窗口 iframe）
 // ============================================
 
+// 用户是否实际修改过设置：beforeunload/关闭弹窗时避免用陈旧的 UI 状态全量覆盖配置
+// （iframe 每次打开都会重载, 期间主页面可能已写入 theme/ai 等字段, 无改动时保存会丢失这些并发写入）
+let _settingsDirty = false;
+document.addEventListener('change', function () { _settingsDirty = true; }, true);
+document.addEventListener('input', function () { _settingsDirty = true; }, true);
+
 const IS_EMBEDDED = window.self !== window.top;
 
 if (IS_EMBEDDED) {
@@ -10,7 +16,7 @@ if (IS_EMBEDDED) {
   // 保存完成后回复父页面，等它关闭弹窗，避免异步操作（如密码哈希）未完成
   window.addEventListener('message', (e) => {
     if (e.data && e.data.type === 'saveSettings') {
-      Promise.resolve(saveSettings()).catch(() => {}).then(() => {
+      Promise.resolve(_settingsDirty ? saveSettings() : Promise.resolve()).catch(() => {}).then(() => {
         window.parent.postMessage({ type: 'settingsSaved' }, '*');
       });
     }
@@ -720,9 +726,25 @@ function setupEventListeners() {
 // 主题应用
 // ============================================
 
-function applyTheme(theme) {
-  document.body.setAttribute('data-theme', theme);
+// auto 主题: 跟随系统 prefers-color-scheme
+function resolveTheme(t) {
+  if (t === 'auto') {
+    try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { return 'dark'; }
+  }
+  return t || 'dark';
 }
+
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', resolveTheme(theme));
+}
+
+// 系统主题切换时自动重新应用 (仅 auto 模式)
+try {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+    const t = themeSelect ? themeSelect.value : '';
+    if (t === 'auto') applyTheme('auto');
+  });
+} catch (e) {}
 
 function applyPreset(presetName) {
   
@@ -1117,6 +1139,7 @@ async function saveSettings() {
   applyCheckboxMarks(config);
   applyPremiumHint(config);
   applyVersionHint(config);
+  _settingsDirty = false;
   showNotification(I18N.t('settings.saved'), 'success');
 }
 
@@ -1581,7 +1604,7 @@ document.head.appendChild(style);
 // 页面加载时同步设置
 
 window.addEventListener('beforeunload', () => {
-  saveSettings();
+  if (_settingsDirty) saveSettings();
 });
 
 document.addEventListener('DOMContentLoaded', async () => {

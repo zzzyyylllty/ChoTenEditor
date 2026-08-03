@@ -549,9 +549,12 @@
     savedTheme = localStorage.getItem('theme') || 'dark';
   }
 
+  // auto 主题在首次渲染前解析为实际主题 (renderer.js 的 resolveTheme)
+  if (typeof resolveTheme === 'function') savedTheme = resolveTheme(savedTheme);
   body.setAttribute('data-theme', savedTheme);
 
-  // 应用保存的背景图片到 body
+  // 应用保存的背景图片到 body (与 renderer.js applyStoredConfig 保持一致:
+  // 反斜杠转正斜杠, 引号转义 %22, url() 加引号包裹)
   (function applyBackground() {
     try {
       const stored = localStorage.getItem('editorConfig');
@@ -563,7 +566,8 @@
       var opacity = bg.opacity != null ? bg.opacity : 0.3;
       var alpha = Math.round((1 - opacity) * 60) / 100;
       var bgColor = theme === 'light' ? 'rgba(255,255,255,' + alpha + ')' : 'rgba(0,0,0,' + alpha + ')';
-      document.body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
+      var bgUrl = String(bg.filename).replace(/\\/g, '/').replace(/"/g, '%22');
+      document.body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url("background/' + bgUrl + '") center/cover no-repeat fixed';
     } catch (e) {
       // 静默失败
     }

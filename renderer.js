@@ -1933,13 +1933,29 @@ window.appState = {
     return isVisualMode;
   },
 };
+// auto 主题: 跟随系统 prefers-color-scheme
+function resolveTheme(t) {
+  if (t === 'auto') {
+    try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { return 'dark'; }
+  }
+  return t || 'dark';
+}
+// 系统主题切换时自动重新应用 (仅 auto 模式)
+try {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+    const c = localStorage.getItem('editorConfig');
+    if (!c) return;
+    try { if ((JSON.parse(c).theme || 'dark') === 'auto') applyStoredConfig(); } catch (e) {}
+  });
+} catch (e) {}
+
 // 重新应用存储的主题/颜色/背景（窗口重新聚焦或设置弹窗关闭时调用）
 function applyStoredConfig() {
   const stored = localStorage.getItem('editorConfig');
   if (!stored) return;
   try {
     const config = JSON.parse(stored);
-    document.body.setAttribute('data-theme', config.theme || 'dark');
+    document.body.setAttribute('data-theme', resolveTheme(config.theme));
 
     // 重新应用字体（界面字体 + 编辑器字体）
     document.body.style.fontFamily = config.uiFont || '';
@@ -1976,7 +1992,9 @@ function applyStoredConfig() {
       const opacity = bg.opacity ?? 0.3;
       const alpha = (1 - opacity) * 0.6;
       const bgColor = theme === 'light' ? 'rgba(255,255,255,' + alpha + ')' : 'rgba(0,0,0,' + alpha + ')';
-      body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
+      // 文件名含空格/引号时 url() 需引号包裹, 否则背景失效
+      const bgUrl = String(bg.filename).replace(/\\/g, '/').replace(/"/g, '%22');
+      body.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url("background/' + bgUrl + '") center/cover no-repeat fixed';
     } else {
       const theme = body.getAttribute('data-theme') || 'dark';
       body.style.background = theme === 'light' ? '#ffffff' : '#000000';

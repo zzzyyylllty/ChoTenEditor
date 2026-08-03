@@ -555,14 +555,6 @@ function checkFilePermission(client, filePath) {
   return null; // 继承客户端级别权限
 }
 
-// 管理员批准文件更改
-function approveFileChange(clientId, path) {
-  // 从待处理队列中查找
-  // 由于我们没有存储待处理的更改，这里简化处理：
-  //  renderer 端在点"批准"时已经包含了内容和路径
-  // 这个方法不会被直接调用，而是由 renderer 发来已批准的内容直接写入
-}
-
 // 管理员直接写入文件（批准更改）
 function applyApprovedWrite(clientId, filePath, content) {
   if (!isValidPath(filePath) || typeof content !== 'string') {
