@@ -550,6 +550,7 @@ ai:
   deleted: "✅ 已删除: {path}"
   createFailed: "❌ 创建失败: {msg}"
   editFailed: "❌ 编辑失败: {msg}"
+  editOriginalNotFound: "⚠️ 未在 {path} 中找到要替换的原始内容, 编辑已取消"
   deleteFailed: "❌ 删除失败: {msg}"
   emptyHint: "💡 输入你的需求，AI 将帮助你编写和修改代码"
   clearConfirm: "确定清除所有对话历史？"

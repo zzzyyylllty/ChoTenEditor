@@ -24,6 +24,11 @@ function genSecurityCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+// 文件路径校验: 必须是合理长度的字符串, 防止非字符串路径使 fs 同步抛错崩溃主进程
+function isValidPath(p) {
+  return typeof p === 'string' && p.length > 0 && p.length < 4096;
+}
+
 // ============================================
 // 服务器
 // ============================================
@@ -107,7 +112,7 @@ async function startServer(port, password, options = {}) {
           try {
             msg = JSON.parse(raw.toString());
           } catch (e) {
-            safeSend({ type: 'error', message: '无效消息格式' });
+            safeSend({ type: 'error', message: '无效消息格式', errorKey: 'remote.invalidMessageFormat' });
             return;
           }
 
@@ -116,13 +121,13 @@ async function startServer(port, password, options = {}) {
             // ---- 认证阶段 ----
             if (msg.type === 'auth:request') {
               if (msg.password !== _serverPassword) {
-                safeSend({ type: 'auth:rejected', reason: '密码错误' });
+                safeSend({ type: 'auth:rejected', reason: '密码错误', errorKey: 'remote.wrongPassword' });
                 ws.close();
                 return;
               }
               // 版本检查：默认拒绝不同版本客户端
               if (msg.version && msg.version !== APP_VERSION && !_allowDifferentVersions) {
-                safeSend({ type: 'auth:rejected', reason: '客户端版本 (' + msg.version + ') 与服务器版本 (' + APP_VERSION + ') 不匹配，请在设置中开启"允许不同版本"' });
+                safeSend({ type: 'auth:rejected', reason: '客户端版本 (' + msg.version + ') 与服务器版本 (' + APP_VERSION + ') 不匹配，请在设置中开启"允许不同版本"', errorKey: 'remote.versionMismatch', errorKeyParams: { client: msg.version, server: APP_VERSION } });
                 ws.close();
                 return;
               }
@@ -139,7 +144,7 @@ async function startServer(port, password, options = {}) {
               return;
             }
 
-            safeSend({ type: 'error', message: '请先认证' });
+            safeSend({ type: 'error', message: '请先认证', errorKey: 'remote.authenticateFirst' });
             return;
           }
 
@@ -235,7 +240,7 @@ function rejectClient(clientId) {
   _pendingClients.delete(clientId);
   try {
     if (pending.ws.readyState === WebSocket.OPEN) {
-      pending.ws.send(JSON.stringify({ type: 'auth:rejected', reason: '管理员拒绝了连接请求' }));
+      pending.ws.send(JSON.stringify({ type: 'auth:rejected', reason: '管理员拒绝了连接请求', errorKey: 'remote.connectionRejectedByAdmin' }));
       pending.ws.close();
     }
   } catch (e) {}
@@ -280,7 +285,7 @@ function disconnectClient(clientId) {
   if (client) {
     try {
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify({ type: 'disconnected', reason: '管理员断开了连接' }));
+        client.ws.send(JSON.stringify({ type: 'disconnected', reason: '管理员断开了连接', errorKey: 'remote.disconnectedByAdmin' }));
         client.ws.close();
       }
     } catch (e) {}
@@ -333,6 +338,10 @@ function handleClientMessage(clientId, msg) {
     }
     case 'file:editing:start': {
       // 客户端开始编辑某个文件
+      if (!isValidPath(msg.path)) {
+        safeSendTo(client, { type: 'error', message: '无效路径', errorKey: 'remote.invalidPath' });
+        return;
+      }
       if (!client.editingFiles) client.editingFiles = new Set();
       client.editingFiles.add(msg.path);
       // 通知所有其他客户端
@@ -341,6 +350,10 @@ function handleClientMessage(clientId, msg) {
     }
     case 'file:editing:end': {
       // 客户端结束编辑某个文件
+      if (!isValidPath(msg.path)) {
+        safeSendTo(client, { type: 'error', message: '无效路径', errorKey: 'remote.invalidPath' });
+        return;
+      }
       if (client.editingFiles) client.editingFiles.delete(msg.path);
       broadcastToClients(clientId, { type: 'file:editing:ended', path: msg.path, clientId });
       break;
@@ -363,7 +376,7 @@ function handleClientMessage(clientId, msg) {
       break;
     }
     default:
-      safeSendTo(client, { type: 'error', message: `未知消息类型: ${msg.type}` });
+      safeSendTo(client, { type: 'error', message: `未知消息类型: ${msg.type}`, errorKey: 'remote.unknownMessageType', errorKeyParams: { type: msg.type } });
   }
 }
 
@@ -385,10 +398,14 @@ function safeSendTo(client, data) {
 
 function readClientFile(clientId, client, msg) {
   const filePath = msg.path;
+  if (!isValidPath(filePath)) {
+    safeSendTo(client, { type: 'file:read:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
+    return;
+  }
   // 权限检查
   const filePerm = checkFilePermission(client, filePath);
   if (filePerm === 'none') {
-    safeSendTo(client, { type: 'file:read:result', path: filePath, success: false, error: '无权限读取此文件' });
+    safeSendTo(client, { type: 'file:read:result', path: filePath, success: false, error: '无权限读取此文件', errorKey: 'remote.noReadPermission' });
     return;
   }
   fs.readFile(filePath, 'utf-8', (err, content) => {
@@ -402,15 +419,19 @@ function readClientFile(clientId, client, msg) {
 
 function writeClientFile(clientId, client, msg) {
   const filePath = msg.path;
+  if (!isValidPath(filePath) || typeof msg.content !== 'string') {
+    safeSendTo(client, { type: 'file:write:result', path: '', success: false, error: '无效路径或内容', errorKey: 'remote.invalidPath' });
+    return;
+  }
   const filePerm = checkFilePermission(client, filePath);
 
   if (filePerm === 'none') {
-    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: '无权限编辑此文件' });
+    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: '无权限编辑此文件', errorKey: 'remote.noEditPermission' });
     return;
   }
 
   if (client.permission === 'guest') {
-    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: '访客模式，无编辑权限' });
+    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: '访客模式，无编辑权限', errorKey: 'remote.guestNoEditPermission' });
     return;
   }
 
@@ -439,8 +460,14 @@ function writeClientFile(clientId, client, msg) {
 
 function listClientFiles(clientId, client, msg) {
   const dirPath = msg.path;
-  if (!dirPath) {
-    safeSendTo(client, { type: 'file:list:result', path: '', success: false, error: '未指定路径' });
+  if (!isValidPath(dirPath)) {
+    safeSendTo(client, { type: 'file:list:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
+    return;
+  }
+  // 目录列举同样受文件权限约束
+  const filePerm = checkFilePermission(client, dirPath);
+  if (filePerm === 'none') {
+    safeSendTo(client, { type: 'file:list:result', path: dirPath, success: false, error: '无权限浏览此目录', errorKey: 'remote.noReadPermission' });
     return;
   }
 
@@ -476,15 +503,19 @@ function listClientFiles(clientId, client, msg) {
 
 function deleteClientFile(clientId, client, msg) {
   const filePath = msg.path;
+  if (!isValidPath(filePath)) {
+    safeSendTo(client, { type: 'file:delete:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
+    return;
+  }
   const filePerm = checkFilePermission(client, filePath);
 
   if (filePerm === 'none') {
-    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: '无权限删除此文件' });
+    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: '无权限删除此文件', errorKey: 'remote.noDeletePermission' });
     return;
   }
 
   if (client.permission === 'guest') {
-    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: '访客模式，无删除权限' });
+    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: '访客模式，无删除权限', errorKey: 'remote.guestNoDeletePermission' });
     return;
   }
 
@@ -511,12 +542,15 @@ function deleteClientFile(clientId, client, msg) {
 }
 
 function checkFilePermission(client, filePath) {
-  if (!client.filePerms) return null;
+  if (!client.filePerms || typeof filePath !== 'string') return null;
+  const normPath = filePath.replace(/\\/g, '/');
   // 按完整路径匹配
   if (client.filePerms[filePath]) return client.filePerms[filePath];
-  // 按目录匹配
+  // 按目录匹配 (两侧统一斜杠; 目录前缀需以 / 结尾, 避免 C:\foo 误匹配 C:\foobar)
   for (const [pattern, perm] of Object.entries(client.filePerms)) {
-    if (filePath.startsWith(pattern.replace(/\\/g, '/'))) return perm;
+    const normPattern = String(pattern).replace(/\\/g, '/').replace(/\/+$/, '');
+    if (normPath === normPattern) return perm;
+    if (normPath.startsWith(normPattern + '/')) return perm;
   }
   return null; // 继承客户端级别权限
 }
@@ -531,6 +565,10 @@ function approveFileChange(clientId, path) {
 
 // 管理员直接写入文件（批准更改）
 function applyApprovedWrite(clientId, filePath, content) {
+  if (!isValidPath(filePath) || typeof content !== 'string') {
+    emit('server:error', { message: '批准写入参数无效' });
+    return;
+  }
   fs.writeFile(filePath, content, 'utf-8', (err) => {
     if (err) {
       emit('server:error', { message: `批准写入失败: ${err.message}` });
@@ -547,6 +585,10 @@ function applyApprovedWrite(clientId, filePath, content) {
 
 // 管理员批准删除文件
 function applyApprovedDelete(clientId, filePath) {
+  if (!isValidPath(filePath)) {
+    emit('server:error', { message: '批准删除路径无效' });
+    return;
+  }
   fs.unlink(filePath, (err) => {
     if (err) {
       emit('server:error', { message: `批准删除失败: ${err.message}` });
@@ -561,10 +603,10 @@ function applyApprovedDelete(clientId, filePath) {
 }
 
 // 管理员拒绝删除文件
-function notifyFileDeleteRejected(clientId, filePath, reason) {
+function notifyFileDeleteRejected(clientId, filePath, reason, errorKey) {
   const client = _serverClients.get(clientId);
   if (client) {
-    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: reason || '管理员拒绝了删除请求' });
+    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: reason || '管理员拒绝了删除请求', errorKey: errorKey || 'remote.deleteRejectedByAdmin' });
   }
 }
 
@@ -600,7 +642,7 @@ async function connectToServer(host, port, password, version) {
       const ws = new WebSocket(url);
       let authTimeout = setTimeout(() => {
         if (_client && (_client.readyState === WebSocket.OPEN || _client.readyState === WebSocket.CONNECTING)) {
-          emit('client:error', { message: '认证超时' });
+          emit('client:error', { message: '认证超时', errorKey: 'remote.authTimeout' });
           ws.close();
           _client = null;
         }
@@ -621,7 +663,7 @@ async function connectToServer(host, port, password, version) {
         try {
           msg = JSON.parse(raw.toString());
         } catch (e) {
-          emit('client:error', { message: '无效消息格式' });
+          emit('client:error', { message: '无效消息格式', errorKey: 'remote.invalidMessageFormat' });
           return;
         }
 
@@ -634,10 +676,12 @@ async function connectToServer(host, port, password, version) {
         }
         if (msg.type === 'auth:rejected') {
           clearTimeout(authTimeout);
-          emit('client:error', { message: msg.reason || '认证被拒绝' });
+          const rejectErr = new Error(msg.reason || '认证被拒绝');
+          rejectErr.errorKey = msg.errorKey || 'remote.authRejected';
+          emit('client:error', { message: msg.reason || '认证被拒绝', errorKey: rejectErr.errorKey });
           ws.close();
           _client = null;
-          reject(new Error(msg.reason || '认证被拒绝'));
+          reject(rejectErr);
           return;
         }
         if (msg.type === 'auth:approved') {
@@ -752,7 +796,7 @@ function handleServerMessage(ws, msg) {
       emit('client:auth:approved', { permissions: msg.permissions });
       break;
     case 'auth:rejected':
-      emit('client:error', { message: msg.reason || '认证被拒绝' });
+      emit('client:error', { message: msg.reason || '认证被拒绝', errorKey: msg.errorKey || 'remote.authRejected' });
       ws.close();
       _client = null;
       break;
@@ -763,19 +807,19 @@ function handleServerMessage(ws, msg) {
       emit('client:permission:updated', { permissions: msg.permissions });
       break;
     case 'file:read:result':
-      emit('client:file:read', { path: msg.path, success: msg.success, content: msg.content, error: msg.error });
+      emit('client:file:read', { path: msg.path, success: msg.success, content: msg.content, error: msg.error, errorKey: msg.errorKey, errorKeyParams: msg.errorKeyParams });
       break;
     case 'file:write:result':
-      emit('client:file:write:result', { path: msg.path, success: msg.success, error: msg.error });
+      emit('client:file:write:result', { path: msg.path, success: msg.success, error: msg.error, errorKey: msg.errorKey, errorKeyParams: msg.errorKeyParams });
       break;
     case 'file:write:pending':
       emit('client:file:write:pending', { path: msg.path });
       break;
     case 'file:list:result':
-      emit('client:file:list', { path: msg.path, success: msg.success, files: msg.files, error: msg.error });
+      emit('client:file:list', { path: msg.path, success: msg.success, files: msg.files, error: msg.error, errorKey: msg.errorKey, errorKeyParams: msg.errorKeyParams });
       break;
     case 'file:delete:result':
-      emit('client:file:delete:result', { path: msg.path, success: msg.success, error: msg.error });
+      emit('client:file:delete:result', { path: msg.path, success: msg.success, error: msg.error, errorKey: msg.errorKey, errorKeyParams: msg.errorKeyParams });
       break;
     case 'file:delete:pending':
       emit('client:file:delete:pending', { path: msg.path });
@@ -793,13 +837,13 @@ function handleServerMessage(ws, msg) {
       emit('client:server:stopped', {});
       break;
     case 'disconnected':
-      emit('client:disconnected', { reason: msg.reason });
+      emit('client:disconnected', { reason: msg.reason, errorKey: msg.errorKey });
       break;
     case 'pong':
       emit('client:pong', {});
       break;
     case 'error':
-      emit('client:error', { message: msg.message });
+      emit('client:error', { message: msg.message, errorKey: msg.errorKey, errorKeyParams: msg.errorKeyParams });
       break;
     default:
       console.warn('[REMOTE] 未知服务器消息:', msg.type);
@@ -815,10 +859,10 @@ function notifyFileChangeApproved(clientId, filePath) {
 }
 
 // 发送文件变更被拒绝
-function notifyFileChangeRejected(clientId, filePath, reason) {
+function notifyFileChangeRejected(clientId, filePath, reason, errorKey) {
   const client = _serverClients.get(clientId);
   if (client) {
-    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: reason || '更改被管理员拒绝' });
+    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: reason || '更改被管理员拒绝', errorKey: errorKey || 'remote.changeRejectedByAdmin' });
   }
 }
 

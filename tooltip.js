@@ -126,7 +126,26 @@
       if (c === '<') {
         // 白名单标签直通, 其余 (<ns> <arg:...> 等占位符) 转义显示
         var tm = /^<\/?([a-zA-Z][a-zA-Z0-9]*)\b/.exec(s.slice(i));
-        if (tm && MD_ALLOWED[tm[1].toLowerCase()]) { out += c; i++; continue; }
+        if (tm && MD_ALLOWED[tm[1].toLowerCase()]) {
+          var tagName = tm[1].toLowerCase();
+          var isClose = s[i + 1] === '/';
+          var ge = s.indexOf('>', i);
+          if (ge === -1) { out += '&lt;'; i++; continue; }
+          // 属性过滤: 仅 <a href> 允许且限定 http/https/mailto 协议, 其余标签/属性全部剥离 (防 XSS)
+          if (!isClose && tagName === 'a') {
+            var hrefMatch = /href\s*=\s*"([^"]*)"/i.exec(s.slice(i + 1, ge));
+            var href = hrefMatch ? hrefMatch[1] : '';
+            if (href && /^(https?:|mailto:)/i.test(href)) {
+              out += '<a href="' + href.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer">';
+            } else {
+              out += '<a>';
+            }
+          } else {
+            out += isClose ? '</' + tagName + '>' : '<' + tagName + '>';
+          }
+          i = ge + 1;
+          continue;
+        }
         out += '&lt;';
         i++;
         continue;
@@ -147,7 +166,11 @@
     var txt = el.getAttribute('data-tip');
     if (txt === null || txt === '') return false;
     el.__rtTip = 1;
-    RichTooltip.bind(el, function () { return RichTooltip.md(txt); });
+    // 闭包内动态读取 data-tip: 元素复用且属性更新后 (如标签标题改名) 不显示陈旧内容
+    RichTooltip.bind(el, function () {
+      var cur = el.getAttribute('data-tip');
+      return RichTooltip.md(cur === null || cur === '' ? txt : cur);
+    });
     return true;
   }
   function autoBind() {
@@ -155,7 +178,11 @@
     document.__rtAutoBound = 1;
     document.addEventListener('mouseover', function (e) {
       var el = findTip(e.target);
-      if (!el) return;
+      if (!el) {
+        // 悬停到无 data-tip 的元素: 收起可能残留的 tooltip (如提示元素被重建移除后)
+        if (tipEl && tipEl.style.display && tipEl.style.display !== 'none') hide();
+        return;
+      }
       if (!bindTip(el)) return;
       var txt = el.getAttribute('data-tip');
       RichTooltip.show(e, RichTooltip.md(txt));

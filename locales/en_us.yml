@@ -550,6 +550,7 @@ ai:
   deleted: "✅ Deleted: {path}"
   createFailed: "❌ Create failed: {msg}"
   editFailed: "❌ Edit failed: {msg}"
+  editOriginalNotFound: "⚠️ Original content not found in {path}, edit cancelled"
   deleteFailed: "❌ Delete failed: {msg}"
   emptyHint: "💡 Describe your needs and AI will help you write and modify code"
   clearConfirm: "Clear all chat history?"

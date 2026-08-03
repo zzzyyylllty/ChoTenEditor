@@ -137,6 +137,8 @@ var AIPanel = (function() {
 
   function close() {
     if (_overlay) _overlay.style.display = 'none';
+    // 关闭时若仍在流式请求: 停止状态并移除监听, 防止 reopen 后 _isStreaming 残留卡死输入
+    if (_isStreaming) stopStreaming();
     if (window.electronAPI && window.electronAPI.ai) window.electronAPI.ai.removeListeners();
   }
 
@@ -477,23 +479,36 @@ var AIPanel = (function() {
   // 文件操作解析
   // ============================================
 
+  // AI 输出的路径不可信: 拒绝绝对路径/盘符/.. 穿越/空路径, 防止写出当前文件目录之外
+  function isValidOpPath(p) {
+    if (typeof p !== 'string' || !p) return false;
+    if (p.indexOf('\\') !== -1) return false;
+    if (p.indexOf('..') !== -1) return false;
+    if (p.charAt(0) === '/') return false;
+    if (/^[a-zA-Z]:/.test(p) || p.indexOf(':') !== -1) return false;
+    return true;
+  }
+
   function parseFileOps(text) {
     _fileOps = [];
     var re, match;
 
     re = /```file:create\s+(\S+)\s*\n([\s\S]*?)```/g;
     while ((match = re.exec(text)) !== null) {
-      _fileOps.push({ type: 'create', path: match[1].trim(), content: match[2].trim(), accepted: null });
+      var cp = match[1].trim();
+      if (isValidOpPath(cp)) _fileOps.push({ type: 'create', path: cp, content: match[2].trim(), accepted: null });
     }
 
     re = /```file:edit\s+(\S+)\s*\n---ORIGINAL---\s*\n([\s\S]*?)---UPDATED---\s*\n([\s\S]*?)```/g;
     while ((match = re.exec(text)) !== null) {
-      _fileOps.push({ type: 'edit', path: match[1].trim(), original: match[2].trim(), content: match[3].trim(), accepted: null });
+      var ep = match[1].trim();
+      if (isValidOpPath(ep) && match[2].trim()) _fileOps.push({ type: 'edit', path: ep, original: match[2].trim(), content: match[3].trim(), accepted: null });
     }
 
     re = /```file:delete\s+(\S+)\s*```/g;
     while ((match = re.exec(text)) !== null) {
-      _fileOps.push({ type: 'delete', path: match[1].trim(), accepted: null });
+      var dp = match[1].trim();
+      if (isValidOpPath(dp)) _fileOps.push({ type: 'delete', path: dp, accepted: null });
     }
 
     renderFileOps();
@@ -599,8 +614,22 @@ var AIPanel = (function() {
         addSystemMessage(r.success ? I18N.t('ai.created', {path: op.path}) : I18N.t('ai.createFailed', {msg: r.error || I18N.t('error.unknown')}));
       });
     } else if (op.type === 'edit') {
-      window.electronAPI.writeFile(fullPath, op.content).then(function(r) {
-        addSystemMessage(r.success ? I18N.t('ai.edited', {path: op.path}) : I18N.t('ai.editFailed', {msg: r.error || I18N.t('error.unknown')}));
+      // edit 语义: 读取当前文件, 把 ORIGINAL 片段替换为 UPDATED 内容
+      window.electronAPI.readFile(fullPath).then(function(r) {
+        if (!r.success || typeof r.content !== 'string') {
+          addSystemMessage(I18N.t('ai.editFailed', {msg: r.error || I18N.t('error.unknown')}));
+          return;
+        }
+        var orig = op.original;
+        var cur = r.content;
+        if (cur.indexOf(orig) === -1) {
+          addSystemMessage(I18N.t('ai.editOriginalNotFound', {path: op.path}));
+          return;
+        }
+        var updated = cur.split(orig).join(op.content);
+        window.electronAPI.writeFile(fullPath, updated).then(function(wr) {
+          addSystemMessage(wr.success ? I18N.t('ai.edited', {path: op.path}) : I18N.t('ai.editFailed', {msg: wr.error || I18N.t('error.unknown')}));
+        });
       });
     } else if (op.type === 'delete') {
       window.electronAPI.deleteFile(fullPath).then(function(r) {

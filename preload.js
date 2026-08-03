@@ -76,16 +76,19 @@ try {
     notifyEditingStart: (opts) => ipcRenderer.invoke('remote:notifyEditingStart', opts),
     notifyEditingEnd: (opts) => ipcRenderer.invoke('remote:notifyEditingEnd', opts),
     requestEditingList: () => ipcRenderer.invoke('remote:requestEditingList'),
-    // 事件监听
+    // 事件监听 (单订阅: 重复调用先移除旧 listener, 避免累积)
     onEvent: (callback) => {
-      ipcRenderer.on('remote:event', (event, type, data) => callback(type, data));
+      if (api.remote.__eventListener) ipcRenderer.removeListener('remote:event', api.remote.__eventListener);
+      api.remote.__eventListener = (event, type, data) => callback(type, data);
+      ipcRenderer.on('remote:event', api.remote.__eventListener);
     },
     removeEventListeners: () => {
       ipcRenderer.removeAllListeners('remote:event');
+      api.remote.__eventListener = null;
     },
   };
 
-  // AI 制作
+  // AI 制作 (onChunk/onDone/onError 均单订阅)
   api.ai = {
     getUserDataPath: function() { return ipcRenderer.invoke('ai:getUserDataPath'); },
     loadPrompts: function() { return ipcRenderer.invoke('ai:loadPrompts'); },
@@ -103,18 +106,27 @@ try {
       });
     },
     onChunk: function(callback) {
-      ipcRenderer.on('ai:chunk', function(event, chunk) { callback(chunk); });
+      if (api.ai.__chunkListener) ipcRenderer.removeListener('ai:chunk', api.ai.__chunkListener);
+      api.ai.__chunkListener = function(event, chunk) { callback(chunk); };
+      ipcRenderer.on('ai:chunk', api.ai.__chunkListener);
     },
     onDone: function(callback) {
-      ipcRenderer.on('ai:done', function(event, content) { callback(content); });
+      if (api.ai.__doneListener) ipcRenderer.removeListener('ai:done', api.ai.__doneListener);
+      api.ai.__doneListener = function(event, content) { callback(content); };
+      ipcRenderer.on('ai:done', api.ai.__doneListener);
     },
     onError: function(callback) {
-      ipcRenderer.on('ai:error', function(event, errMsg) { callback(errMsg); });
+      if (api.ai.__errorListener) ipcRenderer.removeListener('ai:error', api.ai.__errorListener);
+      api.ai.__errorListener = function(event, errMsg) { callback(errMsg); };
+      ipcRenderer.on('ai:error', api.ai.__errorListener);
     },
     removeListeners: function() {
       ipcRenderer.removeAllListeners('ai:chunk');
       ipcRenderer.removeAllListeners('ai:done');
       ipcRenderer.removeAllListeners('ai:error');
+      api.ai.__chunkListener = null;
+      api.ai.__doneListener = null;
+      api.ai.__errorListener = null;
     },
   };
 
