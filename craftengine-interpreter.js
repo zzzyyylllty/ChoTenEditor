@@ -2,7 +2,8 @@
  * 依赖: js-yaml (jsyaml 全局), I18N, playSound, window.codeMirrorEditor, window.updateStatus
  * CE 配置特征: 顶层集合键 (items:/blocks:/furniture:/recipes:/...) + namespace:path 条目, 无顶层 type 字段
  * 分段键 items#0: / items#extra_item: 同文件多段合并; :: 扁平嵌套; $$ 版本条件键
- * 已知限制 (与 chemdah 一致): 同步为全文件重建, 注释与引号风格丢失; !!long 等 Java tag 值规范化为普通数字
+ * !!type 值 (!!long/!!IntArray 等) 解析为包装对象 {__ceTag, v}, 渲染时解包显示, 写回时恢复前缀
+ * 已知限制 (与 chemdah 一致): 同步为全文件重建, 注释与引号风格丢失
  */
 (function () {
   'use strict';
@@ -178,16 +179,48 @@
     return p;
   }
 
+  // ============ !!type 值包装 (configuration.mdx Expanded Value Structure) ============
+  // 11 种 Java 类型 tag 注册到自定义 schema: 解析时构造包装对象 {__ceTag, v},
+  // 渲染汇聚点 (_sfScalarText/_sfYvCtrl/...) 解包显示, 序列化汇聚点恢复 !!前缀
+  function _ceIsWrap(v) { return v !== null && typeof v === 'object' && typeof v.__ceTag === 'string'; }
+  function _ceUnwrap(v) { return _ceIsWrap(v) ? v.v : v; }
+  var _ceSchema = null;
+  function _ceYamlSchema() {
+    if (_ceSchema) return _ceSchema;
+    var scNum = function (name, conv) {
+      return new YAML.Type('tag:yaml.org,2002:' + name, {
+        kind: 'scalar', resolve: function () { return true; },
+        construct: function (d) { return { __ceTag: name, v: conv(d) }; },
+      });
+    };
+    var scSeq = function (name, conv) {
+      return new YAML.Type('tag:yaml.org,2002:' + name, {
+        kind: 'sequence', resolve: function () { return true; },
+        construct: function (d) { return { __ceTag: name, v: conv(d) }; },
+      });
+    };
+    var i32 = function (d) { var n = parseInt(String(d), 10); return isNaN(n) ? String(d) : n; };
+    var f64 = function (d) { var n = parseFloat(String(d)); return isNaN(n) ? String(d) : n; };
+    var arrN = function (fn) { return function (a) { return a.map(fn); }; };
+    _ceSchema = YAML.DEFAULT_SCHEMA.extend({ explicit: [
+      scNum('long', i32), scNum('float', f64), scNum('byte', i32), scNum('short', i32),
+      scSeq('ByteArray', arrN(i32)), scSeq('IntArray', arrN(i32)), scSeq('LongArray', arrN(i32)),
+      scSeq('DoubleArray', arrN(f64)), scSeq('IntList', arrN(i32)), scSeq('LongList', arrN(i32)),
+      scSeq('DoubleList', arrN(f64)),
+    ]});
+    return _ceSchema;
+  }
+
   // ============ 解析 ============
   function parse(content) {
     var doc = null;
     var strippedTags = 0;
     try {
-      doc = YAML.load(content);
+      doc = YAML.load(content, { schema: _ceYamlSchema() });
     } catch (e) {
       if (/unknown tag/.test(String(e.message || e))) {
         var fixed = content.replace(/!![A-Za-z][A-Za-z0-9]* /g, function () { strippedTags++; return ''; });
-        try { doc = YAML.load(fixed); } catch (e2) { return { error: e2.message || String(e2) }; }
+        try { doc = YAML.load(fixed, { schema: _ceYamlSchema() }); } catch (e2) { return { error: e2.message || String(e2) }; }
       } else {
         return { error: e.message || String(e) };
       }
@@ -406,6 +439,7 @@
   }
 
   function _genFlow(val) {
+    if (_ceIsWrap(val)) return '!!' + val.__ceTag + ' ' + _genFlow(val.v);
     if (Array.isArray(val)) return '[' + val.map(_genFlow).join(', ') + ']';
     if (val && typeof val === 'object' && !(val instanceof Date)) {
       return '{' + Object.keys(val).map(function (k) { return _quoteKey(k) + ': ' + _genFlow(val[k]); }).join(', ') + '}';
@@ -413,7 +447,7 @@
     return _genScalar(val);
   }
 
-  function _genScalar(val) {
+  function _genScalarRaw(val) {
     if (typeof val === 'number') return isFinite(val) ? String(val) : 'null';
     if (typeof val === 'boolean') return String(val);
     var s = String(val);
@@ -426,6 +460,13 @@
       return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
     }
     return "'" + s + "'";
+  }
+
+  function _genScalar(val) {
+    if (_ceIsWrap(val)) {
+      return '!!' + val.__ceTag + ' ' + (Array.isArray(val.v) ? _genFlow(val.v) : _genScalarRaw(val.v));
+    }
+    return _genScalarRaw(val);
   }
 
   function _fmtDate(d) {
@@ -450,7 +491,8 @@
       var v = map[k];
       var kq = _quoteKey(k);
       var header;
-      if (v === null || v === undefined) header = pad + kq + ': ~';
+      if (_ceIsWrap(v)) header = pad + kq + ': ' + _genScalar(v);
+      else if (v === null || v === undefined) header = pad + kq + ': ~';
       else if (typeof v === 'string' && v.indexOf('\n') !== -1) header = pad + kq + ': |-';
       else if (typeof v === 'object') {
         if (v instanceof Date) header = pad + kq + ': ' + _genScalar(_fmtDate(v));
@@ -463,13 +505,15 @@
       if (typeof v === 'string' && v.indexOf('\n') !== -1) {
         var vs = v.split('\n');
         for (var li = 0; li < vs.length; li++) lines.push(pad + '  ' + vs[li]);
-      } else if (v !== null && typeof v === 'object' && !(v instanceof Date)) {
+      } else if (v !== null && typeof v === 'object' && !(v instanceof Date) && !_ceIsWrap(v)) {
         if (Array.isArray(v)) {
           if (v.length > 0) {
             if (after) for (var aci = 0; aci < after.length; aci++) lines.push(pad + '  ' + after[aci]);
             for (var ai = 0; ai < v.length; ai++) {
               var item = v[ai];
-              if (item !== null && typeof item === 'object' && !Array.isArray(item) && !(item instanceof Date)) {
+              if (_ceIsWrap(item)) {
+                lines.push(pad + '  - !!' + item.__ceTag + ' ' + _genFlow(item.v));
+              } else if (item !== null && typeof item === 'object' && !Array.isArray(item) && !(item instanceof Date)) {
                 if (Object.keys(item).length === 0) { lines.push(pad + '  - {}'); continue; }
                 var rendered = _genMapLines(item, indent + 2);
                 lines.push(rendered[0].replace(pad + '    ', pad + '  - '));
@@ -502,6 +546,10 @@
     if (val === null || val === undefined) {
       var l0 = kq + ': ~';
       return inline ? l0 + ' ' + inline : l0;
+    }
+    if (_ceIsWrap(val)) {
+      var lw = kq + ': ' + _genScalar(val);
+      return inline ? lw + ' ' + inline : lw;
     }
     if (typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date) && Object.keys(val).length === 0) {
       var l1 = kq + ': {}';
@@ -774,12 +822,14 @@
   }
   function _sfScalarText(v) {
     if (v === undefined || v === null) return '';
+    if (_ceIsWrap(v)) v = v.v;
     if (typeof v === 'object') return '';
     return String(v);
   }
   function _sfObjText(obj) {
     return Object.keys(obj).map(function (k) {
       var v = obj[k];
+      if (_ceIsWrap(v)) return k + ': !!' + v.__ceTag + ' ' + (Array.isArray(v.v) ? JSON.stringify(v.v) : String(v.v));
       return k + ': ' + ((v && typeof v === 'object') ? JSON.stringify(v) : String(v));
     }).join('\n');
   }
@@ -820,6 +870,7 @@
       ' rows="' + (rows || def.rows || 4) + '" spellcheck="false">' + _escHtml(_sfScalarText(value)) + '</textarea>';
   }
   function _sfLines(def, path, value, scalar) {
+    value = _ceUnwrap(value);
     var arr;
     if (Array.isArray(value)) arr = value;
     else if (value === undefined || value === null) arr = [];
@@ -897,21 +948,22 @@
   // 容器类字段标签: object (内含子字段) 作为分类标题加大加深, 与子字段区分 (如 INSERT LORE / LEGACY MODEL)
   // 仅 object; listOf/union 等数据容器不算分类, 避免 INSERT LORE 内部的 INSERT 列表标签也被加大
   var _SF_CAT_TYPES = { object: 1 };
-  function _sfWrap(def, html, path) {
+  function _sfWrap(def, html, path, value) {
     var label = _labelOf(def);
     var icon = _sfHintIcon(def, path);
+    var spec = _sfSpecIcon(def, path, value);
     var hint = def.hint ? '<div class="ce-sf-hint">' + _escHtml(_labelOf(def.hint)) + '</div>' : '';
     if (_sfIsStack(def.type) || def.layout === 'stack') {
       var lblCls = _SF_CAT_TYPES[def.type] ? 'ce-field-label ce-cat-label' : 'ce-field-label';
-      return '<div class="ce-stack"><label class="' + lblCls + '">' + _escHtml(label) + icon + '</label>' + hint + html + '</div>';
+      return '<div class="ce-stack"><label class="' + lblCls + '">' + _escHtml(label) + icon + spec + '</label>' + hint + html + '</div>';
     }
-    return '<div class="ce-row"><label class="ce-field-label">' + _escHtml(label) + icon + '</label>' +
+    return '<div class="ce-row"><label class="ce-field-label">' + _escHtml(label) + icon + spec + '</label>' +
       '<div class="ce-row-ctrl">' + html + hint + '</div></div>';
   }
   function _sfFieldHtml(def, path, value, opts) {
     var t = def.type || 'text';
     var inner = _sfIsStack(t) ? _sfItemHtml(def, path, value, opts) : _sfControl(def, path, value);
-    return _sfWrap(def, inner, path);
+    return _sfWrap(def, inner, path, value);
   }
 
   // ---- 字段提示 (ℹ 图标 + RichTooltip) ----
@@ -977,6 +1029,35 @@
       tip += '\n\n§a' + _t('craftengine.versionHint', { versions: versions.join('、') });
     }
     return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '" data-sf-path="' + _escHtml(k) + '">ℹ</span>';
+  }
+  // ---- 特殊配置 (! 按钮): 版本条件键 ($...) / 值类型 (!!type) ----
+  // 版本键: $1.21.4 (固定) / $1.20.1~1.21.4 (范围) / $>=1.21.4 (比较) / $fallback (回退)
+  var _sfVersionKeyRe = /^\$[^$]+$/;
+  var _sfSpecMapTypes = { mapOf: 1, map: 1, components: 1, model: 1, object: 1, kv: 1, kvRest: 1, union: 1, wholeText: 1, kvWhole: 1 };
+  var _sfSpecScalarTypes = { text: 1, number: 1, bool: 1, select: 1, 'string-scalar': 1, miniText: 1, textarea: 1, linesScalar: 1, lines: 1 };
+  function _sfSpecState(def, path, value) {
+    var st = { hasSpec: false, versions: [], type: '' };
+    var v = value;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v) && !_ceIsWrap(v)) {
+      Object.keys(v).forEach(function (k) {
+        if (_sfVersionKeyRe.test(k)) st.versions.push(k);
+      });
+    }
+    if (_ceIsWrap(v)) st.type = v.__ceTag;
+    st.hasSpec = st.versions.length > 0 || st.type !== '';
+    return st;
+  }
+  function _sfSpecIcon(def, path, value) {
+    var st = _sfSpecState(def, path, value);
+    var ttl = _t('craftengine.specTitle');
+    var det = [];
+    if (st.versions.length) det.push(_t('craftengine.specHasVersions', { n: st.versions.length }));
+    if (st.type) det.push(_t('craftengine.specHasType', { type: st.type }));
+    if (det.length) ttl += ' · ' + det.join(' · ');
+    var ft = (def && def.type) || '';
+    return '<button type="button" class="ce-sf-spec-icon' + (st.hasSpec ? ' has-spec' : '') + '" data-sf-action="spec-popup"' +
+      ' data-sf-path="' + _escHtml(path) + '" data-sf-ftype="' + _escHtml(ft) + '"' +
+      ' data-sf-label="' + _escHtml(_labelOf(def)) + '" title="' + _escHtml(ttl) + '">!</button>';
   }
   function _sfBindHintIcons() {
     if (typeof RichTooltip === 'undefined') return;
@@ -1058,16 +1139,25 @@
   }
   function _sfYvType(v) {
     if (v === null || v === undefined) return 'null';
+    if (_ceIsWrap(v)) return 'wrap';
     if (Array.isArray(v)) return 'arr';
     if (typeof v === 'object') return 'obj';
     return typeof v;
   }
-  // 控件模拟: 按值类型分情况 (文本→输入框 / 数字→数字框 / 布尔→勾选框 / null→空 / type 键→下拉)
+  function _sfWrapText(v) {
+    if (_ceIsWrap(v)) {
+      var inner = Array.isArray(v.v) ? JSON.stringify(v.v) : String(v.v);
+      return '!!' + v.__ceTag + ' ' + inner;
+    }
+    return String(v);
+  }
+  // 控件模拟: 按值类型分情况 (文本→输入框 / 数字→数字框 / 布尔→勾选框 / null→空 / type 键→下拉 / !!type→类型前缀)
   function _sfYvCtrl(v, isTypeKey) {
     var t = _sfYvType(v);
     if (t === 'null') return '<span class="ce-yv-ctrl ce-yv-nullctrl">' + _escHtml(_t('craftengine.yvEmpty')) + '</span>';
     if (t === 'boolean') return '<span class="ce-yv-ctrl ce-yv-boolctrl' + (v ? ' is-on' : '') + '">' + (v ? '☑' : '☐') + ' ' + v + '</span>';
     if (t === 'number') return '<span class="ce-yv-ctrl ce-yv-numctrl">' + v + '</span>';
+    if (t === 'wrap') return '<span class="ce-yv-ctrl ce-yv-textctrl ce-yv-wrapctrl">' + _escHtml(_sfWrapText(v)) + '</span>';
     if (isTypeKey) return '<span class="ce-yv-ctrl ce-yv-select">' + _escHtml(String(v)) + '<span class="ce-yv-sel-arrow">▾</span></span>';
     return '<span class="ce-yv-ctrl ce-yv-textctrl">' + _escHtml(String(v)) + '</span>';
   }
@@ -1075,6 +1165,7 @@
     var t = _sfYvType(v);
     if (t === 'null') return 'null';
     if (t === 'boolean') return v ? 'true' : 'false';
+    if (t === 'wrap') return _sfWrapText(v);
     return String(v);
   }
   // 递归生成只读「编辑器方式」结构: 对象=字段组(字段名标签+控件), 列表=每行一个控件 (无 YAML 语法)
@@ -1516,17 +1607,40 @@
     return html + '</select>' +
       '<button class="cv-btn cv-btn-sm cv-btn-secondary" data-sf-action="list-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.listAdd')) + '</button>';
   }
+  // $ 版本键徽标: 固定/范围/比较/回退 识别 + tooltip
+  function _sfVersionKeyKind(k) {
+    var kl = String(k).toLowerCase();
+    if (kl === '$fallback') return 'fallback';
+    if (k.indexOf('~') !== -1) return 'range';
+    if (/^\$(>=|<=|>|<|=)/.test(k)) return 'compare';
+    return 'fixed';
+  }
+  function _sfVersionKeyBadge(k) {
+    var kind = _sfVersionKeyKind(k);
+    var lbl = kind === 'fallback' ? _t('craftengine.specFallback')
+      : kind === 'range' ? _t('craftengine.specRange')
+      : kind === 'compare' ? _t('craftengine.specCompare')
+      : _t('craftengine.specFixed');
+    return '<span class="ce-sf-map-ver" title="' + _escHtml(lbl + ' · ' + k) + '">$</span>';
+  }
   function _sfMapHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'map', def, opts);
     var obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     var keys = Object.keys(obj);
     var valueDef = def.valueType || { type: 'scalar' };
-    var html = '<div class="ce-sf-map" data-sf-kind="map" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
+    var hasVer = false;
+    for (var vk = 0; vk < keys.length; vk++) {
+      if (_sfVersionKeyRe.test(keys[vk])) { hasVer = true; break; }
+    }
+    var html = '<div class="ce-sf-map' + (hasVer ? ' has-verkey' : '') + '" data-sf-kind="map" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
       _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
-      html += '<div class="ce-sf-map-row" data-sf-okey="' + _escHtml(k) + '">' +
-        '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">' +
+      var keyCtrl = '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k).replace(/"/g, '&quot;') + '" spellcheck="false">';
+      if (_sfVersionKeyRe.test(k)) {
+        keyCtrl = '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(k) + keyCtrl + '</div>';
+      }
+      html += '<div class="ce-sf-map-row" data-sf-okey="' + _escHtml(k) + '">' + keyCtrl +
         '<div class="ce-sf-map-val">' + _sfItemHtml(valueDef, _sfKeyPath(path, k), obj[k], { inList: opts && opts.inList }) + '</div>' +
         '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '">✕</button>' +
         '</div>';
@@ -1537,6 +1651,7 @@
   }
   function _sfUnionCurrent(def, value) {
     if (value === undefined || value === null) return { key: '', neg: false };
+    value = _ceUnwrap(value);
     if (typeof value === 'object') {
       if (def.noTypeKey) {
         var types = _sfTypesOf(def);
@@ -1874,6 +1989,7 @@
     return typeof c === 'function' ? c() : c;
   }
   function _sfPopupScalar(fld, v) {
+    v = _ceUnwrap(v);
     var ft = fld.type;
     if (ft === 'union') {
       if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -1894,6 +2010,7 @@
     var c = _sfPopupContent(def) || def;
     var empty = _t('craftengine.popupEmpty');
     if (!c || value === undefined || value === null || value === '') return empty;
+    value = _ceUnwrap(value);
     if (typeof value !== 'object') return String(value);
     var t = c.type;
     if (t === 'mapOf' || t === 'map' || t === 'components') {
@@ -1992,6 +2109,233 @@
     });
     modal.addEventListener('click', function (e) { if (e.target === this) close(); });
   }
+  // ---- 特殊配置弹窗: 版本条件 ($ 键) / 值类型 (!!type), 显示段/条目位置 ----
+  function _sfSpecShowSections(ft, value) {
+    var isObj = value !== null && typeof value === 'object' && !Array.isArray(value) && !_ceIsWrap(value);
+    if (isObj) return 'versions';
+    if (value === undefined || value === null) {
+      if (_sfSpecMapTypes[ft]) return 'versions';
+      if (_sfSpecScalarTypes[ft]) return 'type';
+      return null;
+    }
+    return 'type'; // 标量 / 数组 / wrap
+  }
+  function _sfSpecTypeNames() {
+    return ['long', 'float', 'byte', 'short', 'ByteArray', 'IntArray', 'LongArray', 'DoubleArray', 'IntList', 'LongList', 'DoubleList'];
+  }
+  // 1=整数数组, 2=浮点数组, 0=标量
+  function _sfSpecSeqConv(tag) {
+    if (tag === 'ByteArray' || tag === 'IntArray' || tag === 'LongArray' || tag === 'IntList' || tag === 'LongList') return 1;
+    if (tag === 'DoubleArray' || tag === 'DoubleList') return 2;
+    return 0;
+  }
+  function _sfSpecRowHtml(key, val) {
+    var vs;
+    if (val !== null && typeof val === 'object') {
+      try { vs = JSON.stringify(val); } catch (e) { vs = String(val); }
+    } else vs = (val === undefined || val === null) ? '' : String(val);
+    return '<div class="ce-spec-row" data-ce-okey="' + _escHtml(key) + '">' +
+      '<input class="ce-input ce-spec-key" value="' + _escHtml(key).replace(/"/g, '&quot;') + '" spellcheck="false" title="' + _escHtml(key) + '">' +
+      '<input class="ce-input ce-spec-val" value="' + _escHtml(vs).replace(/"/g, '&quot;') + '" spellcheck="false" placeholder="' + _escHtml(_t('craftengine.specEmptyVal')) + '">' +
+      '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger" data-ce-spec="del" title="' + _escHtml(_t('craftengine.specDel')) + '">✕</button>' +
+      '</div>';
+  }
+  function _sfOpenSpecPopup(def, path, uid, entry, parsed, section, containerEl) {
+    if (!document) return;
+    var old = document.getElementById('ce-spec-modal');
+    if (old) old.remove();
+    var whole = !path || path === '__whole__';
+    var cur = whole ? entry.data : _getNested(entry.data, path);
+    var ft = (def && def.type) || '';
+    var mode = _sfSpecShowSections(ft, cur);
+    var raw = _ceUnwrap(cur);
+
+    var title = _t('craftengine.specTitle') + (def && _labelOf(def) ? ' — ' + _labelOf(def) : '');
+    var loc = [];
+    if (section) loc.push(section.key);
+    if (entry) loc.push(entry.key);
+    if (path && !whole) loc.push(path);
+    var body = '<div class="ce-spec-loc">' + _escHtml(_t('craftengine.specLoc') + ': ' + (loc.join(' / ') || '—')) + '</div>';
+
+    if (mode === 'versions') {
+      var obj = (cur !== null && typeof cur === 'object' && !Array.isArray(cur) && !_ceIsWrap(cur)) ? cur : {};
+      var vkeys = Object.keys(obj).filter(function (k) { return _sfVersionKeyRe.test(k); });
+      body += '<div class="ce-spec-section" data-ce-spec-sec="versions">' +
+        '<div class="ce-spec-title">' + _escHtml(_t('craftengine.specVersions')) + '</div>' +
+        '<div class="ce-spec-desc">' + _escHtml(_t('craftengine.specVersionsDesc')) + '</div>' +
+        '<div class="ce-spec-rows">';
+      for (var i = 0; i < vkeys.length; i++) body += _sfSpecRowHtml(vkeys[i], obj[vkeys[i]]);
+      body += '<div class="ce-spec-empty"' + (vkeys.length ? ' style="display:none"' : '') + '>' + _escHtml(_t('craftengine.specNoVersions')) + '</div>' +
+        '</div>' +
+        '<div class="ce-spec-add">' +
+        '<select class="ce-input ce-spec-add-type">' +
+        '<option value="fixed">' + _escHtml(_t('craftengine.specFixed')) + '</option>' +
+        '<option value="range">' + _escHtml(_t('craftengine.specRange')) + '</option>' +
+        '<option value="compare">' + _escHtml(_t('craftengine.specCompare')) + '</option>' +
+        '<option value="fallback">' + _escHtml(_t('craftengine.specFallback')) + '</option>' +
+        '</select>' +
+        '<input class="ce-input ce-spec-add-key" placeholder="' + _escHtml(_t('craftengine.specKeyPh')) + '" spellcheck="false">' +
+        '<input class="ce-input ce-spec-add-val" placeholder="' + _escHtml(_t('craftengine.specValPh')) + '" spellcheck="false">' +
+        '<button type="button" class="cv-btn cv-btn-sm cv-btn-secondary" data-ce-spec="add">' + _escHtml(_t('craftengine.specAdd')) + '</button>' +
+        '</div></div>';
+    } else if (mode === 'type') {
+      var curTag = _ceIsWrap(cur) ? cur.__ceTag : '';
+      var opts = '<option value="">' + _escHtml(_t('craftengine.specTypeNone')) + '</option>';
+      var tags = _sfSpecTypeNames();
+      for (var t2 = 0; t2 < tags.length; t2++) {
+        opts += '<option value="' + tags[t2] + '"' + (curTag === tags[t2] ? ' selected' : '') + '>' + tags[t2] + '</option>';
+      }
+      var curText = (raw === undefined || raw === null) ? '' : (Array.isArray(raw) ? raw.join(', ') : String(raw));
+      body += '<div class="ce-spec-section" data-ce-spec-sec="type">' +
+        '<div class="ce-spec-title">' + _escHtml(_t('craftengine.specType')) + '</div>' +
+        '<div class="ce-spec-desc">' + _escHtml(_t('craftengine.specTypeHint')) + '</div>' +
+        '<select class="ce-input ce-spec-type-sel">' + opts + '</select>' +
+        '<div class="ce-spec-cur">' + _escHtml(_t('craftengine.specCurVal') + ': ' + (curText || _t('craftengine.specEmptyVal'))) + '</div>' +
+        '</div>';
+    } else {
+      body += '<div class="ce-spec-desc">' + _escHtml(_t('craftengine.specVersionsDesc')) + '</div>';
+    }
+
+    var modal = document.createElement('div');
+    modal.id = 'ce-spec-modal';
+    modal.className = 'cv-modal ce-popup-modal';
+    modal.innerHTML =
+      '<div class="cv-modal-content ce-modal-content ce-popup-content">' +
+      '<h3>' + _escHtml(title) + '</h3>' +
+      '<div class="ce-spec-scroll">' + body + '</div>' +
+      '<div class="cv-modal-actions">' +
+      '<button class="cv-btn cv-btn-secondary" data-ce-spec="cancel">' + _escHtml(_t('craftengine.popupCancel')) + '</button>' +
+      '<button class="cv-btn cv-btn-primary" data-ce-spec="ok">' + _escHtml(_t('craftengine.popupOk')) + '</button>' +
+      '</div></div>';
+    document.body.appendChild(modal);
+    _sound('click');
+
+    var scroll = modal.querySelector('.ce-spec-scroll');
+    function rowCount() { return scroll.querySelectorAll('.ce-spec-row').length; }
+    function refreshEmpty() {
+      var emp = scroll.querySelector('.ce-spec-empty');
+      if (emp) emp.style.display = rowCount() ? 'none' : '';
+    }
+    function bindRow(row) {
+      var del = row.querySelector('[data-ce-spec="del"]');
+      if (del) del.addEventListener('click', function () { row.remove(); refreshEmpty(); });
+    }
+    function addRow(key, val) {
+      var rows = scroll.querySelector('.ce-spec-rows');
+      if (!rows) return;
+      var div = document.createElement('div');
+      div.innerHTML = _sfSpecRowHtml(key, val);
+      var row = div.firstChild;
+      rows.appendChild(row);
+      bindRow(row);
+      refreshEmpty();
+    }
+    var typeSel = scroll.querySelector('.ce-spec-add-type');
+    if (typeSel) {
+      typeSel.addEventListener('change', function () {
+        var ph = typeSel.value === 'range' ? '1.20.1~1.21.4' : (typeSel.value === 'compare' ? '>=1.21.4' : (typeSel.value === 'fallback' ? '' : '1.21.4'));
+        var kInp = scroll.querySelector('.ce-spec-add-key');
+        kInp.placeholder = _t('craftengine.specKeyPh') + (ph ? ' ' + ph : '');
+        kInp.disabled = typeSel.value === 'fallback';
+        if (typeSel.value === 'fallback') kInp.value = '';
+      });
+    }
+    scroll.querySelectorAll('.ce-spec-row').forEach(bindRow);
+    var addBtn = scroll.querySelector('[data-ce-spec="add"]');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        var kInp = scroll.querySelector('.ce-spec-add-key');
+        var vInp = scroll.querySelector('.ce-spec-add-val');
+        var k = typeSel && typeSel.value === 'fallback' ? '$fallback' : '$' + String(kInp.value || '').trim();
+        kInp.classList.remove('ce-invalid');
+        if (!typeSel || k === '$' || k === '$$') { kInp.classList.add('ce-invalid'); return; }
+        var dup = scroll.querySelector('.ce-spec-row[data-ce-okey="' + k.replace(/"/g, '&quot;') + '"]');
+        if (dup) { kInp.classList.add('ce-invalid'); return; }
+        addRow(k, vInp.value ? _parseKvLine(vInp.value) : '');
+        kInp.value = ''; vInp.value = '';
+      });
+    }
+    function close() { modal.remove(); }
+    modal.querySelector('[data-ce-spec="cancel"]').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === this) close(); });
+    modal.querySelector('[data-ce-spec="ok"]').addEventListener('click', function () {
+      var invalid = false;
+      if (mode === 'versions') {
+        var rows = scroll.querySelectorAll('.ce-spec-row');
+        var seen = {};
+        var entries = [];
+        for (var r = 0; r < rows.length; r++) {
+          var kInp2 = rows[r].querySelector('.ce-spec-key');
+          var vInp2 = rows[r].querySelector('.ce-spec-val');
+          var k2 = String(kInp2.value || '').trim();
+          kInp2.classList.remove('ce-invalid');
+          if (!k2) continue;
+          if (k2.charAt(0) !== '$') { kInp2.classList.add('ce-invalid'); invalid = true; continue; }
+          if (seen[k2]) { kInp2.classList.add('ce-invalid'); invalid = true; continue; }
+          seen[k2] = 1;
+          entries.push({ key: k2, text: vInp2.value });
+        }
+        if (!invalid) {
+          var wasObj = cur !== null && typeof cur === 'object' && !Array.isArray(cur) && !_ceIsWrap(cur);
+          var obj = wasObj ? cur : {};
+          var keep = {};
+          entries.forEach(function (e) { keep[e.key] = 1; });
+          Object.keys(obj).forEach(function (k) {
+            if (_sfVersionKeyRe.test(k) && !keep[k]) delete obj[k];
+          });
+          entries.forEach(function (e) {
+            if (String(e.text).trim() === '') delete obj[e.key];
+            else obj[e.key] = _parseKvLine(e.text);
+          });
+          if (!wasObj) {
+            if (whole) entry.data = obj;
+            else if (path) _setNested(entry.data, path, obj);
+          }
+        }
+      }
+      if (mode === 'type' && !invalid) {
+        var tsel = scroll.querySelector('.ce-spec-type-sel');
+        var chosen = tsel ? tsel.value : '';
+        var curRaw = raw;
+        if (chosen === '') {
+          if (_ceIsWrap(cur) && !invalid) {
+            if (curRaw === '' || curRaw === undefined) {
+              if (whole) entry.data = undefined;
+              else if (path) _deleteNested(entry.data, path);
+            } else if (whole) entry.data = curRaw;
+            else if (path) _setNested(entry.data, path, curRaw);
+          }
+        } else {
+          var sv = _sfSpecSeqConv(chosen);
+          var val = curRaw;
+          if (sv) {
+            if (!Array.isArray(val)) {
+              val = String(val === undefined || val === null ? '' : val).split(/[,;\n]/)
+                .map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+            }
+            val = val.map(function (x) {
+              if (sv === 2) { var f = parseFloat(String(x)); return isNaN(f) ? String(x) : f; }
+              var n = parseInt(String(x), 10);
+              return isNaN(n) ? String(x) : n;
+            });
+          } else if (typeof val === 'string') {
+            if (chosen === 'float') { var f2 = parseFloat(val); if (!isNaN(f2)) val = f2; }
+            else { var n2 = parseInt(val, 10); if (!isNaN(n2)) val = n2; }
+          }
+          var w = { __ceTag: chosen, v: val };
+          if (whole) entry.data = w;
+          else if (path) _setNested(entry.data, path, w);
+        }
+      }
+      if (invalid) return;
+      close();
+      _sfMarkDirty(parsed);
+      var rec = uid ? _sfUidMap[uid] : null;
+      if (rec && rec.kind !== 'tabs') _sfRerender(uid, containerEl);
+      else _ceRenderFn();
+      if (ROOT.__keAutoSync) syncToSource(parsed);
+    });
+  }
   // 容器局部重渲染 (list/map/union/object/components/model 内容), 不整页刷新、不丢焦点
   function _sfRerender(uid, containerEl) {
     var rec = _sfUidMap[uid];
@@ -2052,6 +2396,15 @@
           inp.dispatchEvent(new Event('change', { bubbles: true }));
         }
       });
+      return;
+    }
+    if (action === 'spec-popup') {
+      // 特殊配置弹窗 (版本条件 / !!type); 写回在确定按钮里处理, 取消不标记脏
+      var spPath = el.getAttribute('data-sf-path') || '';
+      var spFtype = el.getAttribute('data-sf-ftype') || '';
+      var spLabel = el.getAttribute('data-sf-label') || '';
+      var spDef = (spFtype || spLabel) ? { type: spFtype || 'text', label: spLabel } : null;
+      _sfOpenSpecPopup(spDef, spPath, _sfUidOf(el), entry, parsed, section, containerEl);
       return;
     }
     _sfMarkDirty(parsed); // 所有 schema 动作都会修改数据
@@ -2441,11 +2794,11 @@
       // 标量组值 (config-version / metrics ...)
       var t = schema.type;
       if (t === 'bool') {
-        html += _sfWrap(schema, '<input type="checkbox" class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-bool"' + (data ? ' checked' : '') + '>');
+        html += _sfWrap(schema, '<input type="checkbox" class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-bool"' + (data ? ' checked' : '') + '>', '__whole__', data);
       } else if (t === 'number') {
-        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-number" value="' + _escHtml(_sfScalarText(data)) + '" spellcheck="false">');
+        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-number" value="' + _escHtml(_sfScalarText(data)) + '" spellcheck="false">', '__whole__', data);
       } else {
-        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-text" value="' + _escHtml(_sfScalarText(data)).replace(/"/g, '&quot;') + '" spellcheck="false">');
+        html += _sfWrap(schema, '<input class="ce-input" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="whole-text" value="' + _escHtml(_sfScalarText(data)).replace(/"/g, '&quot;') + '" spellcheck="false">', '__whole__', data);
       }
       return html;
     }
@@ -3126,6 +3479,7 @@
       _sfMarkDirty(parsed || _sfLastParsed);
       return;
     }
+    var oldV = _getNested(entry.data, path);
     var existed = _getNested(entry.data, path) !== undefined;
     if (value === undefined || value === null || value === '') {
       if (existed) {
@@ -3134,6 +3488,7 @@
       }
       return;
     }
+    if (_ceIsWrap(oldV)) value = { __ceTag: oldV.__ceTag, v: value };
     if (!existed) {
       // 记录新键序
       var topKey = _pathParts(path)[0];

@@ -3371,6 +3371,124 @@ textarea.ce-input {
   color: var(--color-accent, #6ea8fe);
 }
 
+/* 特殊配置按钮 (!): 字段 label 右侧, 灰色低亮; 有版本条件/值类型时主题色高亮 */
+.ce-sf-spec-icon {
+  display: inline-block;
+  margin-left: 5px;
+  min-width: 17px;
+  padding: 0 3px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: all var(--transition-fast);
+}
+.ce-sf-spec-icon:hover {
+  color: var(--color-accent, #6ea8fe);
+  border-color: var(--color-accent, #6ea8fe);
+}
+.ce-sf-spec-icon.has-spec {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.ce-sf-spec-icon.has-spec:hover {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* 特殊配置弹窗: 版本条件 ($ 键) + 值类型 (!!type) */
+.ce-spec-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+  margin: 10px 0 14px;
+  padding: 2px 4px;
+}
+.ce-spec-loc {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+.ce-spec-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: var(--color-bg-secondary, rgba(128, 128, 128, 0.04));
+}
+.ce-spec-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.ce-spec-desc {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.ce-spec-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ce-spec-row .ce-input {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+.ce-spec-key {
+  flex: 0 0 170px;
+  min-width: 0;
+}
+.ce-spec-val {
+  flex: 1;
+  min-width: 0;
+}
+.ce-spec-row .cv-btn {
+  flex-shrink: 0;
+}
+.ce-spec-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 6px;
+}
+.ce-spec-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ce-spec-add .ce-input {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+.ce-spec-add .ce-spec-add-type {
+  flex: 0 0 86px;
+}
+.ce-spec-add .ce-spec-add-key {
+  flex: 0 0 170px;
+}
+.ce-spec-add .ce-spec-add-val {
+  flex: 1;
+  min-width: 0;
+}
+.ce-spec-type-sel {
+  width: 100%;
+}
+.ce-spec-cur {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
 /* MiniMessage 快捷按钮: 输入框右侧留出小段距离 */
 .ce-sf-mini-wrap {
   display: flex;
@@ -3758,6 +3876,32 @@ textarea.ce-sf-input {
 }
 .ce-sf-map-key.ce-invalid {
   border-color: var(--color-error);
+}
+.ce-sf-map.has-verkey .ce-sf-map-row {
+  grid-template-columns: 172px 1fr auto;
+}
+.ce-sf-map-keybox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.ce-sf-map-keybox .ce-sf-map-key {
+  flex: 1;
+  min-width: 0;
+}
+/* $ 版本键徽标 (固定/范围/比较/回退) */
+.ce-sf-map-ver {
+  flex-shrink: 0;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  cursor: help;
 }
 .ce-sf-map-val {
   min-width: 0;
