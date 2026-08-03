@@ -671,11 +671,16 @@
   }
   function _labelOf(field) {
     if (field === null || field === undefined) return '';
+    if (typeof field === 'string') return field;
+    var lang = (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh_cn';
     var lb = field.label;
     if (typeof lb === 'string') return lb;
     if (lb && typeof lb === 'object') {
-      var lang = (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh_cn';
       return lang === 'en_us' ? (lb.en || lb.zh || '') : (lb.zh || lb.en || '');
+    }
+    // 直接传 {zh, en} 对象 (如 placeholder)
+    if (field.zh !== undefined || field.en !== undefined) {
+      return lang === 'en_us' ? (field.en || field.zh || '') : (field.zh || field.en || '');
     }
     return field.key || '';
   }
@@ -837,8 +842,8 @@
       (def.placeholder ? ' placeholder="' + _escHtml(_labelOf(def.placeholder)) + '"' : '') +
       ' rows="' + Math.max(3, Math.min(lines.length + 1, 10)) + '" spellcheck="false">' + _escHtml(lines.join('\n')) + '</textarea>';
   }
-  function _sfScalarInput(def, path, value) {
-    return '<input class="ce-input" data-sf-kind="field" data-sf-path="' + _escHtml(path) + '" data-sf-type="scalar"' +
+  function _sfScalarInput(def, path, value, type) {
+    return '<input class="ce-input" data-sf-kind="field" data-sf-path="' + _escHtml(path) + '" data-sf-type="' + (type || 'scalar') + '"' +
       (def.placeholder ? ' placeholder="' + _escHtml(_labelOf(def.placeholder)) + '"' : '') +
       ' value="' + _escHtml(_sfScalarText(value)).replace(/"/g, '&quot;') + '" spellcheck="false">';
   }
@@ -867,6 +872,7 @@
     }
     if (t === 'kv' || t === 'kvRest') return _sfKvTextarea(def, path, value);
     if (t === 'scalar') return _sfScalarInput(def, path, value);
+    if (t === 'string-scalar') return _sfScalarInput(def, path, value, 'string-scalar');
     var html = _sfInput(def, path, value, 'text');
     return def.mini ? _sfMiniWrap(html) : html;
   }
@@ -1178,6 +1184,15 @@
         return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') + _sfYvHtml(val, ind + 1, false);
       }
     }
+    if (t === 'popup') {
+      var pc = _sfPopupContent(def);
+      if (pc) return _sfTargetHtml(pc, val, null, ind);
+    }
+    if (t === 'mapOf' || t === 'map' || t === 'components' || t === 'model' || t === 'tabs' || t === 'kv' || t === 'kvRest') {
+      if (val && typeof val === 'object') {
+        return (desc ? '<div class="ce-yv-desc">' + _escHtml(desc) + '</div>' : '') + _sfYvHtml(val, ind + 1, false);
+      }
+    }
     if (t === 'bool') {
       return '<div class="ce-yv-row" style="' + pad + '"><span class="ce-yv-ctrl ce-yv-boolctrl' + (val ? ' is-on' : '') + '">' + (val ? '☑' : '☐') + ' ' + (val ? 'true' : 'false') + '</span></div>';
     }
@@ -1203,11 +1218,10 @@
       if (topM || isList) {
         var key = isList ? '-' : topM[1];
         var isContainer = !isList && SECTION_KEYS.indexOf(topM[1]) !== -1;
-        var isDirectEntry = !isList && topM[1].indexOf(':') !== -1;
         var newTop = false;
         if (!cur) newTop = true;
         else if (key === lastTopKey) newTop = true;
-        else if (isDirectEntry && !cur.isContainer) newTop = true;
+        else if (!cur.isContainer && key !== lastTopKey) newTop = true;
         if (newTop) {
           cur = { name: nameBuf.join(' ').trim(), isContainer: isContainer, lines: [], inline: '' };
           tops.push(cur);
@@ -1297,6 +1311,10 @@
     var root = _sfUnwrapSample(obj);
     var tgt = (def && def.key) ? _sfFindKey(root, def.key, 0) : null;
     if (tgt) {
+      var t0 = def.type || 'text';
+      if (t0 === 'text' || t0 === 'number' || t0 === 'bool' || t0 === 'select' || t0 === 'string-scalar') {
+        return _sfYvHtml(root, 0, false);
+      }
       return _sfTargetHtml(def, tgt.val, tgt.ctx, 0);
     }
     return _sfYvHtml(root, 0, false);
@@ -3286,6 +3304,8 @@
           }
         } else if (sfType === 'scalar') {
           val = _parseKvLine(target.value);
+        } else if (sfType === 'string-scalar') {
+          val = target.value;
         } else if (sfType === 'select') {
           val = target.getAttribute('data-sf-num') ? parseFloat(target.value) : target.value;
         } else {

@@ -857,10 +857,10 @@
   };
   // 方块状态: 字符串 或 键值映射 (item data.block_state / block 相关)
   var BLOCK_STATE_WIDGET = {
-    type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('facing=north', 'facing=north') },
+    type: 'union', noTypeKey: true, allowScalar: { type: 'text', placeholder: l('default:palm_sapling[stage=0]', 'default:palm_sapling[stage=0]') },
     label: l('方块状态', 'Block State'),
     types: {
-      map: { label: l('属性映射', 'Property Map'), widget: { type: 'mapOf', valueType: { type: 'scalar' }, label: l('属性映射', 'Property Map') } },
+      map: { label: l('属性映射', 'Property Map'), widget: { type: 'mapOf', valueType: { type: 'string-scalar' }, label: l('属性映射', 'Property Map') } },
     },
   };
 
