@@ -1030,9 +1030,9 @@
     }
     return '<span class="ce-sf-hint-icon" data-sf-hint="' + _escHtml(tip) + '" data-sf-path="' + _escHtml(k) + '">ℹ</span>';
   }
-  // ---- 特殊配置 (! 按钮): 版本条件键 ($...) / 值类型 (!!type) ----
-  // 版本键: $1.21.4 (固定) / $1.20.1~1.21.4 (范围) / $>=1.21.4 (比较) / $fallback (回退)
-  var _sfVersionKeyRe = /^\$[^$]+$/;
+  // ---- 特殊配置 (! 按钮): 版本条件键 ($$...) / 值类型 (!!type) ----
+  // 版本键 (wiki configuration.mdx): $$1.21.4 (固定) / $$1.20.1~1.21.4 (范围) / $$>=1.21.4 (比较) / $$fallback (回退)
+  var _sfVersionKeyRe = /^\$\$[^$]+$/;
   var _sfSpecMapTypes = { mapOf: 1, map: 1, components: 1, model: 1, object: 1, kv: 1, kvRest: 1, union: 1, wholeText: 1, kvWhole: 1 };
   var _sfSpecScalarTypes = { text: 1, number: 1, bool: 1, select: 1, 'string-scalar': 1, miniText: 1, textarea: 1, linesScalar: 1, lines: 1 };
   function _sfSpecState(def, path, value) {
@@ -1607,12 +1607,12 @@
     return html + '</select>' +
       '<button class="cv-btn cv-btn-sm cv-btn-secondary" data-sf-action="list-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.listAdd')) + '</button>';
   }
-  // $ 版本键徽标: 固定/范围/比较/回退 识别 + tooltip
+  // $$ 版本键徽标: 固定/范围/比较/回退 识别 + tooltip
   function _sfVersionKeyKind(k) {
     var kl = String(k).toLowerCase();
-    if (kl === '$fallback') return 'fallback';
+    if (kl === '$$fallback') return 'fallback';
     if (k.indexOf('~') !== -1) return 'range';
-    if (/^\$(>=|<=|>|<|=)/.test(k)) return 'compare';
+    if (/^\$\$(>=|<=|>|<|=)/.test(k)) return 'compare';
     return 'fixed';
   }
   function _sfVersionKeyBadge(k) {
@@ -1621,7 +1621,16 @@
       : kind === 'range' ? _t('craftengine.specRange')
       : kind === 'compare' ? _t('craftengine.specCompare')
       : _t('craftengine.specFixed');
-    return '<span class="ce-sf-map-ver" title="' + _escHtml(lbl + ' · ' + k) + '">$</span>';
+    var sym = kind === 'fallback' ? '↩'
+      : kind === 'range' ? '~'
+      : kind === 'compare' ? (function () { var m = String(k).match(/^\$\$(>=|<=|>|<|=)/); return m ? m[1] : '>'; })()
+      : '=';
+    return '<span class="ce-sf-map-ver" title="' + _escHtml(lbl + ' · ' + k) + '">' + sym + '</span>';
+  }
+  // entry 键输入框: 版本键 ($$...) 前加徽标
+  function _sfEntryKeyCtrl(key) {
+    var inp = '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(key).replace(/"/g, '&quot;') + '" spellcheck="false">';
+    return _sfVersionKeyRe.test(key) ? '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(key) + inp + '</div>' : inp;
   }
   function _sfMapHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'map', def, opts);
@@ -2246,9 +2255,9 @@
       addBtn.addEventListener('click', function () {
         var kInp = scroll.querySelector('.ce-spec-add-key');
         var vInp = scroll.querySelector('.ce-spec-add-val');
-        var k = typeSel && typeSel.value === 'fallback' ? '$fallback' : '$' + String(kInp.value || '').trim();
+        var k = typeSel && typeSel.value === 'fallback' ? '$$fallback' : '$$' + String(kInp.value || '').trim();
         kInp.classList.remove('ce-invalid');
-        if (!typeSel || k === '$' || k === '$$') { kInp.classList.add('ce-invalid'); return; }
+        if (!typeSel || k === '$$') { kInp.classList.add('ce-invalid'); return; }
         var dup = scroll.querySelector('.ce-spec-row[data-ce-okey="' + k.replace(/"/g, '&quot;') + '"]');
         if (dup) { kInp.classList.add('ce-invalid'); return; }
         addRow(k, vInp.value ? _parseKvLine(vInp.value) : '');
@@ -2270,7 +2279,7 @@
           var k2 = String(kInp2.value || '').trim();
           kInp2.classList.remove('ce-invalid');
           if (!k2) continue;
-          if (k2.charAt(0) !== '$') { kInp2.classList.add('ce-invalid'); invalid = true; continue; }
+          if (k2.indexOf('$$') !== 0) { kInp2.classList.add('ce-invalid'); invalid = true; continue; }
           if (seen[k2]) { kInp2.classList.add('ce-invalid'); invalid = true; continue; }
           seen[k2] = 1;
           entries.push({ key: k2, text: vInp2.value });
@@ -2682,14 +2691,15 @@
       var editor;
       if (v !== null && typeof v === 'object' && !Array.isArray(v)) editor = _sfKvTextarea({ type: 'kv' }, k, v);
       else editor = _sfScalarInput({}, k, v);
-      html += '<div class="ce-stack ce-sf-rest"><label class="ce-field-label">' + _escHtml(k) + '</label>' + editor + '</div>';
+      html += '<div class="ce-stack ce-sf-rest"><label class="ce-field-label">' +
+        (_sfVersionKeyRe.test(k) ? _sfVersionKeyBadge(k) : '') + _escHtml(k) + '</label>' + editor + '</div>';
     }
     return html + '</details>';
   }
   function _sfEntryFormHtml(section, entry, schema, formTab, evKey) {
     _sfInit();
     var html = _renderField(_t('craftengine.entryKey'),
-      '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(entry.key).replace(/"/g, '&quot;') + '" spellcheck="false">',
+      _sfEntryKeyCtrl(entry.key),
       _t('craftengine.entryKeyHint'));
     if (schema.wholeValue) {
       if (entry.data !== null && typeof entry.data === 'object' && !Array.isArray(entry.data)) {
@@ -3050,7 +3060,7 @@
     var schema = _sfSchemaOf(type);
     if (schema) return _sfEntryFormHtml(section, entry, schema, formTab, evKey);
     var keyField = _renderField(_t('craftengine.entryKey'),
-      '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(entry.key).replace(/"/g, '&quot;') + '" spellcheck="false">',
+      _sfEntryKeyCtrl(entry.key),
       _t('craftengine.entryKeyHint'));
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       // 标量条目 → 整条文本 (global_variables); 数组 → 通用 JSON
@@ -3401,7 +3411,7 @@
       for (var e = 0; e < section.entries.length; e++) {
         var en = section.entries[e];
         entryHtml += '<div class="ce-entry-item' + (e === ui.entry ? ' ce-active' : '') + '" data-action="ce-select-entry" data-entry="' + e + '">' +
-          _escHtml(en.key) + '</div>';
+          (_sfVersionKeyRe.test(en.key) ? _sfVersionKeyBadge(en.key) : '') + _escHtml(en.key) + '</div>';
       }
       if (section.entries.length === 0) {
         entryHtml += '<div class="ce-empty">' + _escHtml(_t('craftengine.noEntries')) + '</div>';
