@@ -73,6 +73,7 @@ let aiNewKey;
 let aiAddKeyBtn;
 let aiSystemPrompt;
 let aiCustomPrompt;
+let aiCustomPromptGroup;
 let aiMaxTokens;
 let aiTemperature;
 let aiPromptList;
@@ -404,6 +405,7 @@ function initializeDOMElements() {
   aiAddKeyBtn = document.getElementById('ai-add-key');
   aiSystemPrompt = document.getElementById('ai-system-prompt');
   aiCustomPrompt = document.getElementById('ai-custom-prompt');
+  aiCustomPromptGroup = document.getElementById('ai-custom-prompt-group');
   aiMaxTokens = document.getElementById('ai-max-tokens');
   aiTemperature = document.getElementById('ai-temperature');
   aiPromptList = document.getElementById('ai-prompt-list');
@@ -601,13 +603,21 @@ function setupEventListeners() {
   }
 
   // AI 提示词切换
+  var _promptEditBackup = null;
   if (aiSystemPrompt) {
     aiSystemPrompt.addEventListener('change', function() {
       var val = this.value;
       if (val === 'custom') {
         if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = '';
+        // 切回自定义时恢复用户编辑的内容,避免被磁盘提示词预览覆盖
+        if (_promptEditBackup !== null && aiCustomPrompt) {
+          aiCustomPrompt.value = _promptEditBackup;
+          _promptEditBackup = null;
+        }
       } else {
         if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = 'none';
+        // 备份用户当前编辑内容
+        if (aiCustomPrompt && _promptEditBackup === null) _promptEditBackup = aiCustomPrompt.value;
         // 从磁盘加载该提示词内容预览
         if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
           window.electronAPI.ai.loadPrompts().then(function(result) {
@@ -909,12 +919,16 @@ function getBackgroundConfig() {
 }
 
 function saveBackgroundConfig(filename, opacity) {
-  const stored = localStorage.getItem('editorConfig');
-  const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
-  if (!config.background) config.background = {};
-  config.background.filename = filename || '';
-  if (opacity !== undefined) config.background.opacity = opacity;
-  localStorage.setItem('editorConfig', JSON.stringify(config));
+  try {
+    const stored = localStorage.getItem('editorConfig');
+    const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
+    if (!config.background) config.background = {};
+    config.background.filename = filename || '';
+    if (opacity !== undefined) config.background.opacity = opacity;
+    localStorage.setItem('editorConfig', JSON.stringify(config));
+  } catch (e) {
+    console.warn('保存背景配置失败', e);
+  }
 }
 
 function selectBackground(filename) {
@@ -1085,6 +1099,14 @@ async function saveSettings() {
     config.background = { filename: '', opacity: 0.3 };
   }
 
+  // 保留其他模块管理的字段（不在此表单范围内，全量重建会抹掉它们）
+  if (existing) {
+    if (existing.sound !== undefined) config.sound = existing.sound;
+    if (existing.soundVolume !== undefined) config.soundVolume = existing.soundVolume;
+    if (existing.remoteClient) config.remoteClient = existing.remoteClient;
+    if (existing.remoteServer) config.remoteServer = existing.remoteServer;
+    if (existing.ai && existing.ai.customPrompts) config.ai.customPrompts = existing.ai.customPrompts;
+  }
 
   // 保留语言设置（由 i18n.js 管理，不在此表单范围内）
   if (existing && existing.language) {
@@ -1331,6 +1353,9 @@ function loadSettings() {
   if (aiCustomModel) aiCustomModel.value = aiCfg.customModel || '';
   if (aiSystemPrompt) aiSystemPrompt.value = aiCfg.systemPrompt || 'default';
   if (aiCustomPrompt) aiCustomPrompt.value = aiCfg.customPrompt || '';
+  if (aiCustomPromptGroup) {
+    aiCustomPromptGroup.style.display = (aiCfg.systemPrompt || 'default') === 'custom' ? '' : 'none';
+  }
   if (aiMaxTokens) aiMaxTokens.value = aiCfg.maxTokens || 4096;
   if (aiTemperature) aiTemperature.value = aiCfg.temperature || 0.7;
   renderAiKeys(aiCfg.keys || []);
@@ -1395,6 +1420,7 @@ function resetSettings() {
   UI.confirm({ message: I18N.t('settings.resetConfirm'), danger: true }).then(function(ok) {
     if (!ok) return;
     localStorage.removeItem('editorConfig');
+    sessionStorage.removeItem('remotePassword');
     loadSettings(); applyTheme(defaultConfig.theme);
     showNotification(I18N.t('settings.resetDone'), 'success');
   });

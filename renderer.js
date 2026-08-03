@@ -752,6 +752,9 @@ async function openFile(filePath, content) {
       }
       if (switchResult === 'save') {
         await saveCurrentFile();
+      } else {
+        // 放弃: 清除脏标记, 避免之后反复提示
+        delete dirtyTabs[currentFile];
       }
     }
 
@@ -1051,10 +1054,10 @@ async function closeTab(filePath, force = false) {
     if (result === 'cancel') {
       delete _closingTabs[filePath]; return;
     }
-    if (result === 'save') {
-      currentFile = filePath;
+    if (result === 'save' && currentFile === filePath) {
       await saveCurrentFile();
     }
+    // 后台标签: 缓冲区已不属于它(切换标签时内容即丢失), 按放弃处理, 防止把当前文件内容写入被关闭文件
   }
 
   delete dirtyTabs[filePath];
@@ -1298,6 +1301,11 @@ async function createNewFile() {
 
   const fileName = await UI.prompt({ message: I18N.t('prompt.newFileName') });
   if (!fileName) return;
+  // 拒绝路径分隔符与相对路径, 防止在项目目录外创建文件
+  if (/[\\/]|\.\./.test(fileName)) {
+    showErrorDialog(I18N.t('dialog.createFileFailed'), I18N.t('dialog.invalidFileName'));
+    return;
+  }
 
   const basePath = currentDirectoryPath || currentProjectPath;
   const filePath = `${basePath}/${fileName}`;
@@ -1400,6 +1408,9 @@ async function switchEditorMode(visual) {
     }
     if (swResult === 'save') {
       await saveCurrentFile();
+    } else {
+      // 放弃: 清除脏标记, 避免之后反复提示
+      delete dirtyTabs[currentFile];
     }
   }
 

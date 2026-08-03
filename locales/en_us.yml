@@ -211,6 +211,7 @@ dialog:
   readFailed: "Read Failed"
   error: "Error"
   createFileFailed: "Failed to Create File"
+  invalidFileName: "File name cannot contain path separators or relative paths"
   saveFileFailed: "Failed to Save File"
 
 error:

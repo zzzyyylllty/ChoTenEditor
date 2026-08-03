@@ -32,7 +32,10 @@
       if (stored) {
         var config = JSON.parse(stored);
         if (config.sound !== undefined) _enabled = !!config.sound;
-        if (config.soundVolume !== undefined) _volume = parseFloat(config.soundVolume) || 0.5;
+        if (config.soundVolume !== undefined) {
+          var v = parseFloat(config.soundVolume);
+          _volume = isNaN(v) ? 0.5 : Math.max(0, Math.min(1, v));
+        }
       }
     } catch (e) {}
   }
@@ -71,7 +74,8 @@
 
   // 设置音量
   function setVolume(vol) {
-    _volume = Math.max(0, Math.min(1, parseFloat(vol) || 0.5));
+    var v = parseFloat(vol);
+    _volume = Math.max(0, Math.min(1, isNaN(v) ? 0.5 : v));
     try {
       var stored = localStorage.getItem('editorConfig');
       var config = stored ? JSON.parse(stored) : {};

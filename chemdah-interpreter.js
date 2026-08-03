@@ -225,8 +225,9 @@ window.ChemdahInterpreter = (() => {
       }
 
       if (entry.npc) {
-        dialogue.type = 'dialogue';
         dialogue.npcText = String(entry.npc);
+        // 已有 npc id 时保持 switch 类型(npc 是 switch 的默认文本), 否则是普通对话
+        if (!dialogue.npcId) dialogue.type = 'dialogue';
       }
 
       if (entry.format) dialogue.format = String(entry.format);
@@ -885,7 +886,8 @@ window.ChemdahInterpreter = (() => {
     });
 
     // --- 对话名称编辑 ---
-    container.addEventListener('change', function (e) {
+    if (container._cvCh1) container.removeEventListener('change', container._cvCh1);
+    container._cvCh1 = function (e) {
       const input = e.target.closest('[data-field="dialogue.name"]');
       if (input) {
         const oldName = input.closest('[data-dialogue]').dataset.dialogue;
@@ -913,10 +915,12 @@ window.ChemdahInterpreter = (() => {
           }
         }
       }
-    });
+    };
+    container.addEventListener('change', container._cvCh1);
 
     // --- NPC ID / NPC 文本 / Format 编辑 ---
-    container.addEventListener('change', function (e) {
+    if (container._cvCh2) container.removeEventListener('change', container._cvCh2);
+    container._cvCh2 = function (e) {
       const input = e.target.closest('[data-field="dialogue.npcId"], [data-field="dialogue.format"]');
       if (input) {
         const field = input.dataset.field;
@@ -927,19 +931,23 @@ window.ChemdahInterpreter = (() => {
           else if (field === 'dialogue.format') d.format = input.value;
         }
       }
-    });
+    };
+    container.addEventListener('change', container._cvCh2);
 
-    container.addEventListener('change', function (e) {
+    if (container._cvCh3) container.removeEventListener('change', container._cvCh3);
+    container._cvCh3 = function (e) {
       const input = e.target.closest('[data-field="dialogue.npcText"]');
       if (input) {
         const dName = input.dataset.dialogue;
         const d = parsed.dialogues.find(d => d.name === dName);
         if (d) d.npcText = input.value;
       }
-    });
+    };
+    container.addEventListener('change', container._cvCh3);
 
     // --- 条件分支编辑 ---
-    container.addEventListener('change', function (e) {
+    if (container._cvCh4) container.removeEventListener('change', container._cvCh4);
+    container._cvCh4 = function (e) {
       const input = e.target.closest('[data-field="condition.if"], [data-field="condition.open"]');
       if (input) {
         const field = input.dataset.field;
@@ -951,10 +959,12 @@ window.ChemdahInterpreter = (() => {
           else if (field === 'condition.open') d.conditions[idx].open = input.value;
         }
       }
-    });
+    };
+    container.addEventListener('change', container._cvCh4);
 
     // --- 玩家选项编辑 ---
-    container.addEventListener('change', function (e) {
+    if (container._cvCh5) container.removeEventListener('change', container._cvCh5);
+    container._cvCh5 = function (e) {
       const input = e.target.closest('[data-field^="option."]');
       if (input) {
         const field = input.dataset.field;
@@ -967,7 +977,8 @@ window.ChemdahInterpreter = (() => {
           else if (field === 'option.then') d.options[idx].then = input.value;
         }
       }
-    });
+    };
+    container.addEventListener('change', container._cvCh5);
 
     // --- 自动同步（字段编辑后自动同步到源码） ---
     // 移除旧的 change 监听器防止累积（每次渲染替换监听，避免旧闭包引用旧 parsed 数据）
@@ -992,7 +1003,7 @@ window.ChemdahInterpreter = (() => {
 
   function _genYAMLValue(val, indent) {
     if (val === null || val === undefined) return '~';
-    const s = String(val).replace(/\s+$/, ''); // 去除末尾空白
+    const s = String(val); // 保留原值(含尾部空白与多行空行)
     if (s === '') return "''";
     const lines = s.split('\n');
     if (lines.length > 1) {
@@ -1000,8 +1011,22 @@ window.ChemdahInterpreter = (() => {
       const innerIndent = '  '.repeat(indent + 1);
       return '|-\n' + lines.map(l => innerIndent + l).join('\n');
     }
-    // 单行：判断是否需引号
-    if (/[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$|^[>!]\S/.test(s) || s === '' || s === 'true' || s === 'false' || s === 'yes' || s === 'no') {
+    // 单行：判断是否需引号(含以 - 开头的值, 否则会被解析为列表项)
+    if (s.includes("'") || s.includes('"')) {
+      // 含引号: JSON 双引号转义, 保证 YAML 合法
+      return JSON.stringify(s);
+    }
+    if (/^-|[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$|^[>!]\S/.test(s) || s === 'true' || s === 'false' || s === 'yes' || s === 'no') {
+      const q = s.includes("'") ? '"' : "'";
+      return q + s + q;
+    }
+    return s;
+  }
+
+  // YAML 键加引号保护(含特殊字符的对话名/任务 id)
+  function _quoteYamlKey(key) {
+    const s = String(key);
+    if (/[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$/.test(s) || s === '') {
       const q = s.includes("'") ? '"' : "'";
       return q + s + q;
     }
@@ -1014,9 +1039,9 @@ window.ChemdahInterpreter = (() => {
 
     // __option__
     lines.push('__option__:');
-    lines.push(`${indent}theme: '${parsed.options.theme || 'chat'}'`);
+    lines.push(`${indent}theme: ${_genYAMLValue(parsed.options.theme || 'chat', 1)}`);
     if (parsed.options.title) {
-      lines.push(`${indent}title: '${parsed.options.title}'`);
+      lines.push(`${indent}title: ${_genYAMLValue(parsed.options.title, 1)}`);
     }
     if (parsed.options.flags && parsed.options.flags.length > 0) {
       lines.push(`${indent}flags:`);
@@ -1028,11 +1053,10 @@ window.ChemdahInterpreter = (() => {
 
     // Dialogues
     for (const d of parsed.dialogues) {
-      const dIdent = '';
-      lines.push(`${dIdent}${d.name}:`);
+      lines.push(`${_quoteYamlKey(d.name)}:`);
 
       if (d.type === 'switch') {
-        lines.push(`${indent}npc id: '${d.npcId}'`);
+        lines.push(`${indent}npc id: ${_genYAMLValue(d.npcId, 1)}`);
 
         // conditions
         if (d.conditions && d.conditions.length > 0) {
@@ -1044,14 +1068,9 @@ window.ChemdahInterpreter = (() => {
         }
       }
 
-      // NPC text (for dialogue type) — 也支持 switch 类型有 NPC text
-      if (d.type === 'dialogue' || d.npcText) {
-        if (d.type !== 'switch' && d.npcText) {
-          lines.push(`${indent}npc: ${_genYAMLValue(d.npcText, 1)}`);
-        } else if (d.npcText) {
-          // switch 类型也有 npc text 时
-          lines.push(`${indent}npc: ${_genYAMLValue(d.npcText, 1)}`);
-        }
+      // NPC text (dialogue 默认文本; switch 也可带默认文本)
+      if (d.npcText) {
+        lines.push(`${indent}npc: ${_genYAMLValue(d.npcText, 1)}`);
       }
 
       // format (for dialogue type)
@@ -1078,6 +1097,14 @@ window.ChemdahInterpreter = (() => {
           if (o.then) {
             lines.push(`${indent}${indent}  then: ${_genYAMLValue(o.then, 3)}`);
           }
+        }
+      }
+
+      // 对话级 flags
+      if (d.flags && d.flags.length > 0) {
+        lines.push(`${indent}flags:`);
+        for (const f of d.flags) {
+          lines.push(`${indent}${indent}- ${_genYAMLValue(f, 2)}`);
         }
       }
 
@@ -1306,7 +1333,7 @@ window.ChemdahInterpreter = (() => {
         // 直接在 SVG 上更新所有节点位置
         for (var ni2 = 0; ni2 < graph.nodes.length; ni2++) {
           var n2 = graph.nodes[ni2];
-          var el = mainG.querySelector('g[data-node-id="' + n2.id + '"]');
+          var el = mainG.querySelector('g[data-node-id="' + CSS.escape(n2.id) + '"]');
           if (!el) continue;
           var halfW2 = nodeW / 2, halfH2 = nodeH / 2;
           var rx2 = n2.x - halfW2, ry2 = n2.y - halfH2;
@@ -1554,7 +1581,7 @@ window.ChemdahInterpreter = (() => {
       }
 
       function updateNodeVisual(node) {
-        var el = mainG.querySelector('g[data-node-id="' + node.id + '"]');
+        var el = mainG.querySelector('g[data-node-id="' + CSS.escape(node.id) + '"]');
         if (!el) return;
         var halfW = nodeW / 2, halfH = nodeH / 2;
         var rx = node.x - halfW, ry = node.y - halfH;
@@ -1621,7 +1648,10 @@ window.ChemdahInterpreter = (() => {
         svgEl.style.cursor = 'grabbing';
       });
 
-      window.addEventListener('mousemove', function (e) {
+      // 复用全局监听器引用, 每次渲染先移除旧的, 防止累积
+      if (window._cvMmMove) window.removeEventListener('mousemove', window._cvMmMove);
+      if (window._cvMmUp) window.removeEventListener('mouseup', window._cvMmUp);
+      window._cvMmMove = function (e) {
         if (!dragNode) return;
         var svgRect = svgEl.getBoundingClientRect();
         var mouseSvgX = (e.clientX - svgRect.left - panX) / scale;
@@ -1634,9 +1664,10 @@ window.ChemdahInterpreter = (() => {
         dragNode.x = mouseSvgX - dragOffX;
         dragNode.y = mouseSvgY - dragOffY;
         updateNodeVisual(dragNode);
-      });
+      };
+      window.addEventListener('mousemove', window._cvMmMove);
 
-      window.addEventListener('mouseup', function () {
+      window._cvMmUp = function () {
         if (dragNode) {
           if (isClick) {
             // 没有移动 → 点击跳转
@@ -1648,7 +1679,8 @@ window.ChemdahInterpreter = (() => {
           dragNode = null;
           svgEl.style.cursor = '';
         }
-      });
+      };
+      window.addEventListener('mouseup', window._cvMmUp);
     })();
 
     // 信息浮层
@@ -2747,7 +2779,7 @@ window.ChemdahInterpreter = (() => {
 
     // 取消
     overlay.querySelector('#qie-cancel').addEventListener('click', () => { playSound('close'); overlay.remove(); });
-    overlay.addEventListener('click', (e) => { if (e.target === this) overlay.remove(); });
+    overlay.addEventListener('click', function (e) { if (e.target === this) overlay.remove(); });
 
     // 通知
     overlay.querySelector('.qie-notice').style.display = ITEM_NAMESPACES_ADDON.some(ns => ns.id === parsed.namespace) ? 'block' : 'none';
@@ -3841,7 +3873,8 @@ window.ChemdahInterpreter = (() => {
     })(container);
 
     // --- 文本字段变更事件 ---
-    container.addEventListener('change', function (e) {
+    if (container._qvCh1) container.removeEventListener('change', container._qvCh1);
+    container._qvCh1 = function (e) {
       const input = e.target.closest('[data-field^="q."]');
       if (!input) return;
       const field = input.dataset.field;
@@ -3872,20 +3905,24 @@ window.ChemdahInterpreter = (() => {
         // Quest-level field: q.meta.name, q.start.npc, q.accept.script, etc.
         _setNestedValue(quest, parts.slice(1), input.value);
       }
-    });
+    };
+    container.addEventListener('change', container._qvCh1);
 
     // 处理 task objective 自定义输入
-    container.addEventListener('change', function (e) {
+    if (container._qvCh2) container.removeEventListener('change', container._qvCh2);
+    container._qvCh2 = function (e) {
       const input = e.target.closest('[data-field="q.task.objective.custom"]');
       if (!input) return;
       const qi = parseInt(input.dataset.qIndex);
       const ti = parseInt(input.dataset.tIndex);
       const task = parsed.quests[qi]?.tasks[ti];
       if (task) task.objective = input.value;
-    });
+    };
+    container.addEventListener('change', container._qvCh2);
 
     // 处理 task objective 选择器联动
-    container.addEventListener('change', function (e) {
+    if (container._qvCh3) container.removeEventListener('change', container._qvCh3);
+    container._qvCh3 = function (e) {
       const sel = e.target.closest('select[data-field="q.task.objective"]');
       if (!sel) return;
       const qi = parseInt(sel.dataset.qIndex);
@@ -3898,7 +3935,8 @@ window.ChemdahInterpreter = (() => {
         );
         if (customInput) customInput.value = sel.value ? '' : customInput.value;
       }
-    });
+    };
+    container.addEventListener('change', container._qvCh3);
 
     // 处理 textarea 文本变更（change 事件对 textarea 足够）
     // 已经包含在 change 事件代理中
@@ -4017,9 +4055,11 @@ window.ChemdahInterpreter = (() => {
       } else if (parts.length === 4 && parts[0] !== '~' && parts[0] !== '>') {
         result.world = parts[0]; result.x = parts[1]; result.y = parts[2]; result.z = parts[3];
       } else if (parts.length === 4 && parts[0] === '~') {
-        result.x = parts[1]; result.y = parts[2]; result.z = parts[3]; result.mode = 'radius'; result.radius = '';
+        // 相对坐标(以玩家位置为基准): ~ 作为 world 占位, 序列化时原样回写
+        result.world = '~'; result.x = parts[1]; result.y = parts[2]; result.z = parts[3]; result.mode = 'exact';
       } else if (parts.length === 5) {
         if (parts[3] === '~') { result.world = parts[0]; result.x = parts[1]; result.y = parts[2]; result.mode = 'radius'; result.radius = parts[4]; }
+        else if (parts[3] === '>') { result.world = parts[0]; result.x = parts[1]; result.y = parts[2]; result.mode = 'area'; result.toX = parts[4]; result.toY = ''; result.toZ = ''; }
         else { result.x = parts[0]; result.y = parts[1]; result.z = parts[2]; result.mode = 'radius'; result.radius = parts[4]; }
       } else if (parts.length === 6) {
         result.world = parts[0]; result.x = parts[1]; result.y = parts[2]; result.z = parts[3];
@@ -4204,11 +4244,25 @@ window.ChemdahInterpreter = (() => {
     _showPositionEditorModal(initialValue, onConfirm);
   }
 
+  // 未知 section 原样写回(内容级保留; 引号风格可能与原文不同)
+  function _genRawYAML(value, indent) {
+    if (value === null || value === undefined) return '  '.repeat(indent) + '~';
+    if (typeof value !== 'object') return '  '.repeat(indent) + _genYAMLValue(value, indent);
+    let dumped;
+    try {
+      dumped = jsyaml.dump(value, { indent: 2, noRefs: true, lineWidth: -1 });
+    } catch (e) {
+      return '  '.repeat(indent) + JSON.stringify(value);
+    }
+    const pad = '  '.repeat(indent);
+    return String(dumped).trimEnd().split('\n').map(l => (l ? pad + l : '')).join('\n');
+  }
+
   function _genQuestYAML(parsed) {
     const lines = [];
 
     for (const quest of parsed.quests) {
-      lines.push(`${quest.id}:`);
+      lines.push(`${_quoteYamlKey(quest.id)}:`);
 
       // meta
       const hasMeta = quest.meta.name || quest.meta.type || quest.meta.description ||
@@ -4274,6 +4328,13 @@ window.ChemdahInterpreter = (() => {
               lines.push(`        ${hook}: ${_genYAMLValue(script, 4)}`);
             }
           }
+
+          // 任务内无法识别的字段原样写回
+          if (task._raw && Object.keys(task._raw).length > 0) {
+            for (const [rk, rv] of Object.entries(task._raw)) {
+              lines.push(_genRawYAML({ [rk]: rv }, 3));
+            }
+          }
         }
       }
 
@@ -4288,6 +4349,25 @@ window.ChemdahInterpreter = (() => {
         lines.push('  agent:');
         for (const [hook, script] of Object.entries(quest.agent)) {
           lines.push(`    ${hook}: ${_genYAMLValue(script, 2)}`);
+        }
+      }
+
+      // start / accept(有值才写, 避免凭空出现空字段)
+      if (quest.start && (quest.start.npc || quest.start.script)) {
+        lines.push('  start:');
+        if (quest.start.npc) lines.push(`    npc: ${_genYAMLValue(quest.start.npc, 3)}`);
+        if (quest.start.script) lines.push(`    script: ${_genYAMLValue(quest.start.script, 3)}`);
+      }
+      if (quest.accept && (quest.accept.npc || quest.accept.script)) {
+        lines.push('  accept:');
+        if (quest.accept.npc) lines.push(`    npc: ${_genYAMLValue(quest.accept.npc, 3)}`);
+        if (quest.accept.script) lines.push(`    script: ${_genYAMLValue(quest.accept.script, 3)}`);
+      }
+
+      // 无法识别的 section 原样写回
+      if (quest._raw && Object.keys(quest._raw).length > 0) {
+        for (const [rk, rv] of Object.entries(quest._raw)) {
+          lines.push(_genRawYAML({ [rk]: rv }, 1));
         }
       }
 
@@ -4416,14 +4496,20 @@ window.ChemdahInterpreter = (() => {
           return;
         }
 
-        // 保存覆盖设置
+        // 保存覆盖设置(跨平台分隔符)
+        const sep = filePath.includes('/') ? '/' : '\\';
         let scopePath = filePath;
         if (scope === 'directory') {
-          scopePath = filePath.substring(0, filePath.lastIndexOf('/'));
-          scopePath = scopePath.substring(0, scopePath.lastIndexOf('\\'));
+          scopePath = filePath.substring(0, filePath.lastIndexOf(sep));
         } else if (scope === 'project') {
-          scopePath = filePath.substring(0, filePath.lastIndexOf('/'));
-          // Try to find project root
+          // 项目根: 向上找含 configuration/ 的目录(与 detectProjectTypes 一致)
+          let dir = filePath.substring(0, filePath.lastIndexOf(sep));
+          while (dir && dir.includes(sep)) {
+            const dirName = dir.substring(dir.lastIndexOf(sep) + 1);
+            if (dirName === 'configuration') break;
+            dir = dir.substring(0, dir.lastIndexOf(sep));
+          }
+          scopePath = dir || filePath.substring(0, filePath.lastIndexOf(sep));
         }
         setTypeOverride(scopePath, type);
 
@@ -4482,18 +4568,20 @@ window.ChemdahInterpreter = (() => {
     containerEl.innerHTML = `<div class="cv-empty">
       <h2>${I18N.t('chemdah.unknownTypeTitle')}</h2>
       <p>${I18N.t('chemdah.unknownTypeMsg')}</p>
-      <p>${I18N.t('chemdah.unknownTypeHint')} <button class="cv-btn cv-btn-sm cv-btn-secondary"
-        onclick="ChemdahInterpreter.showTypeSelector(
-          '${_escHtml(filePath)}',
-          'unknown',
-          (type, scope) => {
-            if (type) {
-              document.getElementById('visual-editor').innerHTML = '<div class=\"cv-empty\">' + I18N.t('chemdah.rendering') + '</div>';
-              ChemdahInterpreter.render('${_escHtml(filePath)}', document.getElementById('source-editor').textContent || window.codeMirrorEditor.getValue(), document.getElementById('visual-editor'), { forceType: type });
-            }
-          }
-        )">${I18N.t('chemdah.manualSelect')}</button></p>
+      <p>${I18N.t('chemdah.unknownTypeHint')} <button class="cv-btn cv-btn-sm cv-btn-secondary" id="cv-unknown-type-btn">${I18N.t('chemdah.manualSelect')}</button></p>
     </div>`;
+    // 事件委托绑定, 避免 filePath 拼进 inline onclick 的注入面
+    const unknownBtn = containerEl.querySelector('#cv-unknown-type-btn');
+    if (unknownBtn) {
+      unknownBtn.addEventListener('click', function () {
+        ChemdahInterpreter.showTypeSelector(filePath, 'unknown', function (type, scope) {
+          if (type) {
+            document.getElementById('visual-editor').innerHTML = '<div class="cv-empty">' + I18N.t('chemdah.rendering') + '</div>';
+            ChemdahInterpreter.render(filePath, document.getElementById('source-editor').textContent || window.codeMirrorEditor.getValue(), document.getElementById('visual-editor'), { forceType: type });
+          }
+        });
+      });
+    }
   }
 
   // ============================================
