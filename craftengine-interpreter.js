@@ -17,7 +17,7 @@
     try { if (typeof playSound === 'function') playSound(name); } catch (e) {}
   }
   function _escHtml(str) {
-    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // ============ 常量 ============
@@ -319,7 +319,19 @@
     var stack = [{ indent: -1, kind: 'root', path: '', sec: null, entry: null, entryKey: null }];
     var pending = [];
     var inBlock = false, blockBase = -1;
+    var inDq = false; // 多行双引号标量 (续行以 # 开头时不应视为注释)
     var prevTopKey = null;
+
+    function dqOpen(line) {
+      var n = 0, esc = false;
+      for (var qi = 0; qi < line.length; qi++) {
+        var ch = line[qi];
+        if (ch === '\\' && !esc) { esc = true; continue; }
+        if (ch === '"' && !esc) n++;
+        esc = false;
+      }
+      return (n % 2) === 1;
+    }
 
     function pushTo(b, key, text) {
       var arr = b[key] || (b[key] = []);
@@ -369,8 +381,13 @@
         if (!line.trim() || indent > blockBase) continue;
         inBlock = false;
       }
+      if (inDq) {
+        inDq = dqOpen(line);
+        continue;
+      }
       if (/^\s*#/.test(line)) { pending.push({ text: line.replace(/^\s+/, ''), indent: indent }); continue; }
       if (!line.trim()) continue;
+      inDq = dqOpen(line);
 
       var sp = _splitInline(line);
       var content = sp.value;
@@ -469,7 +486,11 @@
   }
 
   function _genScalarRaw(val) {
-    if (typeof val === 'number') return isFinite(val) ? String(val) : 'null';
+    if (typeof val === 'number') {
+      // YAML 特殊数值符号, 避免 .inf/.nan 被静默改成 null
+      if (!isFinite(val)) return isNaN(val) ? '.nan' : (val > 0 ? '.inf' : '-.inf');
+      return String(val);
+    }
     if (typeof val === 'boolean') return String(val);
     var s = String(val);
     if (s === '') return "''";
@@ -485,7 +506,13 @@
 
   function _genScalar(val) {
     if (_ceIsWrap(val)) {
-      return '!!' + val.__ceTag + ' ' + (Array.isArray(val.v) ? _genFlow(val.v) : _genScalarRaw(val.v));
+      // 数值型 tag (!!long 等) 的值可能经输入框写回为数字字符串, 保持裸数字输出, 避免 !!long '7'
+      var raw;
+      if (Array.isArray(val.v)) raw = _genFlow(val.v);
+      else if (typeof val.v === 'number') raw = _genScalarRaw(val.v);
+      else if (typeof val.v === 'string' && _NUMBER_RE.test(val.v)) raw = val.v;
+      else raw = _genScalarRaw(val.v);
+      return '!!' + val.__ceTag + ' ' + raw;
     }
     return _genScalarRaw(val);
   }
@@ -835,6 +862,12 @@
   // kv 行解析: JSON 对象/数组 / 带引号字符串 / true/false / 数字 / 字符串 (键始终为字符串)
   function _parseKvLine(v) {
     var s = String(v).trim();
+    // !!tag 前缀: 保留为 wrap 对象, 序列化时写回 k: !!tag 值
+    var tagMatch = s.match(/^!!(\S+)\s+([\s\S]*)$/);
+    if (tagMatch) {
+      var tv = _parseKvLine(tagMatch[2]);
+      return { __ceTag: tagMatch[1], v: tv };
+    }
     if (/^[\[{"']/.test(s)) {
       try {
         var j = JSON.parse(s);
@@ -1645,8 +1678,7 @@
     var arr = Array.isArray(value) ? value : [];
     var itemDef = def.itemType;
     var isUnionItem = itemDef && itemDef.type === 'union';
-    var html = '<div class="ce-sf-list" data-sf-kind="list" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
-      _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
+    var html = '<div class="ce-sf-list" data-sf-kind="list" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < arr.length; i++) {
       html += '<div class="ce-sf-list-item" data-sf-idx="' + i + '">' +
         '<div class="ce-sf-list-ops">' +
@@ -1714,8 +1746,7 @@
     for (var vk = 0; vk < keys.length; vk++) {
       if (_sfVersionKeyRe.test(keys[vk])) { hasVer = true; break; }
     }
-    var html = '<div class="ce-sf-map' + (hasVer ? ' has-verkey' : '') + '" data-sf-kind="map" data-sf-path="' + _escHtml(path) + '" data-sf-def="' +
-      _escHtml(JSON.stringify(_sfNorm(def))) + '" data-sf-uid="' + uid + '">';
+    var html = '<div class="ce-sf-map' + (hasVer ? ' has-verkey' : '') + '" data-sf-kind="map" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var keyCtrl = '<input class="ce-input ce-sf-map-key" data-sf-kind="map-key" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" value="' + _escHtml(k) + '" spellcheck="false">';
@@ -1902,8 +1933,10 @@
     var obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     var comps = _sfCompsOf(def);
     var condKey = def.conditionKey;
+    // conditional 键支持 conditional#id 变体(多项条件), 以 # 前段匹配
+    var condKeyBase = condKey ? String(condKey).split('#')[0] : null;
     var keys = [];
-    Object.keys(obj).forEach(function (k) { if (k !== condKey) keys.push(k); });
+    Object.keys(obj).forEach(function (k) { if (!condKeyBase || String(k).split('#')[0] !== condKeyBase) keys.push(k); });
     var html = '<div class="ce-sf-map ce-sf-components" data-sf-kind="components" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
     // 组件列表: 行 = 名称 + 编辑弹窗按钮 + 删除按钮
     for (var i = 0; i < keys.length; i++) {
@@ -1925,12 +1958,22 @@
     if (condKey && comps[condKey]) {
       var condWd = comps[condKey].widget || comps[condKey];
       var condVal = obj[condKey];
+      var condActualKey = condKey;
+      if (condVal === undefined && condKeyBase) {
+        // conditional#id 变体已存在: 取第一个, 避免重复生成普通 conditional 键
+        // 注意 keys 已过滤掉 conditional# 前缀键, 需扫描 obj 原始键
+        var objKeys = Object.keys(obj);
+        for (var ck0 = 0; ck0 < objKeys.length; ck0++) {
+          if (String(objKeys[ck0]).indexOf(condKeyBase + '#') === 0) { condVal = obj[objKeys[ck0]]; condActualKey = objKeys[ck0]; break; }
+        }
+      }
       var hasCond = condVal !== undefined && condVal !== null && typeof condVal === 'object' && !Array.isArray(condVal);
       html += '<div class="ce-sf-cond-block">' +
         '<div class="ce-sf-cond-title">' + _escHtml(_t('craftengine.componentConditionTitle', '条件')) + '</div>';
       if (hasCond) {
-        var cuid = _sfUidAlloc(_sfKeyPath(path, condKey), 'popup', condWd, opts);
-        html += '<div class="ce-sf-cond-row">' + _sfPopupHtml(condWd, _sfKeyPath(path, condKey), condVal, { uid: cuid }) + '</div>';
+        // 编辑/清除作用于实际键 (可能为 conditional#id 变体)
+        var cuid = _sfUidAlloc(_sfKeyPath(path, condActualKey), 'popup', condWd, opts);
+        html += '<div class="ce-sf-cond-row">' + _sfPopupHtml(condWd, _sfKeyPath(path, condActualKey), condVal, { uid: cuid }) + '</div>';
       } else {
         html += '<button type="button" class="cv-btn cv-btn-sm ce-sf-cond-add" data-sf-action="cond-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.condAdd', '添加条件')) + '</button>';
       }
@@ -2370,8 +2413,8 @@
             else obj[e.key] = _parseKvLine(e.text);
           });
           if (!wasObj) {
-            if (whole) entry.data = obj;
-            else if (path) _setNested(entry.data, path, obj);
+            // 统一走 _applyValue: 同步 config 场景的 _fileLevelRaw, 避免类型/版本修改静默丢失
+            _applyValue(entry, whole ? '__whole__' : path, obj, parsed, section);
           }
         }
       }
@@ -2382,10 +2425,10 @@
         if (chosen === '') {
           if (_ceIsWrap(cur) && !invalid) {
             if (curRaw === '' || curRaw === undefined) {
-              if (whole) entry.data = undefined;
-              else if (path) _deleteNested(entry.data, path);
-            } else if (whole) entry.data = curRaw;
-            else if (path) _setNested(entry.data, path, curRaw);
+              _applyValue(entry, whole ? '__whole__' : path, undefined, parsed, section);
+            } else {
+              _applyValue(entry, whole ? '__whole__' : path, curRaw, parsed, section);
+            }
           }
         } else {
           var sv = _sfSpecSeqConv(chosen);
@@ -2405,8 +2448,7 @@
             else { var n2 = parseInt(val, 10); if (!isNaN(n2)) val = n2; }
           }
           var w = { __ceTag: chosen, v: val };
-          if (whole) entry.data = w;
-          else if (path) _setNested(entry.data, path, w);
+          _applyValue(entry, whole ? '__whole__' : path, w, parsed, section);
         }
       }
       if (invalid) return;
@@ -3863,6 +3905,7 @@
         target.classList.remove('ce-invalid');
         if (jsonField === '__whole__') {
           _applyValue(entry, '__whole__', newVal, parsed, section);
+          if (ROOT.__keAutoSync) syncToSource(parsed);
           _ceRenderFn();
           return;
         }
