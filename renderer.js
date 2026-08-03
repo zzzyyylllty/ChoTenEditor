@@ -670,6 +670,7 @@ let _openingFile = null;
 let _closingTabs = {};
 let _loadingFile = false;
 let _fileContents = {}; // 文件内容缓存，用于标签页切换
+let _remoteSaveWaiters = {}; // path → [{resolve, timer}] 远程保存等待服务器确认
 
 async function openFile(filePath, content) {
 
@@ -746,12 +747,19 @@ async function openFile(filePath, content) {
     // 检查当前文件是否有未保存更改（避免与 _openingFile 冲突）
     if (currentFile && currentFile !== filePath && dirtyTabs[currentFile] && !_closingTabs[currentFile]) {
       var switchResult = await showDirtyConfirmDialog(getFileName(currentFile));
+      if (_openingFile !== filePath) return; // 已被更新的打开请求抢占
       if (switchResult === 'cancel') {
         _openingFile = null;
         return;
       }
       if (switchResult === 'save') {
-        await saveCurrentFile();
+        var savedOk = await saveCurrentFile();
+        if (_openingFile !== filePath) return;
+        if (savedOk === false) {
+          // 保存失败: 中止切换, 防止未保存修改被新内容覆盖
+          _openingFile = null;
+          return;
+        }
       } else {
         // 放弃: 清除脏标记, 避免之后反复提示
         delete dirtyTabs[currentFile];
@@ -760,6 +768,7 @@ async function openFile(filePath, content) {
 
     if (!content) {
       const result = await _electronAPI.readFile(filePath);
+      if (_openingFile !== filePath) return;
       if (!result.success) {
         showErrorDialog(I18N.t('dialog.readFailed'), result.error || I18N.t('error.cannotReadFile'));
         _openingFile = null;
@@ -825,11 +834,11 @@ async function openFile(filePath, content) {
     }
 
     saveAppState();
-    _openingFile = null;
+    if (_openingFile === filePath) _openingFile = null;
   } catch (error) {
     console.error('[RENDERER] 打开文件错误:', error);
     showErrorDialog(I18N.t('dialog.openFileFailed'), error.message || error);
-    _openingFile = null;
+    if (_openingFile === filePath) _openingFile = null;
   }
 }
 
@@ -904,6 +913,22 @@ async function setActiveTab(filePath) {
       tab.classList.remove('active');
     }
   });
+
+  // 可视化模式下有未同步修改时, 切换前先确认
+  // (可视化修改只存在于 _ceParsed 中, syncToSource 仅在切代码模式时触发, 直接切标签会丢失)
+  if (currentFile && currentFile !== filePath && isVisualMode && visualEditor &&
+      visualEditor._ceParsed && visualEditor._ceParsed._visualDirty) {
+    var vdResult = await showUnsyncedConfirmDialog(getFileName(currentFile));
+    if (vdResult === 'cancel') return;
+    if (vdResult === 'sync' && typeof CraftEngineInterpreter !== 'undefined') {
+      try {
+        CraftEngineInterpreter.syncToSource(visualEditor._ceParsed);
+        await saveCurrentFile();
+      } catch (e) {
+        console.error('[RENDERER] 同步可视化状态失败:', e);
+      }
+    }
+  }
 
   // 如果文件不同，加载内容
   if (currentFile !== filePath) {
@@ -1328,25 +1353,44 @@ async function saveCurrentFile() {
 
   if (!currentFile) {
     await UI.alert({ message: I18N.t('alert.noFileOpen') });
-    return;
+    return false;
   }
 
   if (!codeMirrorEditor) {
     showErrorDialog(I18N.t('dialog.error'), I18N.t('error.codemirrorMissing'));
-    return;
+    return false;
   }
 
   const content = codeMirrorEditor.getValue();
 
   try {
     if (_fmMode === 'remote' && window.electronAPI && window.electronAPI.remote) {
-      // 远程保存
-      window.electronAPI.remote.requestFileWrite({ filePath: currentFile, content: content });
-      dirtyTabs[currentFile] = false;
-      _fileContents[currentFile] = content; // 更新缓存
-      updateTabDirtyIndicator(currentFile);
+      // 远程保存: 不立即清除脏标记, 等服务器 file:write:result 确认成功
+      const path = currentFile;
+      _fileContents[path] = content; // 预存提交内容
+      window.electronAPI.remote.requestFileWrite({ filePath: path, content: content });
       setRemoteStatus('rm-client-status', I18N.t('rm.savingRemoteFile'));
-      return;
+      const ok = await new Promise(function (resolve) {
+        const timer = setTimeout(function () {
+          const arr = _remoteSaveWaiters[path];
+          if (arr) {
+            _remoteSaveWaiters[path] = arr.filter(function (w) { return w.timer !== timer; });
+            if (!_remoteSaveWaiters[path].length) delete _remoteSaveWaiters[path];
+          }
+          showErrorDialog(I18N.t('dialog.saveFileFailed'), I18N.t('rm.saveTimeout'));
+          resolve(false);
+        }, 10000);
+        if (!_remoteSaveWaiters[path]) _remoteSaveWaiters[path] = [];
+        _remoteSaveWaiters[path].push({ resolve, timer });
+      });
+      if (ok) {
+        if (dirtyTabs[path]) {
+          dirtyTabs[path] = false;
+          updateTabDirtyIndicator(path);
+        }
+        playSound('save');
+      }
+      return ok;
     }
 
     const result = await _electronAPI.writeFile(currentFile, content);
@@ -1356,11 +1400,14 @@ async function saveCurrentFile() {
       _fileContents[currentFile] = content; // 更新缓存
       updateTabDirtyIndicator(currentFile);
       updateStatus(I18N.t('status.fileSaved', { path: currentFile }));
+      return true;
     } else {
       showErrorDialog(I18N.t('dialog.saveFileFailed'), result.error);
+      return false;
     }
   } catch (error) {
     showErrorDialog(I18N.t('dialog.saveFileFailed'), error.message || error);
+    return false;
   }
 }
 
@@ -1686,8 +1733,10 @@ function finishCloseSettingsModal() {
   updateCodeMirrorTheme();
 }
 
-// 设置页 iframe 内点击"返回编辑器"时关闭弹窗
+// 设置页 iframe 内点击"返回编辑器"时关闭弹窗 (校验消息来源, 忽略其它窗口消息)
 window.addEventListener('message', (e) => {
+  const frame = document.getElementById('st-frame');
+  if (!frame || !frame.contentWindow || e.source !== frame.contentWindow) return;
   if (e.data && e.data.type === 'closeSettings') {
     requestCloseSettingsModal();
   } else if (e.data && e.data.type === 'settingsSaved') {
@@ -2635,13 +2684,30 @@ function initRemoteEvents() {
         setRemoteStatus('rm-client-status', I18N.t('rm.permUpdated', { level: data.permissions ? data.permissions.level : '' }));
         break;
 
-      case 'client:file:write:result':
+      case 'client:file:write:result': {
+        const wpath = data.path;
+        // 唤醒等待确认的保存调用
+        const waiters = _remoteSaveWaiters[wpath];
+        if (waiters && waiters.length) {
+          delete _remoteSaveWaiters[wpath];
+          for (var wi = 0; wi < waiters.length; wi++) {
+            clearTimeout(waiters[wi].timer);
+            waiters[wi].resolve(data.success);
+          }
+        }
         if (data.success) {
-          setRemoteStatus('rm-client-status', I18N.t('rm.fileSavedOk', { path: data.path }));
+          setRemoteStatus('rm-client-status', I18N.t('rm.fileSavedOk', { path: wpath }));
+          // 管理员批准等延迟确认路径: 结果到达后无条件清除脏标记
+          if (dirtyTabs[wpath]) {
+            dirtyTabs[wpath] = false;
+            updateTabDirtyIndicator(wpath);
+          }
         } else {
+          // 失败: 保留脏标记, 用户可再次保存
           setRemoteStatus('rm-client-status', I18N.t('rm.fileSaveFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
+      }
 
       case 'client:file:write:pending':
         setRemoteStatus('rm-client-status', I18N.t('rm.waitingApproveWrite'));

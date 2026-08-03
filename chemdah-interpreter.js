@@ -216,7 +216,16 @@ window.ChemdahInterpreter = (() => {
         flags: [],
         conditions: [],      // for switch type
         options: [],         // for dialogue type (player replies)
+        _raw: {},            // 无法识别的字段, 编辑后原样写回
       };
+
+      // 收集对话条目级未知字段 (npc/when/player 等已知字段之外的), 防止编辑后丢失
+      {
+        const knownKeys = ['npc', 'npcId', 'npc id', 'when', 'player', 'format', 'flags'];
+        for (const ek of Object.keys(entry)) {
+          if (!knownKeys.includes(ek)) dialogue._raw[ek] = entry[ek];
+        }
+      }
 
       // 检测对话类型
       if (entry.npcId || entry['npc id']) {
@@ -995,6 +1004,13 @@ window.ChemdahInterpreter = (() => {
     };
     container.addEventListener('change', container._cvChangeListener);
 
+    // 双向清理: 清除任务编辑器残留的 change 监听
+    // (quest→conversation 切换后旧 handler 引用旧 parsed, 触发会把编辑器覆盖成旧文件内容)
+    if (container._qvCh1) container.removeEventListener('change', container._qvCh1);
+    if (container._qvCh2) container.removeEventListener('change', container._qvCh2);
+    if (container._qvCh3) container.removeEventListener('change', container._qvCh3);
+    if (container._qvChangeListener) container.removeEventListener('change', container._qvChangeListener);
+
   }
 
   // ============================================
@@ -1105,6 +1121,13 @@ window.ChemdahInterpreter = (() => {
         lines.push(`${indent}flags:`);
         for (const f of d.flags) {
           lines.push(`${indent}${indent}- ${_genYAMLValue(f, 2)}`);
+        }
+      }
+
+      // 无法识别的字段原样写回 (内容级保留)
+      if (d._raw && Object.keys(d._raw).length > 0) {
+        for (const [rk, rv] of Object.entries(d._raw)) {
+          lines.push(_genRawYAML({ [rk]: rv }, 1));
         }
       }
 
@@ -2022,13 +2045,22 @@ window.ChemdahInterpreter = (() => {
     }
     if (data.optional !== undefined) meta.optional = data.optional;
     if (data['reset-data-on-accepted'] !== undefined) meta['reset-data-on-accepted'] = data['reset-data-on-accepted'];
+    // 保留 meta 内无法识别的字段 (编辑后原样写回)
+    meta._raw = {};
+    const metaKnown = ['name', 'type', 'description', 'depend', 'stats', 'optional', 'reset-data-on-accepted'];
+    for (const mk of Object.keys(data)) {
+      if (!metaKnown.includes(mk)) meta._raw[mk] = data[mk];
+    }
     return meta;
   }
 
   function _parseQuestStartAccept(data) {
-    const obj = { npc: '', script: '' };
+    const obj = { npc: '', script: '', _raw: {} };
     if (data.npc) obj.npc = String(data.npc);
     if (data.script) obj.script = String(data.script);
+    for (const [k, v] of Object.entries(data)) {
+      if (k !== 'npc' && k !== 'script') obj._raw[k] = v;
+    }
     return obj;
   }
 
@@ -2269,6 +2301,8 @@ window.ChemdahInterpreter = (() => {
   function _renderQuestCard(quest, qi) {
     const label = quest.meta.name || quest.id;
     const typeLabel = quest.meta.type || 'L1';
+    // class 只允许字母数字下划线连字符, 防止 meta.type 注入 HTML
+    const typeCls = String(typeLabel).replace(/[^\w-]/g, '') || 'L1';
 
     let html = `<div class="qv-card collapsed" data-q-index="${qi}">`;
 
@@ -2278,7 +2312,7 @@ window.ChemdahInterpreter = (() => {
         <span class="cv-toggle-arrow">▶</span>
         <span class="cv-card-preview">${_escHtml(label)}</span>
       </span>
-      <span class="qv-type-badge qv-type-${typeLabel}">${_escHtml(typeLabel)}</span>
+      <span class="qv-type-badge qv-type-${typeCls}">${_escHtml(typeLabel)}</span>
       <span class="qv-task-count">${I18N.t('chemdah.subtaskCount', {count: quest.tasks.length})}</span>
       <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" data-tip="${I18N.t('chemdah.deleteQuest')}">&times;</button>
     </div>`;
@@ -3954,6 +3988,15 @@ window.ChemdahInterpreter = (() => {
       }
     };
     container.addEventListener('change', container._qvChangeListener);
+
+    // 双向清理: 清除对话编辑器残留的 change 监听
+    // (conversation→quest 切换后旧 handler 引用旧 parsed, 触发会把编辑器覆盖成旧对话内容)
+    if (container._cvCh1) container.removeEventListener('change', container._cvCh1);
+    if (container._cvCh2) container.removeEventListener('change', container._cvCh2);
+    if (container._cvCh3) container.removeEventListener('change', container._cvCh3);
+    if (container._cvCh4) container.removeEventListener('change', container._cvCh4);
+    if (container._cvCh5) container.removeEventListener('change', container._cvCh5);
+    if (container._cvChangeListener) container.removeEventListener('change', container._cvChangeListener);
   }
 
   function _setNestedValue(obj, path, value) {
@@ -4267,7 +4310,8 @@ window.ChemdahInterpreter = (() => {
       // meta
       const hasMeta = quest.meta.name || quest.meta.type || quest.meta.description ||
         quest.meta.depend || quest.meta.stats || quest.meta.optional !== undefined ||
-        quest.meta['reset-data-on-accepted'] !== undefined;
+        quest.meta['reset-data-on-accepted'] !== undefined ||
+        (quest.meta._raw && Object.keys(quest.meta._raw).length > 0);
       if (hasMeta) {
         lines.push('  meta:');
         if (quest.meta.name) lines.push(`    name: ${_genYAMLValue(quest.meta.name, 2)}`);
@@ -4286,6 +4330,12 @@ window.ChemdahInterpreter = (() => {
         }
         if (quest.meta['reset-data-on-accepted'] !== undefined) {
           lines.push(`    reset-data-on-accepted: ${quest.meta['reset-data-on-accepted']}`);
+        }
+        // 无法识别的 meta 字段原样写回
+        if (quest.meta._raw && Object.keys(quest.meta._raw).length > 0) {
+          for (const [rk, rv] of Object.entries(quest.meta._raw)) {
+            lines.push(_genRawYAML({ [rk]: rv }, 2));
+          }
         }
       }
 
@@ -4353,15 +4403,27 @@ window.ChemdahInterpreter = (() => {
       }
 
       // start / accept(有值才写, 避免凭空出现空字段)
-      if (quest.start && (quest.start.npc || quest.start.script)) {
+      if (quest.start && (quest.start.npc || quest.start.script ||
+          (quest.start._raw && Object.keys(quest.start._raw).length > 0))) {
         lines.push('  start:');
         if (quest.start.npc) lines.push(`    npc: ${_genYAMLValue(quest.start.npc, 3)}`);
         if (quest.start.script) lines.push(`    script: ${_genYAMLValue(quest.start.script, 3)}`);
+        if (quest.start._raw) {
+          for (const [rk, rv] of Object.entries(quest.start._raw)) {
+            lines.push(_genRawYAML({ [rk]: rv }, 2));
+          }
+        }
       }
-      if (quest.accept && (quest.accept.npc || quest.accept.script)) {
+      if (quest.accept && (quest.accept.npc || quest.accept.script ||
+          (quest.accept._raw && Object.keys(quest.accept._raw).length > 0))) {
         lines.push('  accept:');
         if (quest.accept.npc) lines.push(`    npc: ${_genYAMLValue(quest.accept.npc, 3)}`);
         if (quest.accept.script) lines.push(`    script: ${_genYAMLValue(quest.accept.script, 3)}`);
+        if (quest.accept._raw) {
+          for (const [rk, rv] of Object.entries(quest.accept._raw)) {
+            lines.push(_genRawYAML({ [rk]: rv }, 2));
+          }
+        }
       }
 
       // 无法识别的 section 原样写回

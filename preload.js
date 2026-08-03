@@ -68,7 +68,6 @@ try {
     connectToServer: (opts) => ipcRenderer.invoke('remote:connectToServer', opts),
     disconnectFromServer: () => ipcRenderer.invoke('remote:disconnectFromServer'),
     getClientStatus: () => ipcRenderer.invoke('remote:getClientStatus'),
-    sendSecurityCode: (opts) => ipcRenderer.invoke('remote:sendSecurityCode', opts),
     requestFileRead: (opts) => ipcRenderer.invoke('remote:requestFileRead', opts),
     requestFileWrite: (opts) => ipcRenderer.invoke('remote:requestFileWrite', opts),
     requestFileList: (opts) => ipcRenderer.invoke('remote:requestFileList', opts),

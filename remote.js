@@ -177,30 +177,39 @@ async function startServer(port, password, options = {}) {
 }
 
 async function stopServer() {
-  if (_server) {
-    // 通知所有客户端
-    for (const [, c] of _serverClients) {
-      try {
-        if (c.ws.readyState === WebSocket.OPEN) {
-          c.ws.send(JSON.stringify({ type: 'server:stopped' }));
-          c.ws.close();
-        }
-      } catch (e) {}
-    }
-    for (const [, c] of _pendingClients) {
-      try {
-        if (c.ws.readyState === WebSocket.OPEN) {
-          c.ws.send(JSON.stringify({ type: 'server:stopped' }));
-          c.ws.close();
-        }
-      } catch (e) {}
-    }
-    _server.close();
-    _server = null;
-    _serverClients.clear();
-    _pendingClients.clear();
-    emit('server:stopped', {});
+  if (!_server) return;
+  const server = _server;
+  // 通知所有客户端
+  for (const [, c] of _serverClients) {
+    try {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(JSON.stringify({ type: 'server:stopped' }));
+        c.ws.close();
+      }
+    } catch (e) {}
   }
+  for (const [, c] of _pendingClients) {
+    try {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(JSON.stringify({ type: 'server:stopped' }));
+        c.ws.close();
+      }
+    } catch (e) {}
+  }
+  // 等待 close 真正完成, 否则立刻重启同端口会 EADDRINUSE (2s 兜底防回调悬置)
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, 2000);
+    try {
+      server.close(() => { clearTimeout(timer); resolve(); });
+    } catch (e) {
+      clearTimeout(timer);
+      resolve();
+    }
+  });
+  _server = null;
+  _serverClients.clear();
+  _pendingClients.clear();
+  emit('server:stopped', {});
 }
 
 function confirmClient(clientId) {
@@ -543,12 +552,14 @@ function deleteClientFile(clientId, client, msg) {
 
 function checkFilePermission(client, filePath) {
   if (!client.filePerms || typeof filePath !== 'string') return null;
-  const normPath = filePath.replace(/\\/g, '/');
+  // Windows 文件系统大小写不敏感, 归一化后再匹配, 避免管理员授权 C:\Foo 客户端请求 c:\foo 失配
+  const fold = process.platform === 'win32' ? s => s.toLowerCase() : s => s;
+  const normPath = fold(filePath.replace(/\\/g, '/'));
   // 按完整路径匹配
   if (client.filePerms[filePath]) return client.filePerms[filePath];
   // 按目录匹配 (两侧统一斜杠; 目录前缀需以 / 结尾, 避免 C:\foo 误匹配 C:\foobar)
   for (const [pattern, perm] of Object.entries(client.filePerms)) {
-    const normPattern = String(pattern).replace(/\\/g, '/').replace(/\/+$/, '');
+    const normPattern = fold(String(pattern).replace(/\\/g, '/').replace(/\/+$/, ''));
     if (normPath === normPattern) return perm;
     if (normPath.startsWith(normPattern + '/')) return perm;
   }
@@ -724,14 +735,6 @@ async function disconnectFromServer() {
   }
 }
 
-// 客户端：发送安全码确认（用户在客户端看到安全码后，告知服务器已确认）
-function sendSecurityCode(securityCode) {
-  if (_client && _client.readyState === WebSocket.OPEN) {
-    _client.send(JSON.stringify({ type: 'auth:security-code', securityCode }));
-    emit('client:security-code:sent', {});
-  }
-}
-
 // 客户端：发送文件读取请求
 function requestFileRead(filePath) {
   if (_client && _client.readyState === WebSocket.OPEN) {
@@ -879,7 +882,6 @@ module.exports = {
   connectToServer,
   disconnectFromServer,
   getClientStatus,
-  sendSecurityCode,
   requestFileRead,
   requestFileWrite,
   requestFileList,

@@ -1938,7 +1938,9 @@
     var keys = [];
     Object.keys(obj).forEach(function (k) { if (!condKeyBase || String(k).split('#')[0] !== condKeyBase) keys.push(k); });
     var html = '<div class="ce-sf-map ce-sf-components" data-sf-kind="components" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
-    // 组件列表: 行 = 名称 + 编辑弹窗按钮 + 删除按钮
+    // 组件列表: 行 = 名称 + 摘要行(弹窗编辑/清除) + 删除按钮
+    // 摘要行必须作为 popup uid 节点本体渲染: 弹窗确定后 _sfRerender(puid) 会替换该节点,
+    // 若只放按钮, 按钮会被替换成摘要结构, 造成组件行内嵌套错乱
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var base = String(k).split('#')[0];
@@ -1949,7 +1951,7 @@
       html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<div class="ce-sf-comp-head">' +
         '<span class="ce-sf-comp-name" data-tip="' + _escHtml(k) + '">' + _escHtml(name) + '</span>' +
-        '<button class="cv-btn cv-btn-sm ce-sf-popup-btn" data-sf-action="popup-edit" data-sf-path="' + _escHtml(_sfKeyPath(path, k)) + '" data-sf-uid="' + puid + '">' + _escHtml(_t('craftengine.popupEdit')) + '</button>' +
+        _sfPopupHtml(bodyDef, _sfKeyPath(path, k), obj[k], { uid: puid }) +
         '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '" data-tip="✕">✕</button>' +
         '</div></div>';
     }
@@ -2574,8 +2576,9 @@
               var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model';
               if (listLike && cur !== undefined && cur !== null) {
                 defVal = Array.isArray(cur) ? cur : [cur];
-              } else if (objLike && Array.isArray(cur) && cur.length === 1) {
-                defVal = cur[0];
+              } else if (objLike && Array.isArray(cur)) {
+                // 数组→对象: 仅单项时解包, 多项保留数组 (解包会静默丢弃其余元素)
+                defVal = cur.length === 1 ? cur[0] : cur;
               } else {
                 defVal = _sfDefaultOf(td.widget);
               }
@@ -2625,10 +2628,10 @@
         if (!tv) return;
         if (tv === '__scalar') nv = '';
         else if (itemDef.noTypeKey) {
-          // 形状推断 union: 键名形式 {类型键: 默认值}, 否则渲染会推断到第一个容器类型
+          // 形状推断 union: 值即内容 (shape-form), 与 union-set 切换写入形式一致;
+          // 键名形式 {类型键: 值} 会与形状推断渲染混淆, 造成同列表内两种形式混杂的数据损坏
           var wd = _sfTypesOf(itemDef)[tv];
-          nv = {};
-          nv[tv] = (wd && wd.widget) ? _sfDefaultOf(wd.widget) : '';
+          nv = (wd && wd.widget) ? _sfDefaultOf(wd.widget) : '';
         }
         else nv = { type: tv };
       } else {

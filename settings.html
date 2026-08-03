@@ -849,7 +849,12 @@
         if (window.electronAPI) window.electronAPI.maximize();
       });
       document.getElementById('tb-close').addEventListener('click', () => {
-        if (window.electronAPI) window.electronAPI.close();
+        if (window.self !== window.top) {
+          // 嵌入模式: 通知父页面关闭设置弹窗, 而非关闭整个应用
+          window.parent.postMessage({ type: 'closeSettings' }, '*');
+        } else if (window.electronAPI) {
+          window.electronAPI.close();
+        }
       });
     </script>
 </body>

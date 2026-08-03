@@ -1798,7 +1798,9 @@
       // 黑色半透明遮罩：alpha 取 (1-opacity) 的 0.6~0.95 范围，保证至少 0.6 以上
       const alpha = Math.min(0.9, Math.round((1 - opacity) * 85) / 100 + 0.15);
       const bgColor = theme === 'light' ? 'rgba(255,255,255,' + Math.min(alpha, 0.5) + ')' : 'rgba(0,0,0,' + alpha + ')';
-      overlay.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url(background/' + bg.filename + ') center/cover no-repeat fixed';
+      // 与 renderer.js/index.html 一致: 反斜杠转正斜杠, 引号转义 %22, url() 引号包裹
+      const bgUrl = String(bg.filename).replace(/\\/g, '/').replace(/"/g, '%22');
+      overlay.style.background = 'linear-gradient(' + bgColor + ', ' + bgColor + '), url("background/' + bgUrl + '") center/cover no-repeat fixed';
     } catch (e) { /* 静默失败 */ }
   }
 

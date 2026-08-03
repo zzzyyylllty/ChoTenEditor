@@ -292,6 +292,7 @@ rm:
   fileDeleted: "文件已删除: {path}"
   fileSavedOk: "文件保存成功: {path}"
   fileSaveFailed: "文件保存失败: {msg}"
+  saveTimeout: "服务器 10 秒内未确认保存结果，请重试"
   waitingApproveWrite: "等待管理员批准文件更改..."
   fileReadOk: "已读取远程文件"
   fileReadFailed: "读取远程文件失败: {msg}"

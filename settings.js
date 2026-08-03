@@ -15,6 +15,7 @@ if (IS_EMBEDDED) {
   // 父页面关闭弹窗前会通知保存（弹窗关闭不触发 beforeunload）
   // 保存完成后回复父页面，等它关闭弹窗，避免异步操作（如密码哈希）未完成
   window.addEventListener('message', (e) => {
+    if (e.source !== window.parent) return;
     if (e.data && e.data.type === 'saveSettings') {
       Promise.resolve(_settingsDirty ? saveSettings() : Promise.resolve()).catch(() => {}).then(() => {
         window.parent.postMessage({ type: 'settingsSaved' }, '*');

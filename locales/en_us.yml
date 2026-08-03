@@ -292,6 +292,7 @@ rm:
   fileDeleted: "File deleted: {path}"
   fileSavedOk: "File saved: {path}"
   fileSaveFailed: "File save failed: {msg}"
+  saveTimeout: "Server did not confirm the save within 10 seconds, please retry"
   waitingApproveWrite: "Waiting for admin approval of file change..."
   fileReadOk: "Remote file read"
   fileReadFailed: "Failed to read remote file: {msg}"
