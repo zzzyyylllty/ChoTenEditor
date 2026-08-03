@@ -367,7 +367,7 @@ window.ChemdahInterpreter = (() => {
       for (const d of dialogues) {
         const typeClass = d.type === 'switch' ? 'switch' : 'dialogue';
         const typeLabel = d.type === 'switch' ? 'S' : 'D';
-        html += `<div class="cv-sidebar-item" data-action="sidebar-nav" data-sidebar-dialogue="${_escHtml(d.name)}" title="${_escHtml(d.name)}">
+        html += `<div class="cv-sidebar-item" data-action="sidebar-nav" data-sidebar-dialogue="${_escHtml(d.name)}" data-tip="${_escHtml(d.name)}">
           <span class="cv-sidebar-type ${typeClass}">${typeLabel}</span>
           <span class="cv-sidebar-name">${_escHtml(d.name)}</span>
         </div>`;
@@ -473,7 +473,7 @@ window.ChemdahInterpreter = (() => {
       <span class="cv-type-badge ${typeClass}">${typeLabel}</span>
       <div class="cv-dialogue-actions">
         <button class="cv-btn-icon" data-action="delete-dialogue" data-dialogue="${_escHtml(d.name)}"
-          title="${I18N.t('chemdah.deleteDialogue')}">&times;</button>
+          data-tip="${I18N.t('chemdah.deleteDialogue')}">&times;</button>
       </div>
     </div>`;
 
@@ -569,7 +569,7 @@ window.ChemdahInterpreter = (() => {
       data-dialogue="${_escHtml(dialogueName)}" data-index="${index}"
       value="${_escHtml(cond.open)}" placeholder="${I18N.t('chemdah.targetDialoguePlaceholder')}">`;
     html += `<button class="cv-btn-icon cv-btn-icon-danger" data-action="delete-condition"
-      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="${I18N.t('chemdah.deleteBranch')}">&times;</button>`;
+      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" data-tip="${I18N.t('chemdah.deleteBranch')}">&times;</button>`;
     html += '</div>';
     html += '</div>';
     return html;
@@ -633,7 +633,7 @@ window.ChemdahInterpreter = (() => {
     // 删除按钮
     html += `<button class="cv-btn-icon cv-btn-icon-danger cv-option-delete"
       data-action="delete-option"
-      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" title="${I18N.t('chemdah.deleteOption')}">&times;</button>`;
+      data-dialogue="${_escHtml(dialogueName)}" data-index="${index}" data-tip="${I18N.t('chemdah.deleteOption')}">&times;</button>`;
 
     html += '</div>';
     return html;
@@ -908,7 +908,7 @@ window.ChemdahInterpreter = (() => {
               sidebarItem.dataset.sidebarDialogue = newName;
               const nameSpan = sidebarItem.querySelector('.cv-sidebar-name');
               if (nameSpan) nameSpan.textContent = newName;
-              sidebarItem.title = newName;
+              sidebarItem.setAttribute('data-tip', newName);
             }
           }
         }
@@ -2219,7 +2219,7 @@ window.ChemdahInterpreter = (() => {
     for (let qi = 0; qi < parsed.quests.length; qi++) {
       const q = parsed.quests[qi];
       const label = q.meta.name || q.id;
-      html += `<div class="cv-sidebar-item" data-action="q-nav" data-q-index="${qi}" title="${_escHtml(q.id)}">
+      html += `<div class="cv-sidebar-item" data-action="q-nav" data-q-index="${qi}" data-tip="${_escHtml(q.id)}">
         <span class="cv-sidebar-type Q">Q</span>
         <span class="cv-sidebar-name">${_escHtml(label)}</span>
       </div>`;
@@ -2248,7 +2248,7 @@ window.ChemdahInterpreter = (() => {
       </span>
       <span class="qv-type-badge qv-type-${typeLabel}">${_escHtml(typeLabel)}</span>
       <span class="qv-task-count">${I18N.t('chemdah.subtaskCount', {count: quest.tasks.length})}</span>
-      <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" title="${I18N.t('chemdah.deleteQuest')}">&times;</button>
+      <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" data-tip="${I18N.t('chemdah.deleteQuest')}">&times;</button>
     </div>`;
 
     // === 体部（折叠后隐藏） ===
@@ -2332,7 +2332,7 @@ window.ChemdahInterpreter = (() => {
             data-q-index="${qi}" rows="2" placeholder="${I18N.t('chemdah.ketherScript')}">${_escHtml(script)}</textarea>
           <button class="cv-btn-icon cv-btn-icon-danger" style="position:absolute;top:0;right:0;"
             data-action="q-delete-agent-hook"
-            data-q-index="${qi}" data-hook="${_escHtml(hook)}" title="${I18N.t('chemdah.deleteHook')}">&times;</button>
+            data-q-index="${qi}" data-hook="${_escHtml(hook)}" data-tip="${I18N.t('chemdah.deleteHook')}">&times;</button>
         </div>`;
       }
     }
@@ -3058,7 +3058,7 @@ window.ChemdahInterpreter = (() => {
     html += '<div class="cv-field"><label>Value</label><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.value" value="' + _escHtml(task.condition?.value || '') + '"></div>';
     html += '<div class="cv-field"><label>' + I18N.t('chemdah.position') + '</label><div style="display:flex;gap:6px;">';
     html += '<input class="cv-input cv-input-mono qte-field" data-qte-field="condition.position" value="' + _escHtml(task.condition?.position || '') + '" style="flex:1;">';
-    html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.position" title="' + I18N.t('chemdah.posEdit') + '">📍</button>';
+    html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.position" data-tip="' + I18N.t('chemdah.posEdit') + '">📍</button>';
     html += '</div></div></div>';
     html += '<div class="cv-field"><label>' + I18N.t('chemdah.ketherScriptField') + '</label><textarea class="cv-textarea cv-textarea-code qte-field" data-qte-field="condition.kether" rows="2">' + _escHtml(task.condition?.kether || '') + '</textarea></div>';
 
@@ -3073,9 +3073,9 @@ window.ChemdahInterpreter = (() => {
         var _isItem = (_p.type || '').toLowerCase().indexOf('item') >= 0 || _p.type === 'ItemStack';
         var _isPosition = (_p.type || '').toLowerCase().indexOf('position') >= 0 || (_p.type || '').toLowerCase().indexOf('location') >= 0 || _p.name === 'position';
         if (_isItem) {
-          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qie-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="' + I18N.t('chemdah.itemEdit') + '">📦</button></div></div>';
+          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qie-trigger" data-target="condition.' + _escHtml(_p.name) + '" data-tip="' + I18N.t('chemdah.itemEdit') + '">📦</button></div></div>';
         } else if (_isPosition) {
-          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.' + _escHtml(_p.name) + '" title="' + I18N.t('chemdah.posEdit') + '">📍</button></div></div>';
+          html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><div style="display:flex;gap:6px;"><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '" style="flex:1;"><button class="cv-btn cv-btn-xs cv-btn-secondary qpe-trigger" data-target="condition.' + _escHtml(_p.name) + '" data-tip="' + I18N.t('chemdah.posEdit') + '">📍</button></div></div>';
         } else {
           html += '<div class="cv-field"><label>' + _escHtml(_p.name) + ' <span class="cv-label-sm">' + _escHtml(_p.type) + '</span></label><input class="cv-input cv-input-mono qte-field" data-qte-field="condition.' + _escHtml(_p.name) + '" value="' + _escHtml(_val) + '" placeholder="' + _escHtml(_p.description || '') + '"></div>';
         }
@@ -3330,7 +3330,7 @@ window.ChemdahInterpreter = (() => {
           html += '<input class="cv-input qam-map-key" style="width:120px;flex-shrink:0;font-family:monospace;" value="' + _escHtml(mk) + '" placeholder="key">';
           html += '<span style="color:var(--color-text-tertiary);">:</span>';
           html += '<input class="cv-input qam-map-val" style="flex:1;" value="' + _escHtml(mv != null ? String(mv) : '') + '" placeholder="value">';
-          html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-map-del" data-addon-id="' + _escHtml(addonId) + '" data-map-key="' + _escHtml(mk) + '" title="' + I18N.t('chemdah.deleteItem') + '">&times;</button>';
+          html += '<button class="cv-btn cv-btn-xs cv-btn-danger qam-map-del" data-addon-id="' + _escHtml(addonId) + '" data-map-key="' + _escHtml(mk) + '" data-tip="' + I18N.t('chemdah.deleteItem') + '">&times;</button>';
           html += '</div></div>';
         }
         html += '<button class="cv-btn cv-btn-xs cv-btn-secondary qam-map-add" data-addon-id="' + _escHtml(addonId) + '" style="margin-top:4px;">' + I18N.t('chemdah.addNode') + '</button>';

@@ -221,7 +221,7 @@
       sw.className = 'mini-color-swatch';
       sw.style.background = c.hex;
       var colorZh = t('minimessage.color_' + c.name, c.name);
-      sw.title = c.name + (colorZh !== c.name ? ' (' + colorZh + ')' : '');
+      sw.setAttribute('data-tip', c.name + (colorZh !== c.name ? ' (' + colorZh + ')' : ''));
       sw.addEventListener('click', function (hex) { return function () { applyColor(hex); }; }(c.hex));
       grid.appendChild(sw);
     }
@@ -269,11 +269,11 @@
       '<div class="mini-modal">' +
         '<div class="mini-header">' +
           '<span class="mini-title">✏️ ' + esc(t('minimessage.title', 'MiniMessage 编辑器')) + '</span>' +
-          '<button class="mini-close" id="mini-close" title="' + esc(t('common.close', '关闭')) + '">✕</button>' +
+          '<button class="mini-close" id="mini-close" data-tip="' + esc(t('common.close', '关闭')) + '">✕</button>' +
         '</div>' +
         '<div class="mini-preview-box">' +
           '<div class="mini-preview-label">' + esc(t('minimessage.preview', '预览')) + '</div>' +
-          '<button type="button" class="mini-preview-bg" id="mini-preview-bg" title="' + esc(t('minimessage.previewBg', '切换黑白底色')) + '">◐</button>' +
+          '<button type="button" class="mini-preview-bg" id="mini-preview-bg" data-tip="' + esc(t('minimessage.previewBg', '切换黑白底色')) + '">◐</button>' +
           '<div class="mini-preview" id="mini-preview"></div>' +
         '</div>' +
         '<div class="mini-toolbar" id="mini-toolbar"></div>' +
@@ -411,7 +411,7 @@
       '<div class="mini-modal">' +
         '<div class="mini-header">' +
           '<span class="mini-title" id="mini-detail-title">✏️ ' + esc(t('minimessage.detailTitle', '详细添加')) + '</span>' +
-          '<button type="button" class="mini-close" id="mini-detail-close" title="' + esc(t('common.close', '关闭')) + '">✕</button>' +
+          '<button type="button" class="mini-close" id="mini-detail-close" data-tip="' + esc(t('common.close', '关闭')) + '">✕</button>' +
         '</div>' +
         '<div class="mini-detail-body">' +
           '<div class="mini-detail-row">' +

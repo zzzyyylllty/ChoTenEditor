@@ -56,7 +56,7 @@
       key = el.getAttribute('data-i18n-placeholder');
       if (key) el.setAttribute('placeholder', t(key));
       key = el.getAttribute('data-i18n-title');
-      if (key) el.setAttribute('title', t(key));
+      if (key) el.setAttribute('data-tip', t(key));
     }
     document.documentElement.lang = current === 'zh_cn' ? 'zh-CN' : 'en';
     var titleKey = (document.body && document.body.getAttribute('data-title-key'));

@@ -997,7 +997,7 @@
   // MiniMessage 快捷按钮: 输入框右侧留出小段距离放置铅笔按钮
   function _sfMiniWrap(html) {
     return '<div class="ce-sf-mini-wrap">' + html +
-      '<button type="button" class="ce-sf-mini-btn" data-sf-action="mini-edit" title="' + _escHtml(_t('minimessage.editBtn', 'MiniMessage 编辑器')) + '">✏️</button>' +
+      '<button type="button" class="ce-sf-mini-btn" data-sf-action="mini-edit" data-tip="' + _escHtml(_t('minimessage.editBtn', 'MiniMessage 编辑器')) + '">✏️</button>' +
       '</div>';
   }
   function _sfDatalistHtml() {
@@ -1124,7 +1124,7 @@
     var ft = (def && def.type) || '';
     return '<button type="button" class="ce-sf-spec-icon' + (st.hasSpec ? ' has-spec' : '') + '" data-sf-action="spec-popup"' +
       ' data-sf-path="' + _escHtml(path) + '" data-sf-ftype="' + _escHtml(ft) + '"' +
-      ' data-sf-label="' + _escHtml(_labelOf(def)) + '" title="' + _escHtml(ttl) + '">!</button>';
+      ' data-sf-label="' + _escHtml(_labelOf(def)) + '" data-tip="' + _escHtml(ttl) + '">!</button>';
   }
   function _sfBindHintIcons() {
     if (typeof RichTooltip === 'undefined') return;
@@ -1491,7 +1491,7 @@
       var h = _sfSectionHtml(secs[i].text, def);
       if (!h) h = '<pre class="rt-pre"><code>' + _escHtml(secs[i].text) + '</code></pre>';
       var nm = secs[i].name || _t('craftengine.yvCase') + ' ' + (i + 1);
-      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" title="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
+      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" data-tip="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
       panes += '<div class="ce-yv-pane' + (i === 0 ? ' is-active' : '') + '" data-ce-pane="' + i + '">' + h + '</div>';
     }
     return '<div class="ce-yv ce-yv-tabs" data-ce-tabs="' + secs.length + '">' +
@@ -1553,7 +1553,7 @@
       var h = _sfYamlTreeHtml(blocks[i], def);
       if (!h) h = '<pre class="rt-pre"><code>' + _escHtml(blocks[i]) + '</code></pre>';
       var nm = _sfYamlBlockName(blocks[i]) || (_t('craftengine.yvCase') + ' ' + (i + 1));
-      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" title="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
+      tabs += '<span class="ce-yv-tab' + (i === 0 ? ' is-active' : '') + '" data-ce-tab="' + i + '" data-tip="' + _escHtml(nm) + '">' + _escHtml(nm) + '</span>';
       panes += '<div class="ce-yv-pane' + (i === 0 ? ' is-active' : '') + '" data-ce-pane="' + i + '">' + h + '</div>';
     }
     return '<div class="ce-yv ce-yv-tabs" data-ce-tabs="' + blocks.length + '">' +
@@ -1594,7 +1594,7 @@
             '<button type="button" class="cv-btn cv-btn-sm ce-hint-mode-btn is-active" data-ce-hint-mode="editor">' + _escHtml(_t('craftengine.hintModeEditor')) + '</button>' +
             '<button type="button" class="cv-btn cv-btn-sm ce-hint-mode-btn" data-ce-hint-mode="wiki">' + _escHtml(_t('craftengine.hintModeWiki')) + '</button>' +
           '</span>' +
-          '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger ce-hint-close" title="Esc">✕</button>' +
+          '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger ce-hint-close" data-tip="Esc">✕</button>' +
         '</div>' +
         '<div class="ce-hint-body">' +
           '<div class="ce-hint-content" data-ce-hint-view="editor">' + editorHtml + '</div>' +
@@ -1645,9 +1645,9 @@
     for (var i = 0; i < arr.length; i++) {
       html += '<div class="ce-sf-list-item" data-sf-idx="' + i + '">' +
         '<div class="ce-sf-list-ops">' +
-        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="up" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="↑">↑</button>' +
-        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="down" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="↓">↓</button>' +
-        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="list-del" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" title="✕">✕</button>' +
+        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="up" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" data-tip="↑">↑</button>' +
+        '<button class="cv-btn cv-btn-sm" data-sf-action="list-move" data-sf-dir="down" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" data-tip="↓">↓</button>' +
+        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="list-del" data-sf-idx="' + i + '" data-sf-uid="' + uid + '" data-tip="✕">✕</button>' +
         '</div>' +
         '<div class="ce-sf-list-body">' + _sfItemHtml(itemDef, path + '.' + i, arr[i], { inList: true }) + '</div>' +
         '</div>';
@@ -1692,7 +1692,7 @@
       : kind === 'range' ? '~'
       : kind === 'compare' ? (function () { var m = String(k).match(/^\$\$(>=|<=|>|<|=)/); return m ? m[1] : '>'; })()
       : '=';
-    return '<span class="ce-sf-map-ver" title="' + _escHtml(lbl + ' · ' + k) + '">' + sym + '</span>';
+    return '<span class="ce-sf-map-ver" data-tip="' + _escHtml(lbl + ' · ' + k) + '">' + sym + '</span>';
   }
   // entry 键输入框: 版本键 ($$...) 或所属版本键分组 (group) 前加徽标
   function _sfEntryKeyCtrl(key, group) {
@@ -1830,7 +1830,7 @@
       var otip = '';
       if (hintPrefix && _sfCeHints) {
         var oh = _sfCeHints[hintPrefix + '.' + k];
-        if (oh) otip = ' title="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
+        if (oh) otip = ' data-tip="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
       }
       optHtml += '<option value="' + _escHtml(k) + '"' + otip + (cur.key === k && !cur.neg ? ' selected' : '') + '>' + _escHtml(lb) + '</option>';
       if (def.negatable) {
@@ -1856,7 +1856,7 @@
     }
     var clear = '';
     if (cur.key && !(opts && opts.inList)) {
-      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="union-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
+      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="union-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" data-tip="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
     return '<div class="ce-sf-union" data-sf-uid="' + uid + '">' +
       '<div class="ce-sf-union-head">' +
@@ -1910,9 +1910,9 @@
       var puid = _sfUidAlloc(_sfKeyPath(path, k), 'popup', bodyDef, opts);
       html += '<div class="ce-sf-comp-row" data-sf-okey="' + _escHtml(k) + '">' +
         '<div class="ce-sf-comp-head">' +
-        '<span class="ce-sf-comp-name" title="' + _escHtml(k) + '">' + _escHtml(name) + '</span>' +
+        '<span class="ce-sf-comp-name" data-tip="' + _escHtml(k) + '">' + _escHtml(name) + '</span>' +
         '<button class="cv-btn cv-btn-sm ce-sf-popup-btn" data-sf-action="popup-edit" data-sf-path="' + _escHtml(_sfKeyPath(path, k)) + '" data-sf-uid="' + puid + '">' + _escHtml(_t('craftengine.popupEdit')) + '</button>' +
-        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '" title="✕">✕</button>' +
+        '<button class="cv-btn cv-btn-sm cv-btn-danger" data-sf-action="map-del" data-sf-path="' + _escHtml(path) + '" data-sf-okey="' + _escHtml(k) + '" data-sf-uid="' + uid + '" data-tip="✕">✕</button>' +
         '</div></div>';
     }
     if (!keys.length) html += '<div class="ce-sf-empty">' + _escHtml(_t('craftengine.componentsEmpty')) + '</div>';
@@ -2039,7 +2039,7 @@
     var mode = isStr ? 'path' : (isObj && value.type !== undefined && value.type !== null && value.type !== '' ? 'tree' : 'simplified');
     var clear = '';
     if (value !== undefined && value !== null) {
-      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="model-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
+      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-union-clear" data-sf-action="model-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" data-tip="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
     var html = '<div class="ce-sf-model" data-sf-uid="' + uid + '">' +
       '<div class="ce-sf-union-head">' +
@@ -2132,7 +2132,7 @@
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'popup', def, opts);
     var clear = '';
     if (value !== undefined && value !== null && value !== '') {
-      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-popup-clear" data-sf-action="popup-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" title="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
+      clear = '<button class="cv-btn cv-btn-sm cv-btn-danger ce-sf-popup-clear" data-sf-action="popup-clear" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '" data-tip="' + _escHtml(_t('craftengine.unionClear')) + '">✕</button>';
     }
     return '<div class="ce-sf-popup" data-sf-uid="' + uid + '">' +
       '<div class="ce-sf-popup-row">' +
@@ -2212,9 +2212,9 @@
       try { vs = JSON.stringify(val); } catch (e) { vs = String(val); }
     } else vs = (val === undefined || val === null) ? '' : String(val);
     return '<div class="ce-spec-row" data-ce-okey="' + _escHtml(key) + '">' +
-      '<input class="ce-input ce-spec-key" value="' + _escHtml(key) + '" spellcheck="false" title="' + _escHtml(key) + '">' +
+      '<input class="ce-input ce-spec-key" value="' + _escHtml(key) + '" spellcheck="false" data-tip="' + _escHtml(key) + '">' +
       '<input class="ce-input ce-spec-val" value="' + _escHtml(vs) + '" spellcheck="false" placeholder="' + _escHtml(_t('craftengine.specEmptyVal')) + '">' +
-      '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger" data-ce-spec="del" title="' + _escHtml(_t('craftengine.specDel')) + '">✕</button>' +
+      '<button type="button" class="cv-btn cv-btn-sm cv-btn-danger" data-ce-spec="del" data-tip="' + _escHtml(_t('craftengine.specDel')) + '">✕</button>' +
       '</div>';
   }
   function _sfOpenSpecPopup(def, path, uid, entry, parsed, section, containerEl) {
@@ -3002,7 +3002,7 @@
       var otip = '';
       if (titlePrefix && _sfCeHints) {
         var oh = _sfCeHints[titlePrefix + '.' + o];
-        if (oh) otip = ' title="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
+        if (oh) otip = ' data-tip="' + _escHtml(_sfPlain(_sfTipOf(oh))) + '"';
       }
       html += '<option value="' + _escHtml(o) + '"' + otip + (String(value) === o ? ' selected' : '') + '>' + _escHtml(o) + '</option>';
     }

@@ -137,5 +137,42 @@
     return out;
   }
 
+  // ---- 全局委托: 任意带 data-tip 属性的元素自动获得自定义 tooltip (替换原生 title) ----
+  function findTip(t) {
+    if (!t || t.nodeType !== 1 || !t.closest) return null;
+    return t.closest('[data-tip]');
+  }
+  function bindTip(el) {
+    if (el.__rtTip) return true;
+    var txt = el.getAttribute('data-tip');
+    if (txt === null || txt === '') return false;
+    el.__rtTip = 1;
+    RichTooltip.bind(el, function () { return RichTooltip.md(txt); });
+    return true;
+  }
+  function autoBind() {
+    if (document.__rtAutoBound) return;
+    document.__rtAutoBound = 1;
+    document.addEventListener('mouseover', function (e) {
+      var el = findTip(e.target);
+      if (!el) return;
+      if (!bindTip(el)) return;
+      var txt = el.getAttribute('data-tip');
+      RichTooltip.show(e, RichTooltip.md(txt));
+    });
+    // 键盘可达性: focus 也显示
+    document.addEventListener('focusin', function (e) {
+      var el = findTip(e.target);
+      if (!el || !bindTip(el)) return;
+      var txt = el.getAttribute('data-tip');
+      var r = el.getBoundingClientRect();
+      RichTooltip.show({ clientX: r.left + Math.min(64, Math.max(8, r.width / 2)), clientY: r.bottom + 6 }, RichTooltip.md(txt));
+    });
+    document.addEventListener('focusout', function (e) {
+      if (findTip(e.target)) RichTooltip.hide();
+    });
+  }
+  autoBind();
+
   root.RichTooltip = { bind: bind, show: show, hide: hide, md: md };
 })();

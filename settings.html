@@ -15,14 +15,14 @@
                 <span class="title-bar-text" data-i18n="settings.title">设置</span>
             </div>
             <div class="title-bar-controls">
-                <button class="tb-btn tb-btn-minimize" id="tb-minimize" title="最小化" data-i18n-title="titlebar.minimize">─</button>
-                <button class="tb-btn tb-btn-maximize" id="tb-maximize" title="最大化" data-i18n-title="titlebar.maximize">□</button>
-                <button class="tb-btn tb-btn-close" id="tb-close" title="关闭" data-i18n-title="titlebar.close">✕</button>
+                <button class="tb-btn tb-btn-minimize" id="tb-minimize" data-tip="最小化" data-i18n-title="titlebar.minimize">─</button>
+                <button class="tb-btn tb-btn-maximize" id="tb-maximize" data-tip="最大化" data-i18n-title="titlebar.maximize">□</button>
+                <button class="tb-btn tb-btn-close" id="tb-close" data-tip="关闭" data-i18n-title="titlebar.close">✕</button>
             </div>
         </div>
         <div class="settings-header">
             <h1 data-i18n="settings.titlePage">⚙️ 设置</h1>
-            <button id="back-btn" class="btn-secondary" title="返回编辑器" data-i18n-title="settings.backToEditor">
+            <button id="back-btn" class="btn-secondary" data-tip="返回编辑器" data-i18n-title="settings.backToEditor">
                 ← <span data-i18n="settings.backToEditor">返回编辑器</span>
             </button>
         </div>
@@ -838,6 +838,7 @@
     <script src="i18n.js"></script>
     <script src="sound.js"></script>
     <script src="ui.js"></script>
+    <script src="tooltip.js"></script>
     <script src="settings.js"></script>
     <script>
       // 窗口控制

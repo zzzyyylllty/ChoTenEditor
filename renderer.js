@@ -862,7 +862,7 @@ function addTab(filePath) {
   nameSpan.classList.add('editor-tab-name');
   const baseName = getFileName(filePath);
   nameSpan.textContent = dirtyTabs[filePath] ? '● ' + baseName : baseName;
-  nameSpan.title = dirtyTabs[filePath] ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName;
+  nameSpan.setAttribute('data-tip', dirtyTabs[filePath] ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName);
   tab.appendChild(nameSpan);
 
   tab.addEventListener('click', async () => {
@@ -1635,7 +1635,7 @@ function updateTabDirtyIndicator(filePath) {
   if (nameSpan) {
     const baseName = getFileName(filePath);
     nameSpan.textContent = isDirty ? '● ' + baseName : baseName;
-    nameSpan.title = isDirty ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName;
+    nameSpan.setAttribute('data-tip', isDirty ? I18N.t('tab.unsavedTitle', { name: baseName }) : baseName);
   }
 }
 

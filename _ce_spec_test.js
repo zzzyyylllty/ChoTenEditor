@@ -57,7 +57,7 @@ items:
 `;
 const h2 = render(y2).innerHTML;
 check(h2.includes('ce-sf-spec-icon has-spec'), '!!long 值 → 高亮');
-check(h2.includes('title="特殊配置 · 值类型 long"'), 'tooltip 显示值类型');
+check(h2.includes('data-tip="特殊配置 · 值类型 long"'), 'tooltip 显示值类型');
 
 // 3. mapOf 中 $$ 版本键 → has-spec
 const y3 = `
@@ -69,10 +69,10 @@ items:
 `;
 const h3 = render(y3).innerHTML;
 check(h3.includes('ce-sf-spec-icon has-spec'), '$$ 版本键 → 高亮');
-check(h3.includes('title="特殊配置 · 版本条件 2 项"'), 'tooltip 显示版本条件数');
+check(h3.includes('data-tip="特殊配置 · 版本条件 2 项"'), 'tooltip 显示版本条件数');
 
 // 4. spec-popup 按钮带路径与字段类型 (client-bound-material 为 text 字段, 值含 $$ 键 → versions 模式)
-check(/data-sf-path="client-bound-material" data-sf-ftype="text" data-sf-label="客户端材质" title="特殊配置 · 版本条件 2 项"/.test(h3), '! 按钮带路径/字段类型/高亮 tooltip');
+check(/data-sf-path="client-bound-material" data-sf-ftype="text" data-sf-label="客户端材质" data-tip="特殊配置 · 版本条件 2 项"/.test(h3), '! 按钮带路径/字段类型/高亮 tooltip');
 
 // 4b. mapOf 徽标为 kind 符号而非 $ (避免 $$+$ 三美元)
 const y3b = `
