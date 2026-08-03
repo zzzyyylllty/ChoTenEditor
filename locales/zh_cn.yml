@@ -1028,6 +1028,8 @@ craftengine:
   image: "贴图 (image)"
   keywords: "关键词 (keywords)"
   kvWholeHint: "整条数据为键值对；值为 JSON 时自动解析"
+  templateContent: "模板内容 (YAML)"
+  templateContentHint: "模板为任意键值对集合：支持深层嵌套、$$ 版本条件键、!!type 类型标记"
   layers: "图层 (layers)"
   layersHint: "可用图层: {names}；值可为材质路径或 JSON 对象"
   length: "时长 (length)"

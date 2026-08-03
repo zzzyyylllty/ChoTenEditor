@@ -907,6 +907,18 @@
     return '<textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="kv-whole"' +
       ' rows="' + Math.max(3, Math.min(Object.keys(obj).length + 1, 12)) + '" spellcheck="false">' + _escHtml(_sfObjText(obj)) + '</textarea>';
   }
+  // 整条 YAML 编辑: 任意键值对集合, 支持深层嵌套 / $$ 版本键 / !!type 值 (templates 等)
+  function _sfYamlWhole(value) {
+    var obj = value;
+    var txt;
+    if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {
+      txt = _genMapLines(obj, 0).join('\n');
+    } else {
+      txt = (obj === undefined || obj === null) ? '' : (typeof obj === 'string' ? obj : JSON.stringify(obj));
+    }
+    return '<textarea class="ce-input ce-kv-field" data-sf-kind="field" data-sf-path="__whole__" data-sf-type="yaml-whole"' +
+      ' rows="' + Math.max(6, Math.min(txt.split('\n').length + 1, 16)) + '" spellcheck="false">' + _escHtml(txt) + '</textarea>';
+  }
   function _sfControl(def, path, value) {
     var t = def.type || 'text';
     if (t === 'number') return _sfInput(def, path, value, 'number');
@@ -3052,11 +3064,17 @@
   }
 
   // ---- 条目表单 ----
+  // templates: 模板 = 任意键值对集合 (深层嵌套 / $$ 版本键 / !!type 值), 整条 YAML 编辑
+  function _sfTemplateEntryForm(section, entry) {
+    return _renderField(_t('craftengine.entryKey'), _sfEntryKeyCtrl(entry.key), _t('craftengine.entryKeyHint')) +
+      _renderField(_t('craftengine.templateContent'), _sfYamlWhole(entry.data), _t('craftengine.templateContentHint'));
+  }
   function _renderEntryForm(section, entry, formTab, evKey) {
     var type = TYPE_SECTIONS[section.base];
     var data = entry.data;
     // config 伪 section / schema 化 section (简单类型) 走数据驱动表单
     if (section.base === 'config') return _sfConfigEntryForm(section, entry);
+    if (type === 'template') return _sfTemplateEntryForm(section, entry);
     var schema = _sfSchemaOf(type);
     if (schema) return _sfEntryFormHtml(section, entry, schema, formTab, evKey);
     var keyField = _renderField(_t('craftengine.entryKey'),
@@ -3228,14 +3246,6 @@
       used['dimension'] = 1; html += _renderField(_t('craftengine.dimension'), _linesField('dimension', data.dimension, '每行一个维度'));
       used['dimension_type'] = 1; html += _renderField(_t('craftengine.dimensionType'), _linesField('dimension_type', data.dimension_type));
       used['biome'] = 1; html += _renderField(_t('craftengine.biome'), _linesField('biome', data.biome, '每行一个生物群系'));
-    } else if (type === 'template') {
-      used['type'] = 1; html += _renderField(_t('craftengine.type'), _textInput('type', data.type, 'helmet'));
-      used['material'] = 1; html += _renderField(_t('craftengine.material'), _textInput('material', data.material, 'minecraft:paper'));
-      used['content'] = 1; html += _renderField(_t('craftengine.content'), _textArea('content', data.content, '模板内容', 4));
-      used['template'] = 1; html += _renderField(_t('craftengine.template'), _linesScalarField('template', data.template, 'default:template（多行 = 多模板）'));
-      used['arguments'] = 1; html += _renderField(_t('craftengine.arguments'), _kvField('arguments', data.arguments, 'part: helmet\nslot: head'));
-      used['merges'] = 1; html += _renderField(_t('craftengine.merges'), _jsonField('merges', data.merges));
-      used['overrides'] = 1; html += _renderField(_t('craftengine.overrides'), _jsonField('overrides', data.overrides));
     } else {
       // 通用 section: 整条 JSON
       return _renderField(_t('craftengine.jsonEditor'),
@@ -3619,7 +3629,18 @@
         }
         var val;
         if (path === '__whole__') {
-          if (sfType === 'kv-whole') {
+          if (sfType === 'yaml-whole') {
+            var yt = target.value;
+            var yo;
+            try {
+              yo = yt.trim() ? YAML.load(yt, { schema: _ceYamlSchema() }) : undefined;
+            } catch (e2) {
+              target.classList.add('ce-invalid');
+              return;
+            }
+            target.classList.remove('ce-invalid');
+            _applyValue(entry, '__whole__', yo, parsed, section);
+          } else if (sfType === 'kv-whole') {
             var wr = _parseKvText(target.value);
             if (wr.bad) { target.classList.add('ce-invalid'); return; }
             target.classList.remove('ce-invalid');

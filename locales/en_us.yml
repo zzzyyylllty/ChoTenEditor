@@ -1028,6 +1028,8 @@ craftengine:
   image: "Image (image)"
   keywords: "Keywords (keywords)"
   kvWholeHint: "Whole entry is a key-value map; JSON values are parsed automatically"
+  templateContent: "Template Content (YAML)"
+  templateContentHint: "A template is an arbitrary key-value map: nested structures, $$ version keys and !!type tags are all supported"
   layers: "Layers (layers)"
   layersHint: "Available layers: {names}; value can be a texture path or JSON object"
   length: "Length (length)"
