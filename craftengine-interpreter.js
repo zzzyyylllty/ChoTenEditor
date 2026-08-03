@@ -255,10 +255,29 @@
           _comments: { beforeEntry: {}, inlineEntry: {} },
         };
         var entries = Object.keys(doc[key]);
+        var isRootMap = _sfSectionIsRootMap(m[1]);
         for (var e = 0; e < entries.length; e++) {
-          var edata = doc[key][entries[e]];
+          var ekey = entries[e];
+          var edata = doc[key][ekey];
+          // 版本键分组 (equipments 等 root-map section): 组内装备展开为条目, 版本键只作分组标记
+          if (isRootMap && _sfVersionKeyRe.test(ekey) && edata !== null && typeof edata === 'object' &&
+              !Array.isArray(edata) && Object.keys(edata).length > 0) {
+            var gkeys = Object.keys(edata);
+            var shareC = { before: {}, inline: {}, afterKey: {} };
+            for (var g = 0; g < gkeys.length; g++) {
+              var gdata = edata[gkeys[g]];
+              section.entries.push({
+                key: gkeys[g],
+                _group: ekey,
+                data: gdata,
+                _rawOrder: (gdata && typeof gdata === 'object' && !Array.isArray(gdata)) ? Object.keys(gdata) : [],
+                _comments: shareC,
+              });
+            }
+            continue;
+          }
           section.entries.push({
-            key: entries[e],
+            key: ekey,
             data: edata,
             _rawOrder: (edata && typeof edata === 'object' && !Array.isArray(edata)) ? Object.keys(edata) : [],
             _comments: { before: {}, inline: {}, afterKey: {} },
@@ -404,7 +423,9 @@
         } else if (parent.kind === 'section') {
           var en = null;
           for (var eni = 0; eni < parent.sec.entries.length; eni++) {
-            if (parent.sec.entries[eni].key === key) { en = parent.sec.entries[eni]; break; }
+            var e2 = parent.sec.entries[eni];
+            // 版本键分组: 文件里的分组键匹配组内条目 (共享注释容器)
+            if (e2.key === key || (e2._group && e2._group === key)) { en = e2; break; }
           }
           scope = newScope(indent, 'entry', '', parent.sec, en, key);
         } else {
@@ -612,52 +633,67 @@
             var lines = [kq + ':'];
             if (inlineTop) lines[0] += ' ' + inlineTop;
             var secC = section._comments || { beforeEntry: {}, inlineEntry: {} };
+            var curGroup = null;
+            var gCom = null; // 版本键分组的共享注释容器
             for (var e = 0; e < section.entries.length; e++) {
               var entry = section.entries[e];
               var ec = entry._comments || { before: {}, inline: {}, afterKey: {} };
-              var bf = secC.beforeEntry[entry.key] || null;
-              if (bf) for (var bi = 0; bi < bf.length; bi++) lines.push('  ' + bf[bi]);
+              var g = entry._group || null;
+              var padE = g !== null ? '    ' : '  ';
+              var padArr = g !== null ? '      ' : '    ';
+              if (g !== curGroup) {
+                curGroup = g;
+                if (g !== null) {
+                  gCom = ec;
+                  var gbf = secC.beforeEntry[g] || null;
+                  if (gbf) for (var gbi = 0; gbi < gbf.length; gbi++) lines.push('  ' + gbf[gbi]);
+                  var gInl = secC.inlineEntry[g] || null;
+                  lines.push('  ' + _quoteKey(g) + ':' + (gInl ? ' ' + gInl : ''));
+                }
+              }
+              var bf = (g !== null ? (gCom.before ? gCom.before[entry.key] : null) : (secC.beforeEntry[entry.key] || null));
+              if (bf) for (var bi = 0; bi < bf.length; bi++) lines.push(padE + bf[bi]);
               var eq = _quoteKey(entry.key);
-              var inlineEntry = secC.inlineEntry[entry.key] || null;
+              var inlineEntry = g !== null ? (gCom.inline ? gCom.inline[entry.key] : null) : (secC.inlineEntry[entry.key] || null);
               var ed = entry.data;
               var el;
-              if (ed === null || ed === undefined) { el = '  ' + eq + ': ~'; }
+              if (ed === null || ed === undefined) { el = padE + eq + ': ~'; }
               else if (typeof ed === 'object' && !Array.isArray(ed) && !(ed instanceof Date)) {
-                el = (Object.keys(ed).length === 0) ? '  ' + eq + ': {}' : '  ' + eq + ':';
+                el = (Object.keys(ed).length === 0) ? padE + eq + ': {}' : padE + eq + ':';
                 if (inlineEntry) el += ' ' + inlineEntry;
                 lines.push(el);
                 el = null;
                 if (Object.keys(ed).length > 0) {
-                  var em = _genMapLines(ed, 2, ec, '');
+                  var em = _genMapLines(ed, g !== null ? 3 : 2, g !== null ? gCom : ec, g !== null ? entry.key : '');
                   for (var mi = 0; mi < em.length; mi++) lines.push(em[mi]);
                 }
               } else if (Array.isArray(ed)) {
-                el = (ed.length === 0) ? '  ' + eq + ': []' : '  ' + eq + ':';
+                el = (ed.length === 0) ? padE + eq + ': []' : padE + eq + ':';
                 if (inlineEntry) el += ' ' + inlineEntry;
                 lines.push(el);
                 el = null;
                 if (ed.length > 0) {
                   var aE = ec.afterKey[''] || null;
-                  if (aE) for (var ae = 0; ae < aE.length; ae++) lines.push('    ' + aE[ae]);
+                  if (aE) for (var ae = 0; ae < aE.length; ae++) lines.push(padArr + aE[ae]);
                   for (var li2 = 0; li2 < ed.length; li2++) {
                     var it2 = ed[li2];
                     if (it2 !== null && typeof it2 === 'object' && !Array.isArray(it2) && !(it2 instanceof Date)) {
-                      if (Object.keys(it2).length === 0) { lines.push('    - {}'); continue; }
+                      if (Object.keys(it2).length === 0) { lines.push(padArr + '- {}'); continue; }
                       var r2 = _genMapLines(it2, 3);
-                      lines.push(r2[0].replace('      ', '    - '));
+                      lines.push(r2[0].replace('      ', padArr + '- '));
                       for (var rj = 1; rj < r2.length; rj++) lines.push(r2[rj]);
                     } else if (typeof it2 === 'string' && it2.indexOf('\n') !== -1) {
-                      lines.push('    - |-');
+                      lines.push(padArr + '- |-');
                       var i3 = it2.split('\n');
-                      for (var i4 = 0; i4 < i3.length; i4++) lines.push('      ' + i3[i4]);
+                      for (var i4 = 0; i4 < i3.length; i4++) lines.push(padArr + '  ' + i3[i4]);
                     } else if (Array.isArray(it2)) {
-                      lines.push('    - ' + _genFlow(it2));
+                      lines.push(padArr + '- ' + _genFlow(it2));
                     } else {
-                      lines.push('    - ' + _genScalar(it2));
+                      lines.push(padArr + '- ' + _genScalar(it2));
                     }
                   }
                 }
-              } else { el = '  ' + eq + ': ' + _genScalar(ed); }
+              } else { el = padE + eq + ': ' + _genScalar(ed); }
               if (el !== null) {
                 if (inlineEntry) el += ' ' + inlineEntry;
                 lines.push(el);
@@ -716,6 +752,16 @@
       _sfDatalistMap.items = vi;
       _sfDatalistMap.blocks = vi;
     }
+  }
+  // section 的 schema 是否 root-map (条目键 = 直接子键, 版本键可作分组)
+  function _sfSectionIsRootMap(base) {
+    _sfInit();
+    var s = _sfSchemas && _sfSchemas.sections && _sfSchemas.sections[TYPE_SECTIONS[base]];
+    if (!s || !s.fields) return false;
+    for (var i = 0; i < s.fields.length; i++) {
+      if (s.fields[i].custom === 'root-map') return true;
+    }
+    return false;
   }
   function _labelOf(field) {
     if (field === null || field === undefined) return '';
@@ -1648,10 +1694,11 @@
       : '=';
     return '<span class="ce-sf-map-ver" title="' + _escHtml(lbl + ' · ' + k) + '">' + sym + '</span>';
   }
-  // entry 键输入框: 版本键 ($$...) 前加徽标
-  function _sfEntryKeyCtrl(key) {
+  // entry 键输入框: 版本键 ($$...) 或所属版本键分组 (group) 前加徽标
+  function _sfEntryKeyCtrl(key, group) {
+    var badge = group ? group : key;
     var inp = '<input class="ce-input ce-key-input" data-ce-field="__key__" value="' + _escHtml(key) + '" spellcheck="false">';
-    return _sfVersionKeyRe.test(key) ? '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(key) + inp + '</div>' : inp;
+    return _sfVersionKeyRe.test(badge) ? '<div class="ce-sf-map-keybox">' + _sfVersionKeyBadge(badge) + inp + '</div>' : inp;
   }
   function _sfMapHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'map', def, opts);
@@ -2720,7 +2767,7 @@
   function _sfEntryFormHtml(section, entry, schema, formTab, evKey) {
     _sfInit();
     var html = _renderField(_t('craftengine.entryKey'),
-      _sfEntryKeyCtrl(entry.key),
+      _sfEntryKeyCtrl(entry.key, entry._group),
       _t('craftengine.entryKeyHint'));
     if (schema.wholeValue) {
       if (entry.data !== null && typeof entry.data === 'object' && !Array.isArray(entry.data)) {
@@ -3075,7 +3122,7 @@
   // ---- 条目表单 ----
   // templates: 模板 = 任意键值对集合 (深层嵌套 / $$ 版本键 / !!type 值), 整条 YAML 编辑
   function _sfTemplateEntryForm(section, entry) {
-    return _renderField(_t('craftengine.entryKey'), _sfEntryKeyCtrl(entry.key), _t('craftengine.entryKeyHint')) +
+    return _renderField(_t('craftengine.entryKey'), _sfEntryKeyCtrl(entry.key, entry._group), _t('craftengine.entryKeyHint')) +
       _renderField(_t('craftengine.templateContent'), _sfYamlWhole(entry.data), _t('craftengine.templateContentHint'));
   }
   function _renderEntryForm(section, entry, formTab, evKey) {
@@ -3087,7 +3134,7 @@
     var schema = _sfSchemaOf(type);
     if (schema) return _sfEntryFormHtml(section, entry, schema, formTab, evKey);
     var keyField = _renderField(_t('craftengine.entryKey'),
-      _sfEntryKeyCtrl(entry.key),
+      _sfEntryKeyCtrl(entry.key, entry._group),
       _t('craftengine.entryKeyHint'));
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       // 标量条目 → 整条文本 (global_variables); 数组 → 通用 JSON
@@ -3430,7 +3477,7 @@
       for (var e = 0; e < section.entries.length; e++) {
         var en = section.entries[e];
         entryHtml += '<div class="ce-entry-item' + (e === ui.entry ? ' ce-active' : '') + '" data-action="ce-select-entry" data-entry="' + e + '">' +
-          (_sfVersionKeyRe.test(en.key) ? _sfVersionKeyBadge(en.key) : '') + _escHtml(en.key) + '</div>';
+          (en._group ? _sfVersionKeyBadge(en._group) : (_sfVersionKeyRe.test(en.key) ? _sfVersionKeyBadge(en.key) : '')) + _escHtml(en.key) + '</div>';
       }
       if (section.entries.length === 0) {
         entryHtml += '<div class="ce-empty">' + _escHtml(_t('craftengine.noEntries')) + '</div>';
