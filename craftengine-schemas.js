@@ -549,7 +549,7 @@
 
   SECTIONS.equipment = {
     fields: [
-      f('type', '类型', 'Type', 'select', { options: S.constants.equipmentTypes }),
+      f('type', '类型', 'Type', 'select', { options: S.constants.equipmentTypes, hint: l('装备类型: component / trim', 'Equipment type: component / trim') }),
       f('__root__', '层', 'Layers', 'mapOf', {
         custom: 'root-map',
         label: l('层', 'Layers'),
@@ -605,7 +605,7 @@
       f('icon', '图标', 'Icon', 'text', { hint: l('注册的物品 ID', 'A registered item ID'), datalist: 'items' }),
       f('priority', '优先级', 'Priority', 'number', { hint: l('越小越靠前', 'Lower shows first') }),
       f('hidden', '隐藏', 'Hidden', 'bool', { hint: l('不出现在主菜单 (子分类)', 'Hidden from main menu (sub-category)') }),
-      f('conditions', '显示条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('显示条件', 'Conditions') }),
+      f('conditions', '显示条件', 'Conditions', 'listOf', { itemType: { type: 'union', negatable: true, types: COND_TYPES }, label: l('显示条件', 'Conditions'), hint: l('满足条件才在主菜单显示此分类', 'Category shows only when these are met') }),
       f('list', '成员列表', 'List', 'lines', { hint: l('物品 ID 或 #分类ID (每行一个)', 'Item IDs or #category refs (one per line)') }),
       f('all_items', '包含全部物品', 'All Items', 'bool', { hint: l('自动包含所有注册的自定义物品', 'Auto-include all registered custom items') }),
     ],
@@ -626,7 +626,7 @@
             f('stream', '流式播放', 'Stream', 'bool'),
             f('attenuation_distance', '衰减距离', 'Attenuation Distance', 'number'),
             f('preload', '预加载', 'Preload', 'bool'),
-            f('type', '类型', 'Type', 'select', { options: ['file', 'event'] }),
+            f('type', '类型', 'Type', 'select', { options: ['file', 'event'], hint: l('file: 独立音效文件; event: 原版音效事件', 'file: standalone sound file; event: vanilla sound event') }),
           ] } },
         } },
       }),
@@ -659,7 +659,7 @@
   SECTIONS.painting = {
     fields: [
       f('width', '宽 (1~16)', 'Width', 'number'),
-      f('height', '高 (1~16)', 'Height', 'number'),
+      f('height', '高 (1~16)', 'Height', 'number', { hint: l('画的高度, 1~16 方块', 'Painting height in blocks, 1~16') }),
       f('asset_id', '纹理', 'Asset ID', 'text', { hint: l('默认等于条目 ID', 'Defaults to the entry id') }),
       f('title', '标题', 'Title', 'miniText', { hint: l('支持 <lang:...>', 'Supports <lang:...>') }),
       f('author', '作者', 'Author', 'miniText'),
@@ -708,7 +708,7 @@
       f('allowed_condition', '允许条件', 'Allowed Condition', 'kv'),
     ] },
     'minecraft:spread_32_above_top': { label: l('顶部上 32 格散布 (spread_32_above_top)', 'Spread 32 Above Top') },
-    'minecraft:top_slice_height': { label: l('顶部切片高度 (top_slice_height)', 'Top Slice Height'), fields: [f('height', '高度', 'Height', 'text')] },
+    'minecraft:top_slice_height': { label: l('顶部切片高度 (top_slice_height)', 'Top Slice Height'), fields: [f('height', '高度', 'Height', 'text', { hint: l('上方截取的方块数', 'Blocks cut from the top') })] },
     'minecraft:carving_mask': { label: l('洞穴雕刻掩码 (carving_mask)', 'Carving Mask'), fields: [f('step', '步骤', 'Step', 'text')] },
     'minecraft:random_spread': { label: l('随机散布 (random_spread)', 'Random Spread'), fields: [
       f('spread_type', '散布类型', 'Spread Type', 'text'),
@@ -718,7 +718,7 @@
     ] },
     'minecraft:block_predictions': { label: l('方块预测 (block_predictions)', 'Block Predictions'), fields: [f('predicate', '谓词', 'Predicate', 'kv')] },
     'minecraft:height_range': { label: l('高度范围 (height_range)', 'Height Range'), fields: [
-      f('height', '高度', 'Height', 'object', { fields: [
+      f('height', '高度', 'Height', 'object', { hint: l('生成高度范围', 'Spawn height range'), fields: [
         f('type', '类型', 'Type', 'text', { hint: l('如 minecraft:uniform', 'e.g. minecraft:uniform') }),
         f('min_inclusive', '最小高度', 'Min Inclusive', 'number'),
         f('max_inclusive', '最大高度', 'Max Inclusive', 'number'),
@@ -730,7 +730,7 @@
     label: l('地物', 'Feature'),
     types: {
       map: { label: l('详细', 'Detailed'), widget: { type: 'object', fields: [
-        f('type', '类型', 'Type', 'text'),
+        f('type', '类型', 'Type', 'text', { hint: l('已配置地物类型, 如 minecraft:tree', 'Configured feature type, e.g. minecraft:tree') }),
         f('config', '配置', 'Config', 'kv'),
       ], label: l('地物', 'Feature') } },
     },
@@ -1835,7 +1835,7 @@
   var FURNITURE_HITBOX_TYPES = {
     interaction: { label: l('交互 (interaction)', 'Interaction'), fields: [
       f('width', '宽度', 'Width', 'number', { hint: l('或用 scale: 1,2 简写宽×高', 'Or scale: 1,2 as width×height shorthand') }),
-      f('height', '高度', 'Height', 'number'),
+      f('height', '高度', 'Height', 'number', { hint: l('交互箱高度 (方块)', 'Hitbox height in blocks') }),
       f('scale', '缩放', 'Scale', 'text'),
       f('interactive', '可交互', 'Interactive', 'bool', { hint: l('玩家可点击 (默认 true)', 'Players can click (default true)') }),
       f('invisible', 'F3+B 不可见', 'Invisible (F3+B)', 'bool'),
@@ -2010,7 +2010,7 @@
       { key: 'custom', label: l('自定义', 'Custom') },
     ],
     fields: [
-      f('type', '类型', 'Type', 'select', { options: RECIPE_TYPE_OPTIONS, tab: 'basic' }),
+      f('type', '类型', 'Type', 'select', { options: RECIPE_TYPE_OPTIONS, tab: 'basic', hint: l('配方类型, 如 shaped / shapeless / smelting / smithing_trim / brewing', 'Recipe type, e.g. shaped / shapeless / smelting / smithing_trim / brewing') }),
       f('pattern', '图案', 'Pattern', 'linesScalar', { hint: l('shaped: 每行一个网格行; smithing_trim: 修饰图案 ID', 'Shaped: one grid row per line; smithing_trim: trim pattern id'), tab: 'basic' }),
       f('ingredients', '材料', 'Ingredients', 'union', { noTypeKey: true, label: l('材料', 'Ingredients'), tab: 'basic', types: RECIPE_INGREDIENTS_SHAPE_TYPES }),
       recipeIngredientField('ingredient', '材料', 'Ingredient', { tab: 'basic', hint: l('烹饪/切石/酿造: 单个材料', 'Cooking/stonecutting/brewing: single ingredient') }),

@@ -1052,13 +1052,18 @@
   function _sfPlain(t) {
     return String(t || '').replace(/\*\*/g, '').replace(/`/g, '').replace(/§[0-9a-fk-orlmn]/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ');
   }
+  // 短键词条有歧义 (多个 section 共用字段名, 词条来自特定 section, 如 type=战利品源类型):
+  // 命中短键词条的字段若有 schema 显式 hint, 优先用 hint, 避免张冠李戴 (lootSource.type 等无 hint 的仍用词条)
+  var _sfAmbiguousShortKeys = { type: 1, height: 1, asset_id: 1, category: 1, conditions: 1 };
   function _sfTipText(def, path) {
     var db = _sfCeHints();
     var k = _sfHintKey(path);
     var h = null;
-    if (db && k) h = db[k];
-    if (!h && db && def && def.key) h = db[def.key];
+    var srcKey = null;
+    if (db && k) { h = db[k]; srcKey = k; }
+    if (!h && db && def && def.key) { h = db[def.key]; srcKey = def.key; }
     if (!h && def) h = def.hint;
+    if (h && srcKey && srcKey.indexOf('.') === -1 && def && def.key && def.hint && _sfAmbiguousShortKeys[def.key]) h = def.hint;
     return _sfTipOf(h);
   }
   // 高级版专属字段 (wiki 标记 Premium Exclusive), tooltip 末尾追加红色提示
