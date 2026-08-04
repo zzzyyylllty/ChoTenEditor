@@ -275,20 +275,6 @@ body.embedded .title-bar {
   gap: var(--spacing-md);
 }
 
-/* 关于作者图片 */
-.about-author-card {
-  display: flex;
-  justify-content: center;
-  padding: var(--spacing-md);
-}
-.about-author-card img {
-  max-width: min(620px, 100%);
-  height: auto;
-  border-radius: 12px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-}
-
 .settings-section h3 {
   font-size: 14px;
   font-weight: 500;

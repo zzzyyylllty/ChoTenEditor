@@ -2901,6 +2901,53 @@ body {
   margin-top: 20px;
 }
 
+/* Help → 关于弹窗 (反馈渠道 + 作者卡片) */
+.about-modal {
+  width: min(520px, 92vw);
+}
+.about-body {
+  white-space: normal;
+}
+.about-feedback {
+  background: var(--color-bg-tertiary);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.about-intro {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+.about-feedback-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.about-feedback-row .ui-btn {
+  padding: 4px 12px;
+  font-size: 12.5px;
+  flex-shrink: 0;
+}
+.about-author {
+  margin-top: 16px;
+}
+.about-author-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+.about-author img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
 .ui-btn {
   display: inline-flex;
   align-items: center;

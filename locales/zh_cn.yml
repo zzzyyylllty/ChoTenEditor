@@ -136,7 +136,6 @@ menu:
   clearRecent: "🗑 清空历史记录"
   empty: "暂无记录"
   allFiles: "全部文件"
-  aboutMsg: "版本 {version}\n\n如有问题、意见，欢迎通过 QQ群 858827523 或 Discord 反馈。"
   experimentalRemoteWarning: "远程模式属于极不稳定且未经过测试的功能，仅限调试使用，可能对您的文件有极大风险！如需启用，请在设置内的实验性一栏内启用。你已经被警告过了！"
   experimentalAIStudioWarning: "AI Studio 属于极不稳定且未经过测试的功能，仅限调试使用，可能对您的文件有极大风险！如需启用，请在设置内的实验性一栏内启用。你已经被警告过了！"
 
@@ -360,7 +359,6 @@ settings:
   tabRemote: "远程设置"
   tabShortcuts: "快捷键"
   tabExperimental: "实验性"
-  tabAbout: "关于"
   aboutAuthor: "🎨 关于作者"
   sectionLanguage: "🌐 语言"
   language: "语言"

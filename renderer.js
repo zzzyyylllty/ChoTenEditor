@@ -654,6 +654,7 @@ async function closeAllTabs() {
   }
 }
 
+// Help → 关于: 富内容弹窗 (反馈渠道 + 作者卡片), 原设置在设置页内, 已移至此处
 function showAbout() {
   let version = '1.0.0';
   try {
@@ -661,10 +662,97 @@ function showAbout() {
       version = window.electronAPI.appVersion;
     }
   } catch (e) {}
-  UI.alert({
-    title: 'Choten Editor',
-    message: I18N.t('menu.aboutMsg', { version: version }),
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ui-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'ui-modal about-modal';
+  modal.setAttribute('role', 'dialog');
+
+  const title = document.createElement('div');
+  title.className = 'ui-modal-title';
+  title.textContent = 'Choten Editor v' + version;
+
+  const body = document.createElement('div');
+  body.className = 'ui-modal-body about-body';
+  body.style.whiteSpace = 'normal';
+
+  const feedback = document.createElement('div');
+  feedback.className = 'about-feedback';
+  const intro = document.createElement('div');
+  intro.className = 'about-intro';
+  intro.textContent = I18N.t('settings.feedbackIntro');
+  feedback.appendChild(intro);
+
+  const channels = [
+    { label: I18N.t('settings.feedbackQqGroup') + ' 858827523', url: 'https://qm.qq.com/q/f7l7qPlY60', btn: I18N.t('settings.feedbackJoinQq') },
+    { label: '🌐 Discord', url: 'https://discord.com/invite/VHs958jJXj', btn: I18N.t('settings.feedbackJoinDiscord') },
+    { label: I18N.t('settings.feedbackQq') + ' 3631901756', url: 'https://qm.qq.com/q/f7l7qPlY60', btn: I18N.t('settings.feedbackAddFriend') },
+  ];
+  channels.forEach((c) => {
+    const row = document.createElement('div');
+    row.className = 'about-feedback-row';
+    const label = document.createElement('span');
+    label.textContent = c.label;
+    const btn = document.createElement('button');
+    btn.className = 'ui-btn ui-btn-secondary';
+    btn.textContent = c.btn;
+    btn.addEventListener('click', () => {
+      if (window.electronAPI && window.electronAPI.openExternal) {
+        window.electronAPI.openExternal(c.url);
+      } else {
+        window.open(c.url, '_blank');
+      }
+    });
+    row.appendChild(label);
+    row.appendChild(btn);
+    feedback.appendChild(row);
   });
+  body.appendChild(feedback);
+
+  const author = document.createElement('div');
+  author.className = 'about-author';
+  const authorTitle = document.createElement('div');
+  authorTitle.className = 'about-author-title';
+  authorTitle.textContent = I18N.t('settings.aboutAuthor');
+  const img = document.createElement('img');
+  img.src = 'images/author.png';
+  img.alt = 'Author';
+  author.appendChild(authorTitle);
+  author.appendChild(img);
+  body.appendChild(author);
+
+  const actions = document.createElement('div');
+  actions.className = 'ui-modal-actions';
+  const okBtn = document.createElement('button');
+  okBtn.className = 'ui-btn ui-btn-primary';
+  okBtn.textContent = I18N.t('ui.ok');
+  actions.appendChild(okBtn);
+
+  modal.appendChild(title);
+  modal.appendChild(body);
+  modal.appendChild(actions);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+
+  function close() {
+    overlay.classList.remove('show');
+    setTimeout(() => {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 160);
+  }
+  okBtn.addEventListener('click', close);
+  overlay.addEventListener('mousedown', (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      close();
+    }
+  });
+  okBtn.focus();
 }
 
 function initMenuBar() {

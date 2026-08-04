@@ -136,7 +136,6 @@ menu:
   clearRecent: "🗑 Clear History"
   empty: "No items"
   allFiles: "All Files"
-  aboutMsg: "Version {version}\n\nFeedback: QQ Group 858827523 or Discord."
   experimentalRemoteWarning: "Remote Mode is an extremely unstable, untested feature for debugging only and may pose a great risk to your files! To enable it, turn it on under the Experimental section in Settings. You have been warned!"
   experimentalAIStudioWarning: "AI Studio is an extremely unstable, untested feature for debugging only and may pose a great risk to your files! To enable it, turn it on under the Experimental section in Settings. You have been warned!"
 
@@ -360,7 +359,6 @@ settings:
   tabRemote: "Remote"
   tabShortcuts: "Shortcuts"
   tabExperimental: "Experimental"
-  tabAbout: "About"
   aboutAuthor: "🎨 About the Author"
   sectionLanguage: "🌐 Language"
   language: "Language"
