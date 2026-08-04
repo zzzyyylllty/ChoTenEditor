@@ -65,6 +65,19 @@ let catColorInputs = {};
 let shortcutInputs = {};
 let resetShortcutsBtn;
 let editShortcutsBtn;
+let _scRecording = null;
+
+// 切换快捷键编辑模式 (编辑按钮文案随 i18n 语言切换)
+function setShortcutEditing(on) {
+  document.body.classList.toggle('sc-editing', on);
+  if (!on) {
+    _scRecording = null;
+    document.querySelectorAll('.sc-recording').forEach((el) => el.classList.remove('sc-recording'));
+  }
+  if (editShortcutsBtn) {
+    editShortcutsBtn.textContent = on ? I18N.t('settings.editShortcutDone') : I18N.t('settings.editShortcuts');
+  }
+}
 
 // 远程设置
 let remotePassword;
@@ -155,10 +168,6 @@ const defaultConfig = {
     newFile: 'Ctrl+N',
     openProject: 'Ctrl+O',
     toggleMode: 'F2',
-    find: 'Ctrl+F',
-    replace: 'Ctrl+H',
-    comment: 'Ctrl+/',
-    format: 'Shift+Alt+F',
   },
   background: {
     filename: '',
@@ -377,10 +386,6 @@ function initializeDOMElements() {
     newFile: document.getElementById('shortcut-new-file'),
     openProject: document.getElementById('shortcut-open-project'),
     toggleMode: document.getElementById('shortcut-toggle-mode'),
-    find: document.getElementById('shortcut-find'),
-    replace: document.getElementById('shortcut-replace'),
-    comment: document.getElementById('shortcut-comment'),
-    format: document.getElementById('shortcut-format'),
   };
 
   // 背景图片
@@ -525,6 +530,7 @@ function setupEventListeners() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       playSound('save');
+      setShortcutEditing(false);
       await saveSettings();
     });
   }
@@ -593,12 +599,70 @@ function setupEventListeners() {
   // 快捷键按钮
   const resetShortcutBtn = document.getElementById('reset-shortcuts');
   if (resetShortcutBtn) {
-    resetShortcutBtn.addEventListener('click', () => { playSound('update'); });
+    resetShortcutBtn.addEventListener('click', () => {
+      playSound('update');
+      setShortcutEditing(false);
+      const defs = defaultConfig.shortcuts;
+      Object.entries(shortcutInputs).forEach(([k, v]) => {
+        if (v && defs[k]) {
+          v.value = defs[k];
+          v.classList.remove('sc-conflict');
+          v.title = '';
+        }
+      });
+    });
   }
   const editShortcutBtn = document.getElementById('edit-shortcuts');
   if (editShortcutBtn) {
-    editShortcutBtn.addEventListener('click', () => { playSound('click'); });
+    editShortcutBtn.addEventListener('click', () => {
+      playSound('click');
+      setShortcutEditing(!document.body.classList.contains('sc-editing'));
+    });
   }
+  // 编辑模式下点击输入框进入录制状态
+  Object.values(shortcutInputs).forEach((input) => {
+    if (!input) return;
+    input.addEventListener('click', () => {
+      if (!document.body.classList.contains('sc-editing')) return;
+      playSound('click');
+      document.querySelectorAll('.sc-recording').forEach((el) => el.classList.remove('sc-recording'));
+      _scRecording = input;
+      input.classList.add('sc-recording');
+      input.title = I18N.t('settings.shortcutHint');
+    });
+  });
+  // 录制: 按组合键写入输入框
+  document.addEventListener('keydown', (e) => {
+    if (!_scRecording) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const k = e.key;
+    if (k === 'Control' || k === 'Shift' || k === 'Alt' || k === 'Meta' || k === 'Escape') {
+      if (k === 'Escape') {
+        _scRecording.classList.remove('sc-recording');
+        _scRecording = null;
+      }
+      return;
+    }
+    const parts = [];
+    if (e.ctrlKey) parts.push('Ctrl');
+    if (e.metaKey) parts.push('Meta');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    parts.push(k.length === 1 ? k.toUpperCase() : k);
+    const combo = parts.join('+');
+    _scRecording.value = combo;
+    _scRecording.classList.remove('sc-recording');
+    // 冲突检测 (与其他快捷键相同则提示)
+    let conflict = null;
+    Object.entries(shortcutInputs).forEach(([ck, v]) => {
+      if (v && v !== _scRecording && v.value === combo) conflict = ck;
+    });
+    _scRecording.classList.toggle('sc-conflict', !!conflict);
+    _scRecording.title = conflict ? I18N.t('settings.shortcutConflict', { name: conflict }) : '';
+    if (conflict) playSound('error');
+    _scRecording = null;
+  });
 
   // AI 模型切换
   if (aiModel) {
@@ -704,6 +768,10 @@ function setupEventListeners() {
     langSelect.addEventListener('change', function() {
       playSound('click');
       I18N.setLang(this.value);
+      // 嵌入模式: 通知主窗口整页重载应用新语言 (否则语言只对设置页生效)
+      if (window.self !== window.top) {
+        window.parent.postMessage({ type: 'langChanged' }, '*');
+      }
       location.reload();
     });
   }
@@ -774,6 +842,8 @@ function applyPreset(presetName) {
   });
 
   updatePresetButtonState(presetName);
+  // 程序化赋值不触发 change/input 事件, 需手动标记, 否则关闭设置时更改丢失
+  _settingsDirty = true;
 }
 
 function updatePresetButtonState(activePreset) {
@@ -980,7 +1050,11 @@ function applyBackgroundPreview() {
   const saved = getBackgroundConfig();
   const filename = saved && saved.filename ? saved.filename : '';
   const themeSelectEl = document.getElementById('theme');
-  const theme = themeSelectEl ? themeSelectEl.value : 'dark';
+  let theme = themeSelectEl ? themeSelectEl.value : 'dark';
+  // auto 主题按系统实际主题渲染预览, 避免设置页预览与主界面不一致
+  if (theme === 'auto') {
+    try { theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { theme = 'dark'; }
+  }
 
   if (filename) {
     const alpha = String(Math.round((1 - (bgOpacity ? parseFloat(bgOpacity.value) : (saved ? saved.opacity : 0.3))) * 60) / 100);
@@ -1075,10 +1149,6 @@ async function saveSettings() {
       newFile: shortcutInputs.newFile ? shortcutInputs.newFile.value : defaultConfig.shortcuts.newFile,
       openProject: shortcutInputs.openProject ? shortcutInputs.openProject.value : defaultConfig.shortcuts.openProject,
       toggleMode: shortcutInputs.toggleMode ? shortcutInputs.toggleMode.value : defaultConfig.shortcuts.toggleMode,
-      find: shortcutInputs.find ? shortcutInputs.find.value : defaultConfig.shortcuts.find,
-      replace: shortcutInputs.replace ? shortcutInputs.replace.value : defaultConfig.shortcuts.replace,
-      comment: shortcutInputs.comment ? shortcutInputs.comment.value : defaultConfig.shortcuts.comment,
-      format: shortcutInputs.format ? shortcutInputs.format.value : defaultConfig.shortcuts.format,
     },
   };
 
@@ -1398,17 +1468,12 @@ function loadSettings() {
     }
   });
 
-  // 应用快捷键设置（将在任务3中完善）
+  // 应用快捷键设置
   const shortcutsConfig = config.shortcuts || defaultConfig.shortcuts;
-  // 暂时只更新显示值
   if (shortcutInputs.save) shortcutInputs.save.value = shortcutsConfig.save;
   if (shortcutInputs.newFile) shortcutInputs.newFile.value = shortcutsConfig.newFile;
   if (shortcutInputs.openProject) shortcutInputs.openProject.value = shortcutsConfig.openProject;
   if (shortcutInputs.toggleMode) shortcutInputs.toggleMode.value = shortcutsConfig.toggleMode;
-  if (shortcutInputs.find) shortcutInputs.find.value = shortcutsConfig.find;
-  if (shortcutInputs.replace) shortcutInputs.replace.value = shortcutsConfig.replace;
-  if (shortcutInputs.comment) shortcutInputs.comment.value = shortcutsConfig.comment;
-  if (shortcutInputs.format) shortcutInputs.format.value = shortcutsConfig.format;
 
   // 加载背景图片列表并应用
   loadBackgroundList().then(() => {
@@ -1510,6 +1575,8 @@ function importSettings(e) {
         }
       });
 
+      // 程序化赋值不触发 change/input 事件, 需手动标记, 否则关闭设置时更改丢失
+      _settingsDirty = true;
       showNotification(I18N.t('settings.importDone'), 'success');
     } catch (error) {
       console.error('[SETTINGS] 导入错误:', error);

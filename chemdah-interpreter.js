@@ -1032,7 +1032,9 @@ window.ChemdahInterpreter = (() => {
       // 含引号: JSON 双引号转义, 保证 YAML 合法
       return JSON.stringify(s);
     }
-    if (/^-|[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$|^[>!]\S/.test(s) || s === 'true' || s === 'false' || s === 'yes' || s === 'no') {
+    // on/off/null/~ 等字面量不带引号写回会被解析成布尔/空值, 数字样字符串
+    // (123/1./.5/+123/0x1F/1e5) 会被解析成数字, 均需加引号保护
+    if (/^-|[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$|^[>!]\S/.test(s) || /^(true|false|yes|no|on|off|null|none|~)$/i.test(s) || /^[-+]?(?:0x[0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|\.?(?:inf|nan))$/i.test(s)) {
       const q = s.includes("'") ? '"' : "'";
       return q + s + q;
     }
@@ -1930,14 +1932,17 @@ window.ChemdahInterpreter = (() => {
 
     // 4. agent 钩子 — JSON 中无定义，保留兜底
     const agentHookDefs = _ensureDefs().agentHookDefs;
+    // JSON 无数据时不覆盖内置兜底定义（避免 UI 定义列表消失）
+    const finalObjectives = objectives.length ? objectives : _ensureDefs().objectiveDefs;
+    const finalAddons = addons.length ? addons : _ensureDefs().addonDefs;
 
-    _definitions = { objectiveDefs: objectives, addonDefs: addons, agentHookDefs };
-    objectives.forEach(d => d._sec = 'objective');
-    addons.forEach(d => d._sec = 'addon');
+    _definitions = { objectiveDefs: finalObjectives, addonDefs: finalAddons, agentHookDefs };
+    finalObjectives.forEach(d => d._sec = 'objective');
+    finalAddons.forEach(d => d._sec = 'addon');
 
     // 更新向后兼容变量
-    QUEST_OBJECTIVE_TYPES = objectives.map(d => d.id);
-    QUEST_ADDON_TYPES = addons.map(d => d.id);
+    QUEST_OBJECTIVE_TYPES = finalObjectives.map(d => d.id);
+    QUEST_ADDON_TYPES = finalAddons.map(d => d.id);
     QUEST_AGENT_HOOKS = agentHookDefs.map(d => d.id);
 
     return true;
@@ -4015,6 +4020,7 @@ window.ChemdahInterpreter = (() => {
   // ============================================
 
   /** 递归生成 addon 的 YAML */
+  // 递归序列化 addon 结构(任意深度嵌套对象 + 数组), 避免深层字段退化成 [object Object]/逗号字符串
   function _genAddonYAML(obj, indent) {
     var lines = [];
     for (var keys = Object.keys(obj), ki = 0; ki < keys.length; ki++) {
@@ -4023,31 +4029,41 @@ window.ChemdahInterpreter = (() => {
       if (v === null || v === undefined) continue;
       if (typeof v === 'boolean') {
         lines.push('  '.repeat(indent) + k + ': ' + v);
-      } else if (typeof v === 'object' && !Array.isArray(v)) {
+      } else if (Array.isArray(v)) {
+        if (v.length === 0) {
+          lines.push('  '.repeat(indent) + k + ': []');
+        } else {
+          lines.push('  '.repeat(indent) + k + ':');
+          var pad = '  '.repeat(indent + 1);
+          for (var ai = 0; ai < v.length; ai++) {
+            var item = v[ai];
+            if (item === null || item === undefined) continue;
+            if (typeof item === 'object' && !Array.isArray(item)) {
+              var oks = Object.keys(item);
+              if (oks.length === 0) {
+                lines.push(pad + '- {}');
+              } else {
+                var firstOk = oks[0];
+                lines.push(pad + '- ' + firstOk + ': ' + _genYAMLValue(item[firstOk], indent + 2));
+                for (var oi = 1; oi < oks.length; oi++) {
+                  var ok = oks[oi];
+                  var ov = item[ok];
+                  if (ov === null || ov === undefined) continue;
+                  lines.push('  '.repeat(indent + 2) + ok + ': ' + _genYAMLValue(ov, indent + 2));
+                }
+              }
+            } else {
+              lines.push(pad + '- ' + _genYAMLValue(item, indent + 1));
+            }
+          }
+        }
+      } else if (typeof v === 'object') {
         lines.push('  '.repeat(indent) + k + ':');
         var subKeys = Object.keys(v);
         if (subKeys.length === 0) {
           lines.push('  '.repeat(indent + 1) + '{}');
         } else {
-          for (var si = 0; si < subKeys.length; si++) {
-            var sk = subKeys[si];
-            var sv = v[sk];
-            if (sv === null || sv === undefined) continue;
-            if (typeof sv === 'boolean') {
-              lines.push('  '.repeat(indent + 1) + sk + ': ' + sv);
-            } else if (typeof sv === 'object' && !Array.isArray(sv)) {
-              lines.push('  '.repeat(indent + 1) + sk + ':');
-              for (var ssi = 0, ssk, ssv; ssi < Object.keys(sv).length; ssi++) {
-                ssk = Object.keys(sv)[ssi];
-                ssv = sv[ssk];
-                if (ssv !== null && ssv !== undefined) {
-                  lines.push('  '.repeat(indent + 2) + ssk + ': ' + _genYAMLValue(ssv, indent + 2));
-                }
-              }
-            } else {
-              lines.push('  '.repeat(indent + 1) + sk + ': ' + _genYAMLValue(sv, indent + 1));
-            }
-          }
+          lines.push(_genAddonYAML(v, indent + 1));
         }
       } else {
         lines.push('  '.repeat(indent) + k + ': ' + _genYAMLValue(v, indent));

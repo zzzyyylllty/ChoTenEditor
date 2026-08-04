@@ -79,7 +79,8 @@
     if (lang !== 'zh_cn') chain = chain.then(function () { return load('zh_cn'); });
     chain = chain.then(function () { return load(lang); });
     return chain.then(function () {
-      applyDOM();
+      // 加载期间可能又调用了 setLang (current 已指向新语言): 过期 init 不得用未就绪字典刷新 DOM
+      if (current === lang) applyDOM();
       return current;
     });
   }

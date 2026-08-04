@@ -376,6 +376,10 @@
     if (id === 'hover_text') f.hover = g('mini-detail-hover');
     return f;
   }
+  // MiniMessage 单引号标签内转义: \ → \\, ' → \' (用户输入含引号会截断标签)
+  function mmEsc(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
   function buildDetailTag(id, f) {
     if (id === 'font') {
       var inner = f.ns.trim() ? f.ns.trim() + ':' + f.font.trim() : f.font.trim();
@@ -388,10 +392,10 @@
     if (id === 'gradient') {
       return { before: '<gradient:' + (f.gradA.trim() || '#ff0000') + ':' + (f.gradB.trim() || '#ffff00') + '>', suffix: '</gradient>' };
     }
-    if (id === 'open_url') return { before: "<click:open_url:'" + f.url.trim() + "'>", suffix: '</click>' };
-    if (id === 'run_command') return { before: "<click:run_command:'" + f.cmd.trim() + "'>", suffix: '</click>' };
-    if (id === 'suggest_command') return { before: "<click:suggest_command:'" + f.cmd.trim() + "'>", suffix: '</click>' };
-    if (id === 'hover_text') return { before: "<hover:show_text:'" + f.hover.trim() + "'>", suffix: '</hover>' };
+    if (id === 'open_url') return { before: "<click:open_url:'" + mmEsc(f.url.trim()) + "'>", suffix: '</click>' };
+    if (id === 'run_command') return { before: "<click:run_command:'" + mmEsc(f.cmd.trim()) + "'>", suffix: '</click>' };
+    if (id === 'suggest_command') return { before: "<click:suggest_command:'" + mmEsc(f.cmd.trim()) + "'>", suffix: '</click>' };
+    if (id === 'hover_text') return { before: "<hover:show_text:'" + mmEsc(f.hover.trim()) + "'>", suffix: '</hover>' };
     var d = detailTypeById(id);
     if (!d || !d.tag) return { before: '', suffix: '' };
     return { before: d.tag.before + d.tag.after, suffix: d.tag.suffix };

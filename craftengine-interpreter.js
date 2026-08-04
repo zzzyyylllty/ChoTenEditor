@@ -340,6 +340,10 @@
     function bucket(scope, inline) {
       if (scope.kind === 'section' || scope.kind === 'filetop') return inline ? C.topInline : C.top;
       if (scope.kind === 'entry') {
+        // 版本键分组条目: 注释存进组内共享容器 (回写按 gCom.before[entryKey] 读取)
+        if (scope.entry && scope.entry._group) {
+          return inline ? scope.entry._comments.inline : scope.entry._comments.before;
+        }
         var ec = scope.sec._comments;
         return inline ? ec.inlineEntry : ec.beforeEntry;
       }
@@ -599,7 +603,11 @@
       var lw = kq + ': ' + _genScalar(val);
       return inline ? lw + ' ' + inline : lw;
     }
-    if (typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date) && Object.keys(val).length === 0) {
+    if (val instanceof Date) {
+      var ld = kq + ': ' + _genScalar(_fmtDate(val));
+      return inline ? ld + ' ' + inline : ld;
+    }
+    if (typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length === 0) {
       var l1 = kq + ': {}';
       return inline ? l1 + ' ' + inline : l1;
     }
@@ -672,9 +680,10 @@
                 curGroup = g;
                 if (g !== null) {
                   gCom = ec;
-                  var gbf = secC.beforeEntry[g] || null;
+                  // 分组键注释与组内条目同存共享容器: 采集端 entry 级注释也写入 entry._comments(shareC)
+                  var gbf = (gCom.before && gCom.before[g]) || null;
                   if (gbf) for (var gbi = 0; gbi < gbf.length; gbi++) lines.push('  ' + gbf[gbi]);
-                  var gInl = secC.inlineEntry[g] || null;
+                  var gInl = (gCom.inline && gCom.inline[g]) || null;
                   lines.push('  ' + _quoteKey(g) + ':' + (gInl ? ' ' + gInl : ''));
                 }
               }
@@ -691,7 +700,8 @@
                 lines.push(el);
                 el = null;
                 if (Object.keys(ed).length > 0) {
-                  var em = _genMapLines(ed, g !== null ? 3 : 2, g !== null ? gCom : ec, g !== null ? entry.key : '');
+                  // prefix 必须为空: 采集端嵌套注释按 "键名" 记录, 不带条目前缀
+                  var em = _genMapLines(ed, g !== null ? 3 : 2, g !== null ? gCom : ec, '');
                   for (var mi = 0; mi < em.length; mi++) lines.push(em[mi]);
                 }
               } else if (Array.isArray(ed)) {
@@ -749,7 +759,6 @@
 
   // ============ Schema 表单引擎 (craftengine-schemas.js) ============
   var _sfSchemas = (typeof CESchemas !== 'undefined' && CESchemas) ? CESchemas : null;
-  var _sfRegPairs = null;
   var _sfDatalistMap = null;
   var _sfUidSeq = 0;
   var _sfUidMap = {};
@@ -763,12 +772,7 @@
 
   function _sfInit() {
     if (_sfSchemas === null && typeof CESchemas !== 'undefined') _sfSchemas = CESchemas;
-    if (_sfRegPairs) return;
-    _sfRegPairs = [];
-    if (_sfSchemas && _sfSchemas.types) {
-      var ks = Object.keys(_sfSchemas.types);
-      for (var i = 0; i < ks.length; i++) _sfRegPairs.push({ key: ks[i], obj: _sfSchemas.types[ks[i]] });
-    }
+    if (_sfDatalistMap) return;
     _sfDatalistMap = {};
     if (_sfSchemas && _sfSchemas.constants) {
       var cs = _sfSchemas.constants;
@@ -807,27 +811,6 @@
   }
   function _sfTypesOf(def) {
     return (typeof def.types === 'function') ? def.types() : (def.types || {});
-  }
-  function _sfRegName(obj) {
-    for (var i = 0; i < _sfRegPairs.length; i++) {
-      if (_sfRegPairs[i].obj === obj) return _sfRegPairs[i].key;
-    }
-    return null;
-  }
-  // 序列化 def → JSON 属性: 循环类型引用 (registry) 替换为 {__sfRef: key}
-  function _sfNorm(def) {
-    _sfInit();
-    if (def === null || typeof def !== 'object') return def;
-    if (Array.isArray(def)) return def.map(_sfNorm);
-    var reg = _sfRegName(def);
-    if (reg) return { __sfRef: reg };
-    var out = {};
-    Object.keys(def).forEach(function (k) {
-      var v = def[k];
-      if (typeof v === 'function') v = v();
-      out[k] = _sfNorm(v);
-    });
-    return out;
   }
   function _sfUidAlloc(path, kind, def, opts) {
     _sfUidSeq++;
@@ -2376,7 +2359,12 @@
         var k = typeSel && typeSel.value === 'fallback' ? '$$fallback' : '$$' + String(kInp.value || '').trim();
         kInp.classList.remove('ce-invalid');
         if (!typeSel || k === '$$') { kInp.classList.add('ce-invalid'); return; }
-        var dup = scroll.querySelector('.ce-spec-row[data-ce-okey="' + k.replace(/"/g, '&quot;') + '"]');
+        // 遍历比较 data-ce-okey (HTML 实体编码), 避免 key 含引号/& 时 selector 语法错误或匹配失效
+        var dup = null;
+        var allRows = scroll.querySelectorAll('.ce-spec-row');
+        for (var di = 0; di < allRows.length; di++) {
+          if (allRows[di].getAttribute('data-ce-okey') === _escHtml(k)) { dup = allRows[di]; break; }
+        }
         if (dup) { kInp.classList.add('ce-invalid'); return; }
         addRow(k, vInp.value ? _parseKvLine(vInp.value) : '');
         kInp.value = ''; vInp.value = '';
@@ -2749,11 +2737,13 @@
       var cdk = rec.def.conditionKey;
       if (!cdk) return;
       var cdobj = rec.path ? _getNested(entry.data, rec.path) : entry.data;
+      // 容器/条件值为标量时是非法形状: 重建为对象, 否则点击按钮静默无反应
       if (!cdobj || typeof cdobj !== 'object' || Array.isArray(cdobj)) {
         cdobj = {};
         if (rec.path) _setNested(entry.data, rec.path, cdobj);
       }
-      if (cdobj[cdk] !== undefined) return;
+      var cdCur = cdobj[cdk];
+      if (cdCur !== undefined && cdCur !== null && typeof cdCur === 'object' && !Array.isArray(cdCur)) return;
       var cdWd = _sfCompsOf(rec.def)[cdk];
       cdobj[cdk] = cdWd ? _sfDefaultOf(cdWd.widget || cdWd) : {};
       _sfRerender(uid, containerEl);

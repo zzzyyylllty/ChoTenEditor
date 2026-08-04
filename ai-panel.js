@@ -7,6 +7,7 @@ var AIPanel = (function() {
   var _overlay = null;
   var _messages = [];
   var _isStreaming = false;
+  var _genSeq = 0; // 请求代次: 停止后旧请求的 chunk/回调不得污染新请求
   var _fileOps = [];
   var _currentFileContext = '';
   var _lastUserMessage = '';
@@ -363,6 +364,7 @@ var AIPanel = (function() {
   }
 
   function startAIResponse(config, userText) {
+    var gen = ++_genSeq;
     _isStreaming = true;
     setStatus(I18N.t('ai.thinking'));
     setSendingState(true);
@@ -384,6 +386,7 @@ var AIPanel = (function() {
       window.electronAPI.ai.removeListeners();
 
       window.electronAPI.ai.onChunk(function(chunk) {
+        if (gen !== _genSeq) return; // 旧请求残余 chunk 丢弃
         var contentEl = msgEl.querySelector('.ai-msg-content');
         if (contentEl) {
           var text = contentEl.textContent + chunk;
@@ -394,6 +397,7 @@ var AIPanel = (function() {
       });
 
       window.electronAPI.ai.onDone(function(content) {
+        if (gen !== _genSeq) return;
         _isStreaming = false;
         setStatus(I18N.t('status.ready'));
         setSendingState(false);
@@ -422,6 +426,7 @@ var AIPanel = (function() {
       });
 
       window.electronAPI.ai.onError(function(errMsg) {
+        if (gen !== _genSeq) return;
         _isStreaming = false;
         setStatus(I18N.t('ai.error'));
         setSendingState(false);
@@ -431,6 +436,7 @@ var AIPanel = (function() {
       });
 
       window.electronAPI.ai.chat(config, messages).catch(function(err) {
+        if (gen !== _genSeq) return;
         console.error('[AI] 请求失败:', err);
         _isStreaming = false;
         setStatus(I18N.t('ai.error'));
@@ -449,6 +455,7 @@ var AIPanel = (function() {
 
   function stopStreaming() {
     _isStreaming = false;
+    _genSeq++; // 作废在途请求, 其后到达的 chunk/回调全部忽略
     setStatus(I18N.t('ai.stopped'));
     setSendingState(false);
     if (window.electronAPI && window.electronAPI.ai) window.electronAPI.ai.removeListeners();

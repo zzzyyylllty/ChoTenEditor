@@ -394,28 +394,22 @@ function setupEventListeners() {
     });
   }
 
-  // 键盘快捷键
+  // 键盘快捷键 (从设置读取, 支持自定义组合键)
   document.addEventListener('keydown', async function (e) {
-    // Ctrl+S: 保存
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    const hit = (combo) => matchShortcut(e, combo);
+    if (hit(_ceShortcuts.save)) {
       e.preventDefault();
       playSound('save');
       saveCurrentFile();
-    }
-    // Ctrl+N: 新建
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    } else if (hit(_ceShortcuts.newFile)) {
       e.preventDefault();
       playSound('click');
       createNewFile();
-    }
-    // Ctrl+O: 打开项目
-    if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+    } else if (hit(_ceShortcuts.openProject)) {
       e.preventDefault();
       playSound('click');
       openProject();
-    }
-    // F2: 切换编辑器模式
-    if (e.key === 'F2') {
+    } else if (hit(_ceShortcuts.toggleMode)) {
       e.preventDefault();
       playSound('click');
       // 检查是否可以对当前文件切换
@@ -1741,6 +1735,9 @@ window.addEventListener('message', (e) => {
     requestCloseSettingsModal();
   } else if (e.data && e.data.type === 'settingsSaved') {
     finishCloseSettingsModal();
+  } else if (e.data && e.data.type === 'langChanged') {
+    // 语言切换后整页重载应用新语言 (设置 iframe 已自行 reload)
+    location.reload();
   }
 });
 
@@ -1999,12 +1996,33 @@ try {
 } catch (e) {}
 
 // 重新应用存储的主题/颜色/背景（窗口重新聚焦或设置弹窗关闭时调用）
+// 快捷键配置 (由 applyStoredConfig 刷新; 无配置时用默认值)
+let _ceShortcuts = { save: 'Ctrl+S', newFile: 'Ctrl+N', openProject: 'Ctrl+O', toggleMode: 'F2' };
+// 匹配按键事件与 "Ctrl+S" 格式组合键 (配置中未含的修饰键若被按下则不匹配, 避免误触发)
+function matchShortcut(e, combo) {
+  if (!combo) return false;
+  const parts = String(combo).split('+').map(s => s.trim().toLowerCase());
+  const keyPart = parts.pop();
+  const wantCtrl = parts.includes('ctrl') || parts.includes('control');
+  const wantMeta = parts.includes('meta') || parts.includes('cmd') || parts.includes('command');
+  const wantShift = parts.includes('shift');
+  const wantAlt = parts.includes('alt');
+  if (wantCtrl !== e.ctrlKey) return false;
+  if (wantMeta !== e.metaKey) return false;
+  if (wantShift !== e.shiftKey) return false;
+  if (wantAlt !== e.altKey) return false;
+  return e.key.toLowerCase() === keyPart;
+}
+
 function applyStoredConfig() {
   const stored = localStorage.getItem('editorConfig');
   if (!stored) return;
   try {
     const config = JSON.parse(stored);
     document.body.setAttribute('data-theme', resolveTheme(config.theme));
+    if (config.shortcuts) {
+      _ceShortcuts = Object.assign({}, _ceShortcuts, config.shortcuts);
+    }
 
     // 重新应用字体（界面字体 + 编辑器字体）
     document.body.style.fontFamily = config.uiFont || '';
