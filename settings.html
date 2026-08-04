@@ -6,6 +6,7 @@
     <title>设置 - Minecraft Plugin Editor</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="settings-styles.css">
+    <link rel="stylesheet" href="ce-select.css">
     <link rel="stylesheet" href="twemoji/emoji-icons.css">
 </head>
 <body data-title-key="settings.title">
@@ -126,34 +127,13 @@
                         <h2 data-i18n="settings.sectionFonts">🔤 字体设置</h2>
                         <div class="setting-group">
                             <label for="ui-font" data-i18n="settings.uiFont">界面字体</label>
-                            <div class="select-wrapper">
-                                <select id="ui-font">
-                                    <option value="" data-i18n="settings.fontSystemDefault">系统默认</option>
-                                    <option value="'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif">微软雅黑 (Microsoft YaHei)</option>
-                                    <option value="'Noto Sans SC', 'Microsoft YaHei', sans-serif">思源黑体 (Noto Sans SC)</option>
-                                    <option value="'PingFang SC', 'Microsoft YaHei', sans-serif">苹方 (PingFang SC)</option>
-                                    <option value="'HarmonyOS Sans SC', 'Microsoft YaHei', sans-serif">HarmonyOS Sans</option>
-                                    <option value="'Segoe UI', 'Microsoft YaHei', sans-serif">Segoe UI</option>
-                                    <option value="'Arial', 'Microsoft YaHei', sans-serif">Arial</option>
-                                </select>
-                                <span class="select-icon">▼</span>
-                            </div>
+                            <input type="text" id="ui-font" data-font-combo class="ce-input" data-i18n-placeholder="settings.fontSearchPlaceholder">
+                            <div class="setting-hint" data-i18n="settings.fontComboHint">输入或从补全中选择系统已安装字体</div>
                         </div>
                         <div class="setting-group">
                             <label for="editor-font-family" data-i18n="settings.editorFontFamily">编辑器字体</label>
-                            <div class="select-wrapper">
-                                <select id="editor-font-family">
-                                    <option value="" data-i18n="settings.editorFontDefault">默认 (Fira Code)</option>
-                                    <option value="'JetBrains Mono', Consolas, monospace">JetBrains Mono</option>
-                                    <option value="'Fira Code', Consolas, monospace">Fira Code</option>
-                                    <option value="Consolas, monospace">Consolas</option>
-                                    <option value="'Source Code Pro', Consolas, monospace">Source Code Pro</option>
-                                    <option value="'Cascadia Code', Consolas, monospace">Cascadia Code</option>
-                                    <option value="'Ubuntu Mono', Consolas, monospace">Ubuntu Mono</option>
-                                    <option value="'Courier New', monospace">Courier New</option>
-                                </select>
-                                <span class="select-icon">▼</span>
-                            </div>
+                            <input type="text" id="editor-font-family" data-font-combo class="ce-input" data-i18n-placeholder="settings.fontSearchPlaceholder">
+                            <div class="setting-hint" data-i18n="settings.fontComboHint">输入或从补全中选择系统已安装字体</div>
                         </div>
                     </section>
 
@@ -817,6 +797,7 @@
     <script src="ui.js"></script>
     <script src="tooltip.js"></script>
     <script src="settings.js"></script>
+    <script src="ce-select.js"></script>
     <script src="twemoji/emoji-map.js"></script>
     <script src="twemoji/emoji-replace.js"></script>
     <script>

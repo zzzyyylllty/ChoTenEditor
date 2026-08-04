@@ -142,6 +142,77 @@ ipcMain.handle('fs:readdir', async (event, dirPath) => {
     return { success: false, error: error.message };
   }
 });
+// ── 系统字体枚举 (Windows 注册表 / macOS·Linux 字体目录) ──
+const VARIANT_RE = /\s+(bold|italic|light|medium|semibold|semilight|semi\s?bold|black|thin|regular|extrabold|extralight|condensed|narrow|heavy|display|outline|rounded|smallcaps)$/i;
+let fontsCache = null;
+
+function cleanFontName(raw) {
+  let n = raw.replace(/\s*\((?:TrueType|OpenType)\)\s*$/i, '').trim();
+  n = n.replace(/\s+(?:Italic|Oblique)$/i, '').trim();
+  if (VARIANT_RE.test(n)) return null; // 过滤 Bold/Italic/Light 等变体, 只留主 family
+  return n || null;
+}
+
+function listDirFonts(dirs) {
+  const names = new Set();
+  for (const dir of dirs) {
+    let files = [];
+    try { files = fs.readdirSync(dir); } catch (e) { continue; }
+    for (const f of files) {
+      if (!/\.(ttf|otf|ttc)$/i.test(f)) continue;
+      let name = f.replace(/\.(ttf|otf|ttc)$/i, '');
+      // 目录文件名不等于 family 名, 去除常见文件后缀 (如 msyh.ttc → msyh), 保留原名作为候选
+      name = name.replace(/[-_](bold|italic|light|medium|semibold|black|thin|regular)$/i, '');
+      if (name && name.length > 1) names.add(name);
+    }
+  }
+  return [...names];
+}
+
+async function listWindowsFonts() {
+  const names = new Set();
+  try {
+    const { execFile } = require('child_process');
+    // PowerShell 强制 UTF-8 输出注册表字体名, 规避 reg 的 ANSI 码页编码问题
+    const script = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"
+      + "$ErrorActionPreference = 'SilentlyContinue'\n"
+      + "$key = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'\n"
+      + "(Get-ItemProperty -Path $key).PSObject.Properties | ForEach-Object { Write-Output $_.Name }";
+    const out = await new Promise((resolve, reject) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 15000, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) => err ? reject(err) : resolve(stdout));
+    });
+    out.split(/\r?\n/).forEach((line) => {
+      const n = cleanFontName(line.trim());
+      if (n) names.add(n);
+    });
+  } catch (e) {}
+  if (names.size === 0) {
+    // 失败时退回枚举字体目录 (文件名近似 family 名)
+    const dirs = [path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts')];
+    names.add(...listDirFonts(dirs));
+  }
+  return [...names];
+}
+
+async function listSystemFonts() {
+  if (fontsCache) return fontsCache;
+  let names = [];
+  if (process.platform === 'win32') {
+    names = await listWindowsFonts();
+  } else if (process.platform === 'darwin') {
+    names = listDirFonts(['/System/Library/Fonts', '/Library/Fonts', path.join(require('os').homedir(), 'Library', 'Fonts')]);
+  } else {
+    names = listDirFonts(['/usr/share/fonts', '/usr/local/share/fonts', path.join(require('os').homedir(), '.fonts'), path.join(require('os').homedir(), '.local', 'share', 'fonts')]);
+  }
+  names = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+  fontsCache = names;
+  return names;
+}
+ipcMain.handle('fonts:list', async () => {
+  try { return { success: true, fonts: await listSystemFonts() }; }
+  catch (e) { return { success: false, error: e.message }; }
+});
+
 ipcMain.handle('fs:mkdir', async (event, dirPath) => {
   if (!isValidFsPath(dirPath)) return { success: false, error: '无效路径' };
   try {

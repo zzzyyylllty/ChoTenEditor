@@ -36,6 +36,9 @@ try {
     ce: {
       resolveProjectRoot: (filePath) => ipcRenderer.invoke('ce:resolveProjectRoot', filePath),
     },
+
+    // 系统字体列表
+    listFonts: () => ipcRenderer.invoke('fonts:list'),
   };
 
   // Window controls

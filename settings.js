@@ -928,11 +928,26 @@ function applyVersionHint(config) {
   document.body.classList.toggle('ce-hide-version-hints', config.hideVersionHints === true);
 }
 
-// 应用字体（实时预览，读取选择框当前值）
+// 字体名 → CSS font-family (含空格/引号的单 family 自动加引号; 已有 CSS 列表保持原样)
+function normalizeFontFamily(name) {
+  name = (name || '').trim();
+  if (!name) return '';
+  if (name.indexOf(',') !== -1) return name;
+  return /[\s"']/.test(name) ? "'" + name + "'" : name;
+}
+
+// CSS font-family → 显示名 (去首尾引号, 便于输入框回显)
+function displayFontName(v) {
+  if (!v) return '';
+  if (v.indexOf(',') !== -1) return v;
+  return v.replace(/^['"]|['"]$/g, '');
+}
+
+// 应用字体（实时预览，读取输入框当前值）
 function applyFonts() {
-  var ui = uiFont ? uiFont.value : '';
+  var ui = uiFont ? normalizeFontFamily(uiFont.value) : '';
   document.body.style.fontFamily = ui;
-  var ed = editorFontFamily ? editorFontFamily.value : '';
+  var ed = editorFontFamily ? normalizeFontFamily(editorFontFamily.value) : '';
   document.documentElement.style.setProperty('--editor-font', ed || "'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace");
 }
 
@@ -1132,7 +1147,7 @@ async function saveSettings() {
 
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
-    uiFont: uiFont ? uiFont.value : '',
+    uiFont: uiFont ? normalizeFontFamily(uiFont.value) : '',
     colors: {},
     editor: {
       fontSize: editorFontSize ? editorFontSize.value : defaultConfig.editor.fontSize,
@@ -1140,7 +1155,7 @@ async function saveSettings() {
       lineNumbers: editorLineNumbers ? editorLineNumbers.value === 'true' : defaultConfig.editor.lineNumbers,
       lineWrapping: editorLineWrapping ? editorLineWrapping.value === 'true' : defaultConfig.editor.lineWrapping,
       theme: editorTheme ? editorTheme.value : defaultConfig.editor.theme,
-      fontFamily: editorFontFamily ? editorFontFamily.value : '',
+      fontFamily: editorFontFamily ? normalizeFontFamily(editorFontFamily.value) : '',
     },
     autoSync: editorAutoSync ? editorAutoSync.value === 'true' : defaultConfig.autoSync,
     devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
@@ -1411,8 +1426,8 @@ function loadSettings() {
   applyTheme(config.theme || defaultConfig.theme);
 
   // 应用字体
-  if (uiFont) uiFont.value = config.uiFont || '';
-  if (editorFontFamily) editorFontFamily.value = (config.editor && config.editor.fontFamily) || '';
+  if (uiFont) uiFont.value = displayFontName(config.uiFont || '');
+  if (editorFontFamily) editorFontFamily.value = displayFontName((config.editor && config.editor.fontFamily) || '');
   applyFonts();
 
   // 应用颜色
@@ -1429,8 +1444,8 @@ function loadSettings() {
 
   updateColorValues();
 
-  // 应用编辑器设置
-  const editorConfig = config.editor || defaultConfig.editor;
+  // 应用编辑器设置 (合并默认值, 避免部分配置缺失字段时崩溃)
+  const editorConfig = Object.assign({}, defaultConfig.editor, config.editor || {});
   if (editorFontSize) editorFontSize.value = editorConfig.fontSize;
   if (editorTabSize) editorTabSize.value = editorConfig.tabSize;
   if (editorLineNumbers) editorLineNumbers.value = editorConfig.lineNumbers.toString();
