@@ -32,6 +32,12 @@ let autoSyncTimer = null;
 let currentDirectoryPath = null;
 let treeCache = {}; // (local|remote) 目录列表缓存: key = 模式前缀 + 路径
 
+// 导航历史 (◀ 后退 / ▶ 前进): 条目为 {type:'file'|'directory', path}
+let _navHistory = [];
+let _navIndex = -1;
+let _navSuppress = false; // 历史导航 / 恢复展开时跳过记录
+const NAV_MAX = 100;
+
 // 展开状态持久化: localStorage ceTreeExpanded = { [projectPath]: [path, ...] }
 const EXPANDED_KEY = 'ceTreeExpanded';
 function _loadExpandedPaths() {
@@ -446,6 +452,25 @@ function setupEventListeners() {
     });
   }
 
+  // 导航按钮: ◀ 后退 / ▶ 前进
+  var navBackBtn = document.getElementById('nav-back');
+  if (navBackBtn) {
+    navBackBtn.addEventListener('click', function() { playSound('click'); navBack(); });
+  }
+  var navForwardBtn = document.getElementById('nav-forward');
+  if (navForwardBtn) {
+    navForwardBtn.addEventListener('click', function() { playSound('click'); navForward(); });
+  }
+  // ▲ 上一个文件 / ▼ 下一个文件 (当前目录循环)
+  var navPrevBtn = document.getElementById('nav-prev');
+  if (navPrevBtn) {
+    navPrevBtn.addEventListener('click', function() { playSound('click'); navAdjacentFile(-1); });
+  }
+  var navNextBtn = document.getElementById('nav-next');
+  if (navNextBtn) {
+    navNextBtn.addEventListener('click', function() { playSound('click'); navAdjacentFile(1); });
+  }
+
   // 删除按钮
   var deleteBtn = document.getElementById('fm-delete');
   if (deleteBtn) {
@@ -805,6 +830,7 @@ async function loadDirectory(path, silent = false) {
       currentDirectoryPath = path;
       renderTree(path, files);
       updateStatus(I18N.t('status.directory', { path: path }));
+      if (!_navSuppress) _pushNav('directory', path);
       return true;
     } else {
       if (!silent) showErrorDialog(I18N.t('dialog.loadDirFailed'), result.error);
@@ -910,6 +936,7 @@ function buildChildren(ul, files) {
 
 // 展开/折叠目录; 首次展开时懒加载子项
 async function toggleDirectory(li, path) {
+  if (li.classList.contains('loading')) return; // 懒加载中防重入 (避免恢复展开与点击竞争折叠)
   if (li.classList.contains('expanded')) {
     li.classList.remove('expanded');
     const ch = li.querySelector(':scope > .tree-children');
@@ -919,6 +946,7 @@ async function toggleDirectory(li, path) {
   }
 
   li.classList.add('expanded');
+  if (!_navSuppress) _pushNav('directory', path);
   const ch = li.querySelector(':scope > .tree-children');
   if (!ch) return;
   ch.style.display = '';
@@ -1016,17 +1044,109 @@ function refreshTree() {
   }
 }
 
+// ============================================
+// 文件导航: ◀▶ 历史后退/前进, ▲▼ 相邻文件循环, ↻ 刷新
+// ============================================
+
+function _pushNav(type, path) {
+  if (_navIndex >= 0 && _navHistory[_navIndex] && _navHistory[_navIndex].path === path) return;
+  _navHistory = _navHistory.slice(0, _navIndex + 1);
+  _navHistory.push({ type: type, path: path });
+  if (_navHistory.length > NAV_MAX) _navHistory.shift();
+  _navIndex = _navHistory.length - 1;
+  _updateNavButtons();
+}
+
+function _updateNavButtons() {
+  const back = document.getElementById('nav-back');
+  const fwd = document.getElementById('nav-forward');
+  if (back) back.disabled = _navIndex <= 0;
+  if (fwd) fwd.disabled = _navIndex >= _navHistory.length - 1;
+}
+
+// 树中定位目录并展开; 目录未加载时逐级展开父目录并等待子项出现
+async function _navToDirectory(path) {
+  var li = _findTreeItem(path);
+  if (li && li.classList.contains('directory')) {
+    if (!li.classList.contains('expanded')) await toggleDirectory(li, path);
+    li.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  const parent = path.replace(/[\\/][^\\/]*$/, '');
+  if (parent && parent !== path) {
+    await _navToDirectory(parent);
+    const t0 = Date.now();
+    while (Date.now() - t0 < 4000) {
+      li = _findTreeItem(path);
+      if (li) {
+        if (li.classList.contains('directory') && !li.classList.contains('expanded')) await toggleDirectory(li, path);
+        li.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+}
+
+async function _applyNav(entry) {
+  _navSuppress = true;
+  try {
+    if (entry.type === 'file') {
+      await openFile(entry.path);
+    } else {
+      await _navToDirectory(entry.path);
+    }
+  } finally {
+    _navSuppress = false;
+  }
+}
+
+async function navBack() {
+  if (_navIndex <= 0) return;
+  _navIndex--;
+  _updateNavButtons();
+  await _applyNav(_navHistory[_navIndex]);
+}
+
+async function navForward() {
+  if (_navIndex >= _navHistory.length - 1) return;
+  _navIndex++;
+  _updateNavButtons();
+  await _applyNav(_navHistory[_navIndex]);
+}
+
+// 切换当前文件所在目录的相邻文件 (首尾循环)
+async function navAdjacentFile(delta) {
+  if (_fmMode === 'remote' || !currentFile || !_electronAPI || !_electronAPI.readdir) return;
+  const dir = currentFile.replace(/[\\/][^\\/]*$/, '');
+  if (!dir || dir === currentFile) return;
+  try {
+    const result = await _electronAPI.readdir(dir);
+    if (!result.success) return;
+    const files = result.files.filter(f => !f.isDirectory);
+    const idx = files.findIndex(f => f.path === currentFile);
+    if (idx === -1 || files.length <= 1) return;
+    const next = files[(idx + delta + files.length) % files.length];
+    if (next) await openFile(next.path);
+  } catch (e) {}
+}
+
 // 懒恢复持久化的展开路径 (按路径长度升序, 父目录先展开)
 async function restoreExpanded(rootPath) {
   if (!currentProjectPath) return;
   const saved = _loadExpandedPaths()[currentProjectPath] || [];
   if (!saved.length) return;
   const list = saved.slice().sort((a, b) => a.length - b.length);
-  for (let i = 0; i < list.length; i++) {
-    const li = _findTreeItem(list[i]);
-    if (li && li.classList.contains('directory') && !li.classList.contains('expanded')) {
-      await toggleDirectory(li, list[i]);
+  _navSuppress = true;
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const li = _findTreeItem(list[i]);
+      if (li && li.classList.contains('directory') && !li.classList.contains('expanded')) {
+        await toggleDirectory(li, list[i]);
+      }
     }
+  } finally {
+    _navSuppress = false;
   }
 }
 
@@ -1233,6 +1353,8 @@ async function openFile(filePath, content) {
 
     // 记录最近打开文件
     addRecentFile(filePath);
+    // 记录导航历史 (历史导航自身触发时不记录)
+    if (!_navSuppress) _pushNav('file', filePath);
 
     if (_openingFile === filePath) _openingFile = null;
   } catch (error) {

@@ -133,6 +133,10 @@ ipcMain.handle('fs:readdir', async (event, dirPath) => {
       isDirectory: entry.isDirectory(),
       path: path.join(dirPath, entry.name),
     }));
+    // 目录在前, 名称排序 (与文件树展示一致)
+    files.sort((a, b) => (a.isDirectory === b.isDirectory)
+      ? a.name.localeCompare(b.name)
+      : (a.isDirectory ? -1 : 1));
     return { success: true, files };
   } catch (error) {
     return { success: false, error: error.message };

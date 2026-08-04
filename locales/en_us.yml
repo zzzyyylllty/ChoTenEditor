@@ -102,6 +102,10 @@ sidebar:
   tabRemote: "Remote"
   loading: "Loading..."
   emptyDir: "Empty"
+  navBack: "Back (to the previously opened location)"
+  navForward: "Forward"
+  navPrev: "Previous File"
+  navNext: "Next File"
 
 menu:
   file: "File"

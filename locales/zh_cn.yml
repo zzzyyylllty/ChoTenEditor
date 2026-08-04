@@ -102,6 +102,10 @@ sidebar:
   tabRemote: "远程"
   loading: "加载中..."
   emptyDir: "空文件夹"
+  navBack: "后退 (回到刚才打开的位置)"
+  navForward: "前进"
+  navPrev: "上一个文件"
+  navNext: "下一个文件"
 
 menu:
   file: "文件"

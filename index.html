@@ -315,16 +315,19 @@
     <div class="main-container">
       <div class="sidebar">
         <div class="sidebar-header">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 data-i18n="sidebar.files">项目文件</h3>
+          <div class="fm-actions" id="fm-actions">
+            <button class="fm-btn" id="nav-back" data-tip="后退" data-i18n-title="sidebar.navBack" disabled>◀</button>
+            <button class="fm-btn" id="nav-forward" data-tip="前进" data-i18n-title="sidebar.navForward" disabled>▶</button>
+            <span class="fm-sep"></span>
+            <button class="fm-btn" id="nav-prev" data-tip="上一个文件" data-i18n-title="sidebar.navPrev">▲</button>
+            <button class="fm-btn" id="nav-next" data-tip="下一个文件" data-i18n-title="sidebar.navNext">▼</button>
+            <span class="fm-sep"></span>
+            <button class="fm-btn" id="fm-reload" data-tip="重新加载" data-i18n-title="common.reload">↻</button>
+            <button class="fm-btn fm-btn-danger" id="fm-delete" data-tip="删除" style="display:none;" data-i18n-title="common.delete">✕</button>
           </div>
           <div class="fm-tabs" id="fm-tabs" style="display:none;">
             <button class="fm-tab active" data-fm="local" data-i18n="sidebar.tabLocal">本地</button>
             <button class="fm-tab" data-fm="remote" data-i18n="sidebar.tabRemote">远程</button>
-          </div>
-          <div class="fm-actions" id="fm-actions">
-            <button class="fm-btn" id="fm-reload" data-tip="重新加载" data-i18n-title="common.reload">↻</button>
-            <button class="fm-btn fm-btn-danger" id="fm-delete" data-tip="删除" style="display:none;" data-i18n-title="common.delete">✕</button>
           </div>
         </div>
         <div class="sidebar-content">

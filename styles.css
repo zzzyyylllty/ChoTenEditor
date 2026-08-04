@@ -589,15 +589,6 @@ body {
   flex-shrink: 0;
 }
 
-.sidebar-header h3 {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-sm);
-}
-
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
@@ -749,7 +740,24 @@ body {
 .fm-actions {
   display: flex;
   gap: 4px;
-  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.fm-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 3px;
+  background: var(--color-border);
+}
+
+.fm-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fm-btn:disabled:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .fm-btn {
