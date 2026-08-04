@@ -271,7 +271,7 @@ body.embedded .title-bar {
   padding: var(--spacing-md);
 }
 .about-author-card img {
-  max-width: min(340px, 100%);
+  max-width: min(620px, 100%);
   height: auto;
   border-radius: 12px;
   border: 1px solid var(--color-border);
