@@ -674,10 +674,11 @@ function initMenuBar() {
     });
   });
 
-  // 展开状态下 hover 到其他菜单 → 切换
+  // 展开状态下 hover 到其他菜单 → 切换 (先关后开, 避免多菜单同时展开)
   menuBar.querySelectorAll('.menu-item-wrap').forEach((wrap) => {
     wrap.addEventListener('mouseenter', () => {
       if (menuBar.querySelector('.menu-item-wrap.open') && !wrap.classList.contains('open')) {
+        closeMenus();
         wrap.classList.add('open');
         if (wrap.dataset.menu === 'file') renderRecentMenu();
       }
@@ -703,7 +704,7 @@ function initMenuBar() {
     if (!entry || entry.dataset.recentType) return; // 最近条目自绑监听
     const action = entry.dataset.action;
     if (!action || entry.disabled) return;
-    closeMenus();
+    if (action !== 'recent') closeMenus();
     switch (action) {
       case 'new-file': playSound('click'); createNewFile(); break;
       case 'open-file': playSound('click'); openFileDialog(); break;

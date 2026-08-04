@@ -116,6 +116,22 @@ app.whenReady().then(async () => {
     await evalJS(`document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); true;`).catch(() => {});
     check(await waitFor(`!document.querySelector('[data-menu="file"]').classList.contains('open')`), 'B5 外部点击关闭菜单');
 
+    // ---------- B6. hover 菜单间切换 (File → Edit) ----------
+    await evalJS(`document.querySelector('[data-menu="file"] > .menu-trigger').click(); true;`).catch(() => {});
+    await waitFor(`document.querySelector('[data-menu="file"]').classList.contains('open')`);
+    const b6pos = await evalJS(`(function () {
+      var el = document.querySelector('[data-menu="edit"] > .menu-trigger');
+      var r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(b6pos.x), y: Math.round(b6pos.y) });
+    check(await waitFor(`(function () {
+      var f = document.querySelector('[data-menu="file"]');
+      var e = document.querySelector('[data-menu="edit"]');
+      return e.classList.contains('open') && !f.classList.contains('open') && document.querySelectorAll('.menu-item-wrap.open').length === 1;
+    })()`), 'B6 hover File→Edit 切换, 仅 Edit 展开');
+    await evalJS(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true;`).catch(() => {});
+
     // ---------- C. 最近打开记录 ----------
     await evalJS(`openProjectPath(${P(FIXTURE)}); true;`).catch(() => {});
     check(await waitFor(`window.appState.currentProjectPath === ${P(FIXTURE)}`), 'C1 openProjectPath 打开项目');
@@ -142,6 +158,15 @@ app.whenReady().then(async () => {
     })()`);
     check(c3.labels === 'tree_fixture:project,a.yml:file', 'C6 子菜单条目类型: ' + c3.labels);
     check(c3.groupTitles === '最近项目,最近文件', 'C7 分组标题: ' + c3.groupTitles);
+
+    // ---------- C8. hover 最近打开 → 子菜单面板显示 ----------
+    const c8pos = await evalJS(`(function () {
+      var el = document.querySelector('.menu-submenu > .menu-entry[data-action="recent"]');
+      var r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(c8pos.x), y: Math.round(c8pos.y) });
+    check(await waitFor(`getComputedStyle(document.getElementById('menu-recent-panel')).display === 'block'`), 'C8 hover 最近打开 → 子菜单面板显示');
 
     // ---------- D. 历史点击打开 ----------
     await evalJS(`(function () {

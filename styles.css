@@ -512,6 +512,11 @@ body {
   left: calc(100% + 2px);
 }
 
+.menu-submenu:hover > .menu-panel {
+  display: block;
+  animation: menuFadeIn 0.12s ease;
+}
+
 /* ============================================
    按钮统一体系
    语义：高亮(primary) / 普通(normal) / 危险(danger) / 幽灵(ghost)
