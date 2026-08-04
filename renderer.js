@@ -2051,7 +2051,24 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// 实验性功能开关 (设置 → 实验性)
+function _experimentalEnabled(key) {
+  try {
+    var cfg = JSON.parse(localStorage.getItem('editorConfig') || '{}');
+    var exp = cfg.experimental || {};
+    return exp[key] === true;
+  } catch (e) {
+    return false;
+  }
+}
+function _requireExperimental(key, warnKey) {
+  if (_experimentalEnabled(key)) return true;
+  UI.alert({ title: 'Choten Editor', message: I18N.t(warnKey) });
+  return false;
+}
+
 function openAIPanel() {
+  if (!_requireExperimental('aiStudio', 'menu.experimentalAIStudioWarning')) return;
   if (typeof AIPanel !== 'undefined' && AIPanel.open) {
     // 更新当前文件上下文
     var ctx = currentFile || '';
@@ -2414,6 +2431,7 @@ function _b64decode(b64) {
 }
 
 function openRemoteMode() {
+  if (!_requireExperimental('remote', 'menu.experimentalRemoteWarning')) return;
   const overlay = document.getElementById('rm-overlay');
   if (overlay) overlay.style.display = '';
 

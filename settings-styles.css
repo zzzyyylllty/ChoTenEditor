@@ -105,6 +105,17 @@
   animation: stFadeIn 0.2s ease;
 }
 
+/* 实验性功能警告 (红色高亮) */
+.experimental-warning {
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .st-modal {
   width: min(1040px, 94vw);
   height: min(820px, 92vh);

@@ -83,6 +83,10 @@ function setShortcutEditing(on) {
 let remotePassword;
 let remoteAllowDifferentVersions;
 
+// 实验性功能
+let experimentalRemote;
+let experimentalAIStudio;
+
 // AI 设置
 let aiEndpoint;
 let aiModel;
@@ -176,6 +180,10 @@ const defaultConfig = {
   remotePasswordHash: '',
   allowDifferentVersions: false,
   devTools: false,
+  experimental: {
+    remote: false,
+    aiStudio: false,
+  },
   prewarm: {
     files: true,
     filesMaxMb: 50,
@@ -397,6 +405,10 @@ function initializeDOMElements() {
   // 远程设置
   remotePassword = document.getElementById('remote-password');
   remoteAllowDifferentVersions = document.getElementById('remote-allow-different-versions');
+
+  // 实验性功能
+  experimentalRemote = document.getElementById('experimental-remote');
+  experimentalAIStudio = document.getElementById('experimental-ai-studio');
 
   // 开发者工具
   editorDevtools = document.getElementById('editor-devtools');
@@ -1172,6 +1184,12 @@ async function saveSettings() {
   }
   config.allowDifferentVersions = remoteAllowDifferentVersions ? remoteAllowDifferentVersions.checked : false;
 
+  // 实验性功能
+  config.experimental = {
+    remote: experimentalRemote ? experimentalRemote.checked : false,
+    aiStudio: experimentalAIStudio ? experimentalAIStudio.checked : false,
+  };
+
   // AI 设置
   config.ai = {
     endpoint: aiEndpoint ? aiEndpoint.value : defaultConfig.ai.endpoint,
@@ -1502,6 +1520,11 @@ function loadSettings() {
   if (remoteAllowDifferentVersions) {
     remoteAllowDifferentVersions.checked = config.allowDifferentVersions === true;
   }
+
+  // 实验性功能
+  var exp = config.experimental || { remote: false, aiStudio: false };
+  if (experimentalRemote) experimentalRemote.checked = exp.remote === true;
+  if (experimentalAIStudio) experimentalAIStudio.checked = exp.aiStudio === true;
 }
 
 function resetSettings() {

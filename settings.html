@@ -49,6 +49,9 @@
                 <button class="settings-nav-item" data-tab="shortcuts">
                     <span class="nav-icon">⌨️</span><span data-i18n="settings.tabShortcuts">快捷键</span>
                 </button>
+                <button class="settings-nav-item" data-tab="experimental">
+                    <span class="nav-icon">🧪</span><span data-i18n="settings.tabExperimental">实验性</span>
+                </button>
                 <button class="settings-nav-item" data-tab="about">
                     <span class="nav-icon">💬</span><span data-i18n="settings.tabAbout">关于</span>
                 </button>
@@ -779,6 +782,30 @@
                         <div class="setting-group">
                             <button id="reset-shortcuts" class="btn btn-secondary" data-i18n="settings.resetShortcuts">重置快捷键</button>
                             <button id="edit-shortcuts" class="btn" data-i18n="settings.editShortcuts">编辑快捷键</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ═══ 实验性 ═══ -->
+                <div class="settings-panel" data-panel="experimental">
+                    <section class="settings-section">
+                        <h2 data-i18n="settings.sectionExperimental">🧪 实验性功能</h2>
+                        <div class="setting-group">
+                            <div class="experimental-warning" data-i18n="settings.experimentalWarning">⚠️ 实验性功能仅供开发人员使用，属于极不稳定且未经过测试的功能，仅限调试使用，可能对您的文件有极大风险！您已经被警告过了！</div>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="experimental-remote">
+                                <span data-i18n="settings.experimentalRemote">启用远程模式</span>
+                            </label>
+                            <div class="setting-hint" data-i18n="settings.experimentalRemoteHint">启用后可通过菜单栏 → 设置 → 远程模式… 进入远程协作面板</div>
+                        </div>
+                        <div class="setting-group">
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="experimental-ai-studio">
+                                <span data-i18n="settings.experimentalAIStudio">启用 AI Studio</span>
+                            </label>
+                            <div class="setting-hint" data-i18n="settings.experimentalAIStudioHint">启用后可通过菜单栏 → 设置 → AI 制作… 进入 AI 面板</div>
                         </div>
                     </section>
                 </div>
