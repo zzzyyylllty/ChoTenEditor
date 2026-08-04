@@ -474,7 +474,8 @@
   var _BOOL_RE = /^(true|false|yes|no|on|off|null|none|~)$/i;
 
   function _quoteKey(key) {
-    if (/:\s/.test(key) || /\s#/.test(key) || /[:#\s]$/.test(key) || _SPECIAL_START_RE.test(key) || key === '' || key !== String(key)) {
+    if (/:\s/.test(key) || /\s#/.test(key) || /[:#\s]$/.test(key) || _SPECIAL_START_RE.test(key) || key === '' || key !== String(key) ||
+        _NUMBER_RE.test(key) || _BOOL_RE.test(key)) {
       return "'" + String(key).replace(/'/g, "''") + "'";
     }
     return String(key);

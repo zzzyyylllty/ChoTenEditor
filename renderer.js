@@ -42,7 +42,6 @@ let breadcrumbs = [];
 let _fmMode = 'local'; // 'local' | 'remote'
 let _remoteFiles = [];
 let _remoteDirPath = '';
-let _editingFilesMap = {}; // { filePath: true } 当前客户端正在编辑的文件
 let _otherEditingFiles = {}; // { filePath: true } 其他人正在编辑的文件
 
 // ============================================
@@ -100,20 +99,7 @@ async function restoreAppState() {
     }
 
     // 检测项目类型
-    if (typeof ChemdahInterpreter !== 'undefined') {
-      const types = await ChemdahInterpreter.detectProjectTypes(state.currentProjectPath);
-      let typeMsg = I18N.t('status.projectOpened', { name: getFileName(state.currentProjectPath) });
-      if (types.hasConversation && types.hasQuest) {
-        typeMsg += I18N.t('status.projectTypesConversationQuest');
-      } else if (types.hasConversation) {
-        typeMsg += I18N.t('status.projectTypesConversation');
-      } else if (types.hasQuest) {
-        typeMsg += I18N.t('status.projectTypesQuest');
-      }
-      updateStatus(typeMsg);
-    } else {
-      updateStatus(I18N.t('status.projectOpened', { name: state.currentProjectPath }));
-    }
+    await _updateProjectTypeStatus(state.currentProjectPath);
 
     // 恢复标签页
     if (state.openTabs && state.openTabs.length > 0) {
@@ -513,6 +499,24 @@ function setupEventListeners() {
 // 打开项目
 // ============================================
 
+// 检测项目类型并更新状态栏消息
+async function _updateProjectTypeStatus(path) {
+  if (typeof ChemdahInterpreter !== 'undefined') {
+    const types = await ChemdahInterpreter.detectProjectTypes(path);
+    let typeMsg = I18N.t('status.projectOpened', { name: getFileName(path) });
+    if (types.hasConversation && types.hasQuest) {
+      typeMsg += I18N.t('status.projectTypesConversationQuest');
+    } else if (types.hasConversation) {
+      typeMsg += I18N.t('status.projectTypesConversation');
+    } else if (types.hasQuest) {
+      typeMsg += I18N.t('status.projectTypesQuest');
+    }
+    updateStatus(typeMsg);
+  } else {
+    updateStatus(I18N.t('status.projectOpened', { name: getFileName(path) }));
+  }
+}
+
 async function openProject() {
 
   if (!_electronAPI || !_electronAPI.openDirectory) {
@@ -525,7 +529,6 @@ async function openProject() {
 
     if (result && result.length > 0) {
       await openProjectPath(result[0]);
-    } else {
     }
   } catch (error) {
     console.error('[RENDERER] 打开项目错误:', error);
@@ -541,20 +544,7 @@ async function openProjectPath(path) {
   await loadDirectory(path);
 
   // 检测项目中的类型
-  if (typeof ChemdahInterpreter !== 'undefined') {
-    const types = await ChemdahInterpreter.detectProjectTypes(path);
-    let typeMsg = I18N.t('status.projectOpened', { name: getFileName(path) });
-    if (types.hasConversation && types.hasQuest) {
-      typeMsg += I18N.t('status.projectTypesConversationQuest');
-    } else if (types.hasConversation) {
-      typeMsg += I18N.t('status.projectTypesConversation');
-    } else if (types.hasQuest) {
-      typeMsg += I18N.t('status.projectTypesQuest');
-    }
-    updateStatus(typeMsg);
-  } else {
-    updateStatus(I18N.t('status.projectOpened', { name: path }));
-  }
+  await _updateProjectTypeStatus(path);
 
   saveAppState();
 }
@@ -2112,6 +2102,14 @@ let _remoteListenersAttached = false;
 let _pendingFileChanges = {}; // key: clientId_path → { clientId, path, content }
 let _pendingFileDeletes = {}; // key: clientId_path → { clientId, path }
 
+// Unicode 安全 base64 (替代废弃的 escape/unescape 兼容层, 输出与旧数据完全一致)
+function _b64encode(str) {
+  return btoa(String.fromCharCode.apply(null, new TextEncoder().encode(str)));
+}
+function _b64decode(b64) {
+  return new TextDecoder().decode(Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }));
+}
+
 function openRemoteMode() {
   const overlay = document.getElementById('rm-overlay');
   if (overlay) overlay.style.display = '';
@@ -2129,7 +2127,7 @@ function openRemoteMode() {
       if (cpw) {
         document.getElementById('rm-client-password').value = cpw;
       } else if (rc.password) {
-        try { document.getElementById('rm-client-password').value = decodeURIComponent(escape(atob(rc.password))); } catch (e) {}
+        try { document.getElementById('rm-client-password').value = _b64decode(rc.password); } catch (e) {}
       }
       // 服务器端口
       var rs = config.remoteServer || {};
@@ -2266,7 +2264,7 @@ function attachRemoteListeners() {
       try {
         var saved = localStorage.getItem('editorConfig');
         var config = saved ? JSON.parse(saved) : {};
-        config.remoteClient = { host: host, port: port, password: btoa(unescape(encodeURIComponent(password))) };
+        config.remoteClient = { host: host, port: port, password: _b64encode(password) };
         localStorage.setItem('editorConfig', JSON.stringify(config));
         sessionStorage.setItem('remoteClientPassword', password);
       } catch (e) {}

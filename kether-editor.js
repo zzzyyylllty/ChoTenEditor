@@ -2264,7 +2264,6 @@
         menu.querySelector('[data-act="copy-block"]').onclick = function() {
           playSound('click');
           _clipboard = { _type: 'act', action: act };
-          console.log('[KE] 复制积木:', act.id, act.name);
           menu.remove();
         };
         menu.querySelector('[data-act="view-detail"]').onclick = function() {
@@ -2526,7 +2525,6 @@ document.addEventListener('dragover', function (e) {
     el.style.setProperty('--b-text-color', textColorForBg(blockColor));
     el.draggable = true;
     el.ondragstart = (e) => {
-      console.log('[KE] dragstart action=' + block.actionId + ' bid=' + block.id.slice(-8));
       playSound('select');
       e.stopPropagation();
       _keDraggedId = block.id;
@@ -2543,15 +2541,13 @@ document.addEventListener('dragover', function (e) {
       removeDropIndicator();
       const id = _keDraggedId;
       _keDraggedId = null;
-      if (!id) { console.log('[KE] dragend: no id'); return; }
+      if (!id) return;
       var slot = _keLastDropTarget;
       _keLastDropTarget = null;
-      if (!slot) { console.log('[KE] dragend: no target'); return; }
-      console.log('[KE] dragend target: class=' + slot.className + ' bid=' + (slot.dataset.bid || '?').slice(-8) + ' tp=' + (slot.dataset.slotType || '?'));
+      if (!slot) return;
       var pid = slot.dataset.bid, tp = slot.dataset.slotType;
       if (pid && tp) {
         var idx = calculateDropIndex(slot, e.clientY);
-        console.log('[KE] dragend->moveBlock bid=' + id.slice(-8) + ' pid=' + pid.slice(-8) + ' tp=' + tp + ' idx=' + idx);
         moveBlock(state, id, pid, tp, idx);
         playSound('drag');
         refreshCanvas(overlay, state);
@@ -3621,14 +3617,11 @@ document.addEventListener('dragover', function (e) {
       return false;
     };
     if (!extract(state.blocks)) {
-      console.log('[KE] moveBlock FAILED to find block ' + blockId.slice(-8));
       return;
     }
 
-    console.log('[KE] moveBlock extracted ' + movedBlock.actionId + ' from ' + sourceDesc + ' target=' + targetSlotType + '@' + targetParentId.slice(-8) + ' idx=' + insertIndex);
-
     const target = findBlock(state.blocks, targetParentId);
-    if (!target) { state.blocks.push(movedBlock); console.log('[KE] moveBlock target not found, pushed to root'); return; }
+    if (!target) { state.blocks.push(movedBlock); return; }
 
     function insertInto(arr) {
       if (arr && insertIndex !== undefined && insertIndex >= 0 && insertIndex <= arr.length) {
@@ -3663,7 +3656,6 @@ document.addEventListener('dragover', function (e) {
       if (!target._whenBranches[idx].condBlocks) target._whenBranches[idx].condBlocks = [];
       insertInto(target._whenBranches[idx].condBlocks);
     }
-    console.log('[KE] moveBlock DONE');
   }
 
   function pasteIntoSlot(copy, parentBlock, slotType) {
@@ -3711,22 +3703,18 @@ document.addEventListener('dragover', function (e) {
     menu.querySelector('[data-action="copy"]').onclick = () => {
       playSound('click');
       _clipboard = { _type: 'block', block: cloneBlock(block) };
-      console.log('[KE] 复制画布积木:', block.actionId);
       menu.remove();
     };
     menu.querySelector('[data-action="paste"]').onclick = () => {
       playSound('click');
       menu.remove();
-      if (!_clipboard) { console.log('[KE] 粘贴失败: _clipboard 为空'); return; }
-      console.log('[KE] 粘贴, _clipboard:', _clipboard._type, _clipboard._type === 'act' ? _clipboard.action.id : 'block');
+      if (!_clipboard) return;
       const blockEl = e.target.closest('.ke-b');
       const slotEl = blockEl ? blockEl.parentNode.closest('.ke-b-slot, .ke-entry-slot') : null;
       const pid = slotEl ? slotEl.dataset.bid : null;
       const stp = slotEl ? slotEl.dataset.slotType : null;
-      console.log('[KE] 槽位检测:', !!slotEl, 'pid:', pid ? pid.slice(-8) : null, 'stp:', stp);
       _pushUndo(state);
       if (_clipboard._type === 'act') {
-        console.log('[KE] 粘贴动作:', _clipboard.action.id);
         addBlock(overlay, state, _clipboard.action, pid, stp, null);
       } else if (_clipboard._type === 'block') {
         const copy = cloneBlock(_clipboard.block);
@@ -4265,17 +4253,14 @@ document.addEventListener('dragover', function (e) {
         _redo(state, overlay); e.preventDefault();
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        if (!_clipboard) { console.log('[KE] Ctrl+V: _clipboard 为空'); return; }
-        console.log('[KE] Ctrl+V: type=', _clipboard._type, _clipboard._type === 'act' ? _clipboard.action.id : 'block');
+        if (!_clipboard) return;
         e.preventDefault();
         const el = document.elementFromPoint(_keMouseX, _keMouseY);
         const slotEl2 = el ? el.closest('.ke-b-slot, .ke-entry-slot') : null;
         const pid2 = slotEl2 ? slotEl2.dataset.bid : null;
         const stp2 = slotEl2 ? slotEl2.dataset.slotType : null;
-        console.log('[KE] Ctrl+V 槽位:', !!slotEl2, 'pid:', pid2 ? pid2.slice(-8) : null, 'stp:', stp2);
         _pushUndo(state);
         if (_clipboard._type === 'act') {
-          console.log('[KE] Ctrl+V 粘贴动作:', _clipboard.action.id);
           addBlock(overlay, state, _clipboard.action, pid2, stp2, null);
         } else if (_clipboard._type === 'block') {
           const copy = cloneBlock(_clipboard.block);

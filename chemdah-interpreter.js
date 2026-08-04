@@ -1041,10 +1041,12 @@ window.ChemdahInterpreter = (() => {
     return s;
   }
 
-  // YAML 键加引号保护(含特殊字符的对话名/任务 id)
+  // YAML 键加引号保护(含特殊字符的对话名/任务 id, 以及 YAML 保留字/数字样键)
   function _quoteYamlKey(key) {
     const s = String(key);
-    if (/[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$/.test(s) || s === '') {
+    if (/[:\{\}\[\],&\*\?\|>!%@`#]|^\s|\s$/.test(s) || s === '' ||
+        /^(true|false|yes|no|on|off|null|none|~)$/i.test(s) ||
+        /^[-+]?(?:0x[0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|\.?(?:inf|nan))$/i.test(s)) {
       const q = s.includes("'") ? '"' : "'";
       return q + s + q;
     }
@@ -1539,7 +1541,7 @@ window.ChemdahInterpreter = (() => {
       mainG.setAttribute('transform', 'translate(' + panX + ',' + panY + ') scale(' + scale + ')');
     }
 
-    // 鼠标拖拽平移
+    // 鼠标拖拽平移 (window 监听器用共享引用, 渲染前移除旧的, 防止累积泄漏)
     let isPan = false, startPX, startPY;
     svgEl.addEventListener('mousedown', function (e) {
       if (e.target === svgEl || e.target.tagName === 'svg') {
@@ -1549,19 +1551,23 @@ window.ChemdahInterpreter = (() => {
         svgEl.style.cursor = 'grabbing';
       }
     });
-    window.addEventListener('mousemove', function (e) {
+    if (window._cvPanMove) window.removeEventListener('mousemove', window._cvPanMove);
+    if (window._cvPanUp) window.removeEventListener('mouseup', window._cvPanUp);
+    window._cvPanMove = function (e) {
       if (isPan) {
         panX = e.clientX - startPX;
         panY = e.clientY - startPY;
         updateTransform();
       }
-    });
-    window.addEventListener('mouseup', function () {
+    };
+    window.addEventListener('mousemove', window._cvPanMove);
+    window._cvPanUp = function () {
       if (isPan) {
         isPan = false;
         svgEl.style.cursor = '';
       }
-    });
+    };
+    window.addEventListener('mouseup', window._cvPanUp);
 
     // 滚轮缩放
     svgEl.addEventListener('wheel', function (e) {

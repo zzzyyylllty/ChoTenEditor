@@ -24,6 +24,14 @@ function genSecurityCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+// 恒定时间字符串比较, 避免密码验证的时序侧信道
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
 // 文件路径校验: 必须是合理长度的字符串, 防止非字符串路径使 fs 同步抛错崩溃主进程
 function isValidPath(p) {
   return typeof p === 'string' && p.length > 0 && p.length < 4096;
@@ -120,7 +128,7 @@ async function startServer(port, password, options = {}) {
           if (!_serverClients.has(clientId)) {
             // ---- 认证阶段 ----
             if (msg.type === 'auth:request') {
-              if (msg.password !== _serverPassword) {
+              if (!safeEqual(msg.password, _serverPassword)) {
                 safeSend({ type: 'auth:rejected', reason: '密码错误', errorKey: 'remote.wrongPassword' });
                 ws.close();
                 return;
