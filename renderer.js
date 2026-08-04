@@ -19,8 +19,6 @@ const settingsBtn = document.getElementById('settings-btn');
 const statusInfo = document.getElementById('status-info');
 const filePathEl = document.getElementById('file-path');
 const editorTabs = document.querySelector('.editor-tabs');
-const navBackBtn = document.getElementById('nav-back-btn');
-const navUpBtn = document.getElementById('nav-up-btn');
 
 // 状态变量
 let currentProjectPath = null;
@@ -33,10 +31,36 @@ let dirtyTabs = {}; // {filePath: true|false}
 let autoSyncEnabled = false;
 let autoSyncTimer = null;
 
-// 文件夹导航状态
+// 文件夹树状态
 let currentDirectoryPath = null;
-let directoryHistory = [];
-let breadcrumbs = [];
+let treeCache = {}; // (local|remote) 目录列表缓存: key = 模式前缀 + 路径
+
+// 展开状态持久化: localStorage ceTreeExpanded = { [projectPath]: [path, ...] }
+const EXPANDED_KEY = 'ceTreeExpanded';
+function _loadExpandedPaths() {
+  try { return JSON.parse(localStorage.getItem(EXPANDED_KEY)) || {}; } catch (e) { return {}; }
+}
+function _saveExpandedPaths(map) {
+  try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(map)); } catch (e) {}
+}
+function _addExpandedPath(path) {
+  if (!currentProjectPath) return;
+  const map = _loadExpandedPaths();
+  const arr = map[currentProjectPath] || (map[currentProjectPath] = []);
+  if (arr.indexOf(path) === -1) arr.push(path);
+  _saveExpandedPaths(map);
+}
+function _removeExpandedPath(path) {
+  if (!currentProjectPath) return;
+  const map = _loadExpandedPaths();
+  const arr = map[currentProjectPath];
+  if (!arr) return;
+  const i = arr.indexOf(path);
+  if (i >= 0) { arr.splice(i, 1); _saveExpandedPaths(map); }
+}
+function _treeCacheKey(path) {
+  return (_fmMode === 'remote' ? 'r:' : 'l:') + path;
+}
 
 // 远程文件管理
 let _fmMode = 'local'; // 'local' | 'remote'
@@ -85,8 +109,6 @@ async function restoreAppState() {
 
     currentProjectPath = state.currentProjectPath;
     currentDirectoryPath = state.currentProjectPath;
-    directoryHistory = [];
-    breadcrumbs = [];
 
     const ok = await loadDirectory(state.currentProjectPath, true);
     if (!ok) {
@@ -259,7 +281,6 @@ function initCodeMirror() {
 function init() {
   initCodeMirror();
   setupEventListeners();
-  updateNavigationButtons();
 
   // 应用已保存的配置（主题/字体/颜色/背景）
   applyStoredConfig();
@@ -353,10 +374,6 @@ function setupEventListeners() {
   // 编辑器文本框
   if (codeMirrorEditor) codeMirrorEditor.on('change', handleEditorChange);
 
-  // 导航按钮
-  if (navUpBtn) navUpBtn.addEventListener('click', () => { playSound('click'); navigateUp(); });
-  if (navBackBtn) navBackBtn.addEventListener('click', () => { playSound('back'); navigateBack(); });
-
   // 解释器类型选择器
   const typeSelect = document.getElementById('interpreter-type-select');
   if (typeSelect) {
@@ -416,7 +433,8 @@ function setupEventListeners() {
       // 显示/隐藏删除按钮
       document.getElementById('fm-delete').style.display = 'none';
       if (mode === 'remote') {
-        // 切换到远程：请求远程文件列表
+        // 切换到远程：清空树并请求远程根列表
+        renderTree(null, []);
         if (window.electronAPI && window.electronAPI.remote) {
           window.electronAPI.remote.getClientStatus().then(function(rs) {
             if (rs && rs.connected) {
@@ -438,13 +456,7 @@ function setupEventListeners() {
   if (reloadBtn) {
     reloadBtn.addEventListener('click', function() {
       playSound('click');
-      if (_fmMode === 'remote') {
-        if (window.electronAPI && window.electronAPI.remote) {
-          window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath || '/' });
-        }
-      } else if (currentDirectoryPath) {
-        loadDirectory(currentDirectoryPath, true);
-      }
+      refreshTree();
     });
   }
 
@@ -452,7 +464,7 @@ function setupEventListeners() {
   var deleteBtn = document.getElementById('fm-delete');
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async function() {
-      var selected = fileTreeEl.querySelector('li.selected');
+      var selected = fileTreeEl.querySelector('.tree-row.selected');
       if (!selected) return;
       var path = selected.dataset.path;
       if (!path) return;
@@ -467,7 +479,7 @@ function setupEventListeners() {
         // 本地删除
         try {
           await _electronAPI.deleteFile(path);
-          if (currentDirectoryPath) loadDirectory(currentDirectoryPath, true);
+          refreshTree();
         } catch (e) {
           showErrorDialog(I18N.t('dialog.deleteFailed'), e.message);
         }
@@ -475,21 +487,26 @@ function setupEventListeners() {
     });
   }
 
-  // 文件树右键菜单 - 选择文件以显示删除按钮
+  // 文件树事件委托: 右键选中 + 点击选中/展开/打开
   if (fileTreeEl) {
     fileTreeEl.addEventListener('contextmenu', function(e) {
-      var li = e.target.closest('li');
-      if (li) {
-        li.classList.add('selected');
+      var row = e.target.closest('.tree-row');
+      if (row) {
+        fileTreeEl.querySelectorAll('.tree-row.selected').forEach(function(el) { el.classList.remove('selected'); });
+        row.classList.add('selected');
         document.getElementById('fm-delete').style.display = '';
         e.preventDefault();
       }
     });
-    // 点击其他地方取消选择
-    fileTreeEl.addEventListener('click', function(e) {
-      var li = e.target.closest('li');
-      fileTreeEl.querySelectorAll('li.selected').forEach(function(el) { el.classList.remove('selected'); });
-      if (li) li.classList.add('selected');
+    fileTreeEl.addEventListener('click', async function(e) {
+      var row = e.target.closest('.tree-row');
+      fileTreeEl.querySelectorAll('.tree-row.selected').forEach(function(el) { el.classList.remove('selected'); });
+      if (!row) return;
+      row.classList.add('selected');
+      var li = row.closest('li.tree-item');
+      if (!li || !li._file) return;
+      playSound('click');
+      await handleFileClick(li._file, li);
     });
   }
 
@@ -539,8 +556,6 @@ async function openProject() {
 async function openProjectPath(path) {
   currentProjectPath = path;
   currentDirectoryPath = path;
-  directoryHistory = [];
-  breadcrumbs = [];
   await loadDirectory(path);
 
   // 检测项目中的类型
@@ -565,10 +580,8 @@ async function loadDirectory(path, silent = false) {
 
     if (result.success) {
       files = result.files;
-      renderFileTree(files);
       currentDirectoryPath = path;
-      updateBreadcrumbs();
-      updateNavigationButtons();
+      renderTree(path, files);
       updateStatus(I18N.t('status.directory', { path: path }));
       return true;
     } else {
@@ -583,49 +596,226 @@ async function loadDirectory(path, silent = false) {
 }
 
 // ============================================
-// 文件树渲染
+// 文件树渲染 (VSCode 风格可折叠树, 懒加载)
 // ============================================
 
-function renderFileTree(files) {
+// 渲染树的根层; rootPath 为本地项目根时懒恢复持久化的展开状态
+function renderTree(rootPath, files) {
+  if (!fileTreeEl) return;
+  fileTreeEl.innerHTML = '';
+  files.forEach((file) => {
+    fileTreeEl.appendChild(buildTreeItem(file));
+  });
+  if (_fmMode !== 'remote' && rootPath) {
+    restoreExpanded(rootPath);
+  }
+}
 
-  if (!fileTreeEl) {
-    console.error('[RENDERER] fileTreeEl 不存在');
+// 构建单个树节点: li.tree-item > div.tree-row(箭头/图标/名称[/编辑标记]) + ul.tree-children
+function buildTreeItem(file) {
+  const li = document.createElement('li');
+  li.className = 'tree-item ' + (file.isDirectory ? 'directory' : 'file');
+  li.dataset.path = file.path;
+  li._file = file;
+
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+  row.dataset.path = file.path;
+
+  const arrow = document.createElement('span');
+  arrow.className = 'tree-arrow';
+  arrow.textContent = '▸';
+
+  const icon = document.createElement('span');
+  icon.className = 'tree-icon';
+  icon.textContent = file.isDirectory ? '📁' : '📄';
+
+  const label = document.createElement('span');
+  label.className = 'tree-label';
+  label.textContent = file.name;
+  label.title = file.path;
+
+  row.appendChild(arrow);
+  row.appendChild(icon);
+  row.appendChild(label);
+
+  // 远程模式下标记其他人正在编辑的文件
+  if (_fmMode === 'remote' && !file.isDirectory && _otherEditingFiles[file.path]) {
+    const mark = document.createElement('span');
+    mark.className = 'tree-mark';
+    mark.textContent = '✏️';
+    row.appendChild(mark);
+    li.classList.add('editing-by-other');
+  }
+
+  li.appendChild(row);
+
+  if (file.isDirectory) {
+    const children = document.createElement('ul');
+    children.className = 'tree-children';
+    children.style.display = 'none';
+    li.appendChild(children);
+  }
+
+  return li;
+}
+
+// 填充目录子行 (清空 loading 占位); 空目录显示占位行并隐藏箭头
+function buildChildren(ul, files) {
+  ul.innerHTML = '';
+  const li = ul.closest('li.tree-item');
+  const arrow = li ? li.querySelector(':scope > .tree-row .tree-arrow') : null;
+  if (!files || files.length === 0) {
+    if (arrow) arrow.style.visibility = 'hidden';
+    const empty = document.createElement('li');
+    empty.className = 'tree-item empty-row';
+    const erow = document.createElement('div');
+    erow.className = 'tree-row';
+    const elabel = document.createElement('span');
+    elabel.className = 'tree-label';
+    elabel.textContent = I18N.t('sidebar.emptyDir');
+    erow.appendChild(elabel);
+    empty.appendChild(erow);
+    ul.appendChild(empty);
+  } else {
+    if (arrow) arrow.style.visibility = '';
+    files.forEach((file) => {
+      ul.appendChild(buildTreeItem(file));
+    });
+  }
+  ul.dataset.loaded = '1';
+}
+
+// 展开/折叠目录; 首次展开时懒加载子项
+async function toggleDirectory(li, path) {
+  if (li.classList.contains('expanded')) {
+    li.classList.remove('expanded');
+    const ch = li.querySelector(':scope > .tree-children');
+    if (ch) ch.style.display = 'none';
+    _removeExpandedPath(path);
     return;
   }
 
-  fileTreeEl.innerHTML = '';
+  li.classList.add('expanded');
+  const ch = li.querySelector(':scope > .tree-children');
+  if (!ch) return;
+  ch.style.display = '';
+  _addExpandedPath(path);
 
-  files.forEach((file) => {
-    const li = document.createElement('li');
-    li.textContent = file.name;
-    li.classList.add(file.isDirectory ? 'directory' : 'file');
-    li.dataset.path = file.path;
-    // 远程模式下标记其他人正在编辑的文件
-    if (_fmMode === 'remote' && !file.isDirectory && _otherEditingFiles[file.path]) {
-      li.classList.add('editing-by-other');
+  if (ch.dataset.loaded === '1' || li.classList.contains('loading')) return;
+  const cached = treeCache[_treeCacheKey(path)];
+  if (cached) {
+    buildChildren(ch, cached);
+    return;
+  }
+
+  // 加载中占位行
+  const lr = document.createElement('li');
+  lr.className = 'tree-item loading-row';
+  const lrow = document.createElement('div');
+  lrow.className = 'tree-row';
+  const larrow = document.createElement('span');
+  larrow.className = 'tree-arrow';
+  const licon = document.createElement('span');
+  licon.className = 'tree-icon';
+  licon.textContent = '📁';
+  const llabel = document.createElement('span');
+  llabel.className = 'tree-label';
+  llabel.textContent = I18N.t('sidebar.loading');
+  lrow.appendChild(larrow); lrow.appendChild(licon); lrow.appendChild(llabel);
+  lr.appendChild(lrow);
+  ch.appendChild(lr);
+  li.classList.add('loading');
+
+  if (_fmMode === 'remote') {
+    // 远程: 列表通过 client:file:list 事件异步返回, 由事件处理器填充
+    if (window.electronAPI && window.electronAPI.remote) {
+      window.electronAPI.remote.requestFileList({ dirPath: path });
+      setRemoteStatus('rm-client-status', I18N.t('rm.loadingRemoteDir'));
+    } else {
+      li.classList.remove('loading');
+      lr.remove();
     }
-    li.addEventListener('click', async () => { playSound('click'); await handleFileClick(file); });
-    fileTreeEl.appendChild(li);
-  });
+    return;
+  }
+
+  try {
+    const result = await _electronAPI.readdir(path);
+    if (result.success) {
+      treeCache[_treeCacheKey(path)] = result.files;
+      buildChildren(ch, result.files);
+    }
+  } catch (e) {
+    console.warn('[RENDERER] 读取目录失败:', path, e);
+  }
+  li.classList.remove('loading');
+  lr.remove();
+}
+
+// 按路径查找已渲染的树节点
+function _findTreeItem(path) {
+  const items = fileTreeEl.querySelectorAll('li.tree-item');
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].dataset.path === path) return items[i];
+  }
+  return null;
+}
+
+// 远程: 标记/清除"他人正在编辑" (✏️ 徽标 + 高亮)
+function _setEditingMark(path, editing) {
+  const li = _findTreeItem(path);
+  if (!li || li.classList.contains('directory')) return;
+  if (editing) {
+    li.classList.add('editing-by-other');
+    const row = li.querySelector(':scope > .tree-row');
+    if (row && !row.querySelector('.tree-mark')) {
+      const mark = document.createElement('span');
+      mark.className = 'tree-mark';
+      mark.textContent = '✏️';
+      row.appendChild(mark);
+    }
+  } else {
+    li.classList.remove('editing-by-other');
+    const mark = li.querySelector('.tree-mark');
+    if (mark) mark.remove();
+  }
+}
+
+// 刷新整棵树: 清缓存 + 重渲染根 (本地按持久化展开状态恢复; 远程重请求根)
+function refreshTree() {
+  treeCache = {};
+  if (_fmMode === 'remote') {
+    renderTree(null, []);
+    if (window.electronAPI && window.electronAPI.remote) {
+      window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath || '/' });
+    }
+  } else if (currentDirectoryPath) {
+    loadDirectory(currentDirectoryPath, true);
+  }
+}
+
+// 懒恢复持久化的展开路径 (按路径长度升序, 父目录先展开)
+async function restoreExpanded(rootPath) {
+  if (!currentProjectPath) return;
+  const saved = _loadExpandedPaths()[currentProjectPath] || [];
+  if (!saved.length) return;
+  const list = saved.slice().sort((a, b) => a.length - b.length);
+  for (let i = 0; i < list.length; i++) {
+    const li = _findTreeItem(list[i]);
+    if (li && li.classList.contains('directory') && !li.classList.contains('expanded')) {
+      await toggleDirectory(li, list[i]);
+    }
+  }
 }
 
 // ============================================
 // 处理文件点击
 // ============================================
 
-async function handleFileClick(file) {
+async function handleFileClick(file, li) {
 
   if (file.isDirectory) {
-    if (_fmMode === 'remote') {
-      // 远程模式：向服务器请求目录列表
-      _remoteDirPath = file.path;
-      if (window.electronAPI && window.electronAPI.remote) {
-        window.electronAPI.remote.requestFileList({ dirPath: file.path });
-        setRemoteStatus('rm-client-status', I18N.t('rm.loadingRemoteDir'));
-      }
-    } else {
-      await navigateToDirectory(file.path);
-    }
+    await toggleDirectory(li, file.path);
   } else {
     if (_fmMode === 'remote') {
       // 远程模式：向服务器请求文件内容
@@ -1185,119 +1375,6 @@ async function closeTabsDirection(filePath, direction) {
 }
 
 // ============================================
-// 导航函数
-// ============================================
-
-async function navigateToDirectory(dirPath) {
-
-  if (currentDirectoryPath) {
-    directoryHistory.push(currentDirectoryPath);
-  }
-  await loadDirectory(dirPath);
-}
-
-async function navigateUp() {
-
-  if (!currentDirectoryPath || currentDirectoryPath === currentProjectPath) {
-    return;
-  }
-
-  const parentPath = getParentPath(currentDirectoryPath);
-  await navigateToDirectory(parentPath);
-}
-
-async function navigateBack() {
-
-  if (directoryHistory.length === 0) return;
-
-  const prevPath = directoryHistory.pop();
-  await loadDirectory(prevPath);
-}
-
-function getParentPath(dirPath) {
-  const parts = dirPath.split(/[\\/]/);
-  parts.pop();
-  return parts.join('/');
-}
-
-function updateNavigationButtons() {
-  if (navUpBtn) {
-    navUpBtn.disabled = !currentDirectoryPath || currentDirectoryPath === currentProjectPath;
-  }
-  if (navBackBtn) {
-    navBackBtn.disabled = directoryHistory.length === 0;
-  }
-}
-
-// ============================================
-// 面包屑导航
-// ============================================
-
-function updateBreadcrumbs() {
-  if (!currentProjectPath || !currentDirectoryPath) {
-    renderBreadcrumbs([]);
-    return;
-  }
-
-  const crumbs = [];
-
-  // 添加根目录
-  crumbs.push({ name: I18N.t('breadcrumb.root'), path: currentProjectPath });
-
-  // 计算相对于项目根的路径
-  const relativePath = getRelativePath(currentProjectPath, currentDirectoryPath);
-  if (relativePath && relativePath !== '.') {
-    const parts = relativePath.split('/');
-    let accumulatedPath = currentProjectPath;
-
-    for (const part of parts) {
-      if (part) {
-        accumulatedPath = accumulatedPath + '/' + part;
-        crumbs.push({ name: part, path: accumulatedPath });
-      }
-    }
-  }
-
-  renderBreadcrumbs(crumbs);
-}
-
-function renderBreadcrumbs(crumbs) {
-  const breadcrumbsEl = document.getElementById('breadcrumbs');
-  if (!breadcrumbsEl) return;
-
-  breadcrumbsEl.innerHTML = '';
-
-  crumbs.forEach((crumb, index) => {
-    const span = document.createElement('span');
-    span.textContent = crumb.name;
-    span.classList.add('breadcrumb');
-    span.dataset.path = crumb.path;
-    span.addEventListener('click', () => { playSound('click'); navigateToDirectory(crumb.path); });
-
-    breadcrumbsEl.appendChild(span);
-
-    if (index < crumbs.length - 1) {
-      const separator = document.createElement('span');
-      separator.textContent = ' / ';
-      separator.classList.add('breadcrumb-separator');
-      breadcrumbsEl.appendChild(separator);
-    }
-  });
-}
-
-function getRelativePath(fromPath, toPath) {
-  const fromParts = fromPath.split(/[\\/]/);
-  const toParts = toPath.split(/[\\/]/);
-
-  let i = 0;
-  while (i < fromParts.length && i < toParts.length && fromParts[i] === toParts[i]) {
-    i++;
-  }
-
-  return toParts.slice(i).join('/');
-}
-
-// ============================================
 // 文件操作
 // ============================================
 
@@ -1322,7 +1399,7 @@ async function createNewFile() {
   try {
     const result = await _electronAPI.writeFile(filePath, '');
     if (result.success) {
-      await loadDirectory(basePath);
+      await refreshTree();
       await openFile(filePath);
       updateStatus(I18N.t('status.fileCreated', { path: filePath }));
     } else {
@@ -2637,14 +2714,14 @@ function initRemoteEvents() {
       case 'file:editing:started':
         _otherEditingFiles[data.path] = true;
         if (_fmMode === 'remote') {
-          renderFileTree(_remoteFiles);
+          _setEditingMark(data.path, true);
         }
         break;
 
       case 'file:editing:ended':
         delete _otherEditingFiles[data.path];
         if (_fmMode === 'remote') {
-          renderFileTree(_remoteFiles);
+          _setEditingMark(data.path, false);
         }
         break;
 
@@ -2742,9 +2819,24 @@ function initRemoteEvents() {
         if (data.success && data.files) {
           _remoteFiles = data.files;
           _remoteDirPath = data.path;
-          renderFileTree(_remoteFiles);
+          if (_remoteDirPath === '/' || !_remoteDirPath) {
+            // 远程根列表: 渲染为树的根层
+            renderTree(null, data.files);
+          } else {
+            // 展开目录的懒加载结果: 定位节点并填充
+            const target = _findTreeItem(_remoteDirPath);
+            if (target && target.classList.contains('directory')) {
+              const ch = target.querySelector(':scope > .tree-children');
+              if (ch) buildChildren(ch, data.files);
+              target.classList.remove('loading');
+            }
+          }
+          treeCache[_treeCacheKey(_remoteDirPath)] = data.files;
           setRemoteStatus('rm-client-status', I18N.t('rm.listLoaded'));
         } else {
+          // 加载失败: 移除 loading 占位
+          const failTarget = _findTreeItem(data.path);
+          if (failTarget) failTarget.classList.remove('loading');
           setRemoteStatus('rm-client-status', I18N.t('rm.listLoadFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }
         break;
@@ -2756,9 +2848,7 @@ function initRemoteEvents() {
             closeTab(data.path);
           }
           // 刷新远程文件列表
-          if (_remoteDirPath && window.electronAPI && window.electronAPI.remote) {
-            window.electronAPI.remote.requestFileList({ dirPath: _remoteDirPath });
-          }
+          refreshTree();
         } else {
           setRemoteStatus('rm-client-status', I18N.t('rm.deleteFailed', { msg: localizeRemoteMsg(data) || '' }), true);
         }

@@ -100,6 +100,8 @@ sidebar:
   previousFile: "上个文件"
   tabLocal: "本地"
   tabRemote: "远程"
+  loading: "加载中..."
+  emptyDir: "空文件夹"
 
 editor:
   sourceMode: "源代码"
