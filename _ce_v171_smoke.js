@@ -189,6 +189,17 @@ app.whenReady().then(async () => {
       var o = document.getElementById('st-overlay');
       return o && o.style.display !== 'none' && document.getElementById('st-frame').src.indexOf('settings.html') !== -1;
     })()`), 'E2 点击设置 → 弹窗显示且 src 含 settings.html');
+    const e4 = await evalJS(`(function () {
+      var mb = getComputedStyle(document.getElementById('menu-bar')).zIndex;
+      var ov = getComputedStyle(document.getElementById('st-overlay')).zIndex;
+      return { mb: mb, ov: ov };
+    })()`);
+    check(parseInt(e4.mb) > parseInt(e4.ov), 'E4 菜单栏 z-index 高于弹窗遮罩 (' + e4.mb + ' > ' + e4.ov + ')');
+    // iframe 加载完成后再 Esc (否则 saveSettings 消息丢失, 弹窗不关闭)
+    check(await waitFor(`(function () {
+      var f = document.getElementById('st-frame');
+      return f && f.contentDocument && f.contentDocument.readyState === 'complete';
+    })()`), 'E3a 设置 iframe 加载完成');
     await evalJS(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true;`).catch(() => {});
     check(await waitFor(`document.getElementById('st-overlay').style.display === 'none'`), 'E3 Esc 关闭设置弹窗');
 
