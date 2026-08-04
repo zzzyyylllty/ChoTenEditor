@@ -1,0 +1,11 @@
+/* Twemoji 替换图片样式: 1em 随字体缩放, 与文字基线对齐 */
+.ce-emoji {
+  width: 1em;
+  height: 1em;
+  min-width: 1em;
+  max-width: none;
+  vertical-align: -0.12em;
+  display: inline-block;
+  pointer-events: none;
+  user-select: none;
+}
