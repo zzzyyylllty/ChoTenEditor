@@ -316,14 +316,26 @@
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="fm-actions" id="fm-actions">
-            <button class="fm-btn" id="nav-back" data-tip="后退" data-i18n-title="sidebar.navBack" disabled>◀</button>
-            <button class="fm-btn" id="nav-forward" data-tip="前进" data-i18n-title="sidebar.navForward" disabled>▶</button>
+            <button class="fm-btn" id="nav-back" data-tip="后退" data-i18n-title="sidebar.navBack" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button class="fm-btn" id="nav-forward" data-tip="前进" data-i18n-title="sidebar.navForward" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
             <span class="fm-sep"></span>
-            <button class="fm-btn" id="nav-prev" data-tip="上一个文件" data-i18n-title="sidebar.navPrev">▲</button>
-            <button class="fm-btn" id="nav-next" data-tip="下一个文件" data-i18n-title="sidebar.navNext">▼</button>
+            <button class="fm-btn" id="nav-prev" data-tip="上一个文件" data-i18n-title="sidebar.navPrev">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+            </button>
+            <button class="fm-btn" id="nav-next" data-tip="下一个文件" data-i18n-title="sidebar.navNext">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
             <span class="fm-sep"></span>
-            <button class="fm-btn" id="fm-reload" data-tip="重新加载" data-i18n-title="common.reload">↻</button>
-            <button class="fm-btn fm-btn-danger" id="fm-delete" data-tip="删除" style="display:none;" data-i18n-title="common.delete">✕</button>
+            <button class="fm-btn" id="fm-reload" data-tip="重新加载" data-i18n-title="common.reload">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+            <button class="fm-btn fm-btn-danger" id="fm-delete" data-tip="删除" style="display:none;" data-i18n-title="common.delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
           <div class="fm-tabs" id="fm-tabs" style="display:none;">
             <button class="fm-tab active" data-fm="local" data-i18n="sidebar.tabLocal">本地</button>

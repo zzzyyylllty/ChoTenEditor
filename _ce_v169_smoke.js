@@ -103,7 +103,7 @@ app.whenReady().then(async () => {
     check(a.dirs === 3, 'A3 目录行 3 个 (dir1/dir2/empty_dir)');
     check(a.expanded === 0, 'A4 初始无展开节点');
     check(a.childUlCount === 0, 'A5 懒加载: 初始无子行');
-    check(a.icons === '📁,📁,📁,📄', 'A6 图标替换为 twemoji img (alt=' + a.icons + ')');
+    check(a.icons === '📁,📁,📁,📄', 'A6 图标替换为 twemoji img (yml 保持 📄, 目录→📁; alt=' + a.icons + ')');
     check(a.hasNav === false && a.hasBreadcrumbs === false, 'A7 面包屑/导航 UI 已移除');
 
     // ---------- B. 展开 dir1 ----------

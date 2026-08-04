@@ -859,6 +859,28 @@ function renderTree(rootPath, files) {
   }
 }
 
+// 按扩展名映射文件图标 (emoji 需在 twemoji 映射表内, 否则保持文本字符)
+const FILE_ICON_MAP = (function () {
+  const map = {};
+  const groups = {
+    '🖼': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg', 'avif', 'tif', 'tiff'],
+    '📦': ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'zst', 'iso'],
+    '📜': ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'rb', 'php', 'sh', 'bat', 'cmd', 'ps1', 'lua', 'sql', 'vue', 'kt', 'kts'],
+    '⚙': ['json', 'toml', 'ini', 'conf', 'cfg', 'properties', 'xml'],
+  };
+  Object.keys(groups).forEach((icon) => {
+    groups[icon].forEach((ext) => { map[ext] = icon; });
+  });
+  return map;
+})();
+
+function fileTypeIcon(name, isDirectory) {
+  if (isDirectory) return '📁';
+  const idx = name.lastIndexOf('.');
+  if (idx <= 0) return '📄';
+  return FILE_ICON_MAP[name.slice(idx + 1).toLowerCase()] || '📄';
+}
+
 // 构建单个树节点: li.tree-item > div.tree-row(箭头/图标/名称[/编辑标记]) + ul.tree-children
 function buildTreeItem(file) {
   const li = document.createElement('li');
@@ -876,7 +898,7 @@ function buildTreeItem(file) {
 
   const icon = document.createElement('span');
   icon.className = 'tree-icon';
-  icon.textContent = file.isDirectory ? '📁' : '📄';
+  icon.textContent = fileTypeIcon(file.name, file.isDirectory);
 
   const label = document.createElement('span');
   label.className = 'tree-label';

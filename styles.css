@@ -739,49 +739,69 @@ body {
 
 .fm-actions {
   display: flex;
-  gap: 4px;
-  margin-bottom: 4px;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 3px;
+  background: var(--color-bg-secondary-alpha);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
 }
 
 .fm-sep {
   width: 1px;
   align-self: stretch;
-  margin: 2px 3px;
+  margin: 3px 4px;
   background: var(--color-border);
+  opacity: 0.7;
 }
 
-.fm-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.fm-btn:disabled:hover {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-}
-
-.fm-btn {
-  padding: 2px 8px;
-  font-size: 14px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
+.fm-actions .fm-btn {
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-  line-height: 1.4;
+  border-radius: 4px;
+  width: 26px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.08s ease, opacity var(--transition-fast);
+  line-height: 1;
 }
 
-.fm-btn:hover {
+.fm-actions .fm-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.fm-actions .fm-btn:hover:not(:disabled) {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
 }
 
-.fm-btn.fm-btn-danger {
+.fm-actions .fm-btn:active:not(:disabled) {
+  transform: scale(0.88);
+}
+
+.fm-actions .fm-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.fm-actions .fm-btn:disabled:hover {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.fm-actions .fm-btn.fm-btn-danger {
   color: var(--color-error);
 }
 
-.fm-btn.fm-btn-danger:hover {
+.fm-actions .fm-btn.fm-btn-danger:hover:not(:disabled) {
   background: var(--color-error);
   color: #fff;
 }
