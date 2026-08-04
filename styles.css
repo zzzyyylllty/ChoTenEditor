@@ -368,6 +368,151 @@ body {
 }
 
 /* ============================================
+   菜单栏 (VSCode 风格下拉菜单)
+   ============================================ */
+
+.menu-bar {
+  position: relative;
+  z-index: 900000;
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  background-color: var(--color-bg-secondary-alpha);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.menu-item-wrap {
+  position: relative;
+  display: flex;
+}
+
+.menu-trigger {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  padding: 0 12px;
+  cursor: pointer;
+  outline: none;
+  border-radius: 4px;
+  margin: 3px 2px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.menu-trigger:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.menu-item-wrap.open > .menu-trigger {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 230px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  display: none;
+  z-index: 900000;
+}
+
+.menu-item-wrap.open > .menu-panel {
+  display: block;
+  animation: menuFadeIn 0.12s ease;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  white-space: nowrap;
+}
+
+.menu-entry:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+}
+
+.menu-entry:disabled {
+  color: var(--color-text-tertiary);
+  cursor: default;
+}
+
+.menu-sep {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 4px 6px;
+}
+
+.menu-key {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-left: auto;
+}
+
+.menu-arrow {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.menu-group-title {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 6px 10px 2px;
+}
+
+.menu-entry.recent-item {
+  justify-content: flex-start;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-submenu {
+  position: relative;
+}
+
+.menu-submenu > .menu-entry {
+  position: relative;
+}
+
+.menu-submenu > .menu-panel {
+  top: -5px;
+  left: calc(100% + 2px);
+}
+
+/* ============================================
    按钮统一体系
    语义：高亮(primary) / 普通(normal) / 危险(danger) / 幽灵(ghost)
    颜色与圆角由 :root 中的 --btn-* 令牌控制，语义着色见文件末尾

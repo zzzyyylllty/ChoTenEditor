@@ -247,17 +247,68 @@
         <button class="tb-btn tb-btn-close" id="tb-close" data-tip="关闭" data-i18n-title="titlebar.close">✕</button>
       </div>
     </div>
+    <nav class="menu-bar" id="menu-bar">
+      <!-- 文件 -->
+      <div class="menu-item-wrap" data-menu="file">
+        <button class="menu-trigger" data-i18n="menu.file">文件</button>
+        <div class="menu-panel">
+          <button class="menu-entry" data-action="new-file" data-i18n="menu.newFile">📄 新建文件</button>
+          <button class="menu-entry" data-action="open-file" data-i18n="menu.openFile">📂 打开文件…</button>
+          <button class="menu-entry" data-action="open-project" data-i18n="menu.openProject">📁 打开项目…</button>
+          <div class="menu-submenu">
+            <button class="menu-entry" data-action="recent" data-i18n="menu.recent">🕘 最近打开</button>
+            <div class="menu-panel menu-sub-panel" id="menu-recent-panel"></div>
+          </div>
+          <div class="menu-sep"></div>
+          <button class="menu-entry" data-action="save" data-i18n="menu.save">💾 保存</button>
+          <div class="menu-sep"></div>
+          <button class="menu-entry" data-action="close-tab" data-i18n="menu.closeTab">关闭当前标签</button>
+          <button class="menu-entry" data-action="close-all-tabs" data-i18n="menu.closeAllTabs">关闭全部标签</button>
+        </div>
+      </div>
+      <!-- 编辑 -->
+      <div class="menu-item-wrap" data-menu="edit">
+        <button class="menu-trigger" data-i18n="menu.edit">编辑</button>
+        <div class="menu-panel">
+          <button class="menu-entry" data-action="undo" data-i18n="menu.undo">撤销</button>
+          <button class="menu-entry" data-action="redo" data-i18n="menu.redo">重做</button>
+          <div class="menu-sep"></div>
+          <button class="menu-entry" data-action="cut" data-i18n="menu.cut">剪切</button>
+          <button class="menu-entry" data-action="copy" data-i18n="menu.copy">复制</button>
+          <button class="menu-entry" data-action="paste" data-i18n="menu.paste">粘贴</button>
+          <div class="menu-sep"></div>
+          <button class="menu-entry" data-action="select-all" data-i18n="menu.selectAll">全选</button>
+        </div>
+      </div>
+      <!-- 调试 -->
+      <div class="menu-item-wrap" data-menu="debug">
+        <button class="menu-trigger" data-i18n="menu.debug">调试</button>
+        <div class="menu-panel">
+          <button class="menu-entry" data-action="debug-placeholder" disabled data-i18n="menu.noDebug">无可用调试功能</button>
+        </div>
+      </div>
+      <!-- 设置 -->
+      <div class="menu-item-wrap" data-menu="settings">
+        <button class="menu-trigger" data-i18n="menu.settings">设置</button>
+        <div class="menu-panel">
+          <button class="menu-entry" data-action="settings" data-i18n="menu.settingsItem">⚙️ 设置…</button>
+          <button class="menu-entry" data-action="remote" data-i18n="menu.remote">🌐 远程模式…</button>
+          <button class="menu-entry" data-action="ai" data-i18n="menu.ai">✨ AI 制作…</button>
+        </div>
+      </div>
+      <!-- 帮助 -->
+      <div class="menu-item-wrap" data-menu="help">
+        <button class="menu-trigger" data-i18n="menu.help">帮助</button>
+        <div class="menu-panel">
+          <button class="menu-entry" data-action="about" data-i18n="menu.about">ℹ️ 关于 ChoTenEditor</button>
+        </div>
+      </div>
+    </nav>
     <div class="header">
       <h1>Choten Editor</h1>
       <div class="header-controls">
-        <button id="open-project-btn" class="btn" data-i18n="common.openProject">📁 打开项目</button>
-        <button id="new-file-btn" class="btn" data-i18n="common.newFile">📄 新文件</button>
-        <button id="save-btn" class="btn" data-i18n="common.save">💾 保存</button>
-        <button id="settings-btn" class="btn btn-secondary" data-i18n="common.settings">⚙️ 设置</button>
-        <button id="remote-btn" class="btn btn-secondary" style="margin-left:4px;" data-i18n="common.remote">🌐 远程</button>
         <button id="source-mode-btn" class="mode-btn active" data-i18n="editor.sourceMode">源代码</button>
         <button id="visual-mode-btn" class="mode-btn" data-i18n="editor.visualMode">可视化</button>
-        <button id="ai-btn" class="btn btn-accent" data-i18n="common.ai">✨ AI</button>
       </div>
     </div>
 

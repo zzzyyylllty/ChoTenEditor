@@ -41,7 +41,8 @@ app.whenReady().then(async () => {
       var imgs = Array.prototype.slice.call(document.querySelectorAll('img.ce-emoji'));
       out.imgCount = imgs.length;
       out.broken = imgs.filter(function (i) { return i.complete && i.naturalWidth === 0; }).length;
-      var btn = document.getElementById('open-project-btn');
+      // v1.0.71: 打开项目按钮移入菜单栏 (文件 → 打开项目…)
+      var btn = document.querySelector('.menu-entry[data-action="open-project"]');
       out.btnHasImg = !!(btn && btn.querySelector('img.ce-emoji'));
       out.btnRawEmoji = btn && btn.textContent.indexOf('📁') !== -1;
       // 缺失字符保持文本: 标题栏最大化按钮 □ (U+25A1 twemoji 无)
@@ -68,7 +69,7 @@ app.whenReady().then(async () => {
 
     check(r.imgCount > 10, '主界面 .ce-emoji 数量 ' + r.imgCount + ' (期望 > 10)');
     check(r.broken === 0, 'ce-emoji 图片全部可加载 (broken=' + r.broken + ')');
-    check(r.btnHasImg && !r.btnRawEmoji, '打开项目按钮: 已替换为 img 且无残留 emoji 字符 (hasImg=' + r.btnHasImg + ', rawEmoji=' + r.btnRawEmoji + ')');
+    check(r.btnHasImg && !r.btnRawEmoji, '菜单栏打开项目条目: 已替换为 img 且无残留 emoji 字符 (hasImg=' + r.btnHasImg + ', rawEmoji=' + r.btnRawEmoji + ')');
     check(r.maxText.indexOf('□') !== -1, '缺失字符 □ 保持文本 (实际: ' + JSON.stringify(r.maxText) + ')');
     check(r.selHasImg === false, 'select 下拉未被替换 (selHasImg=' + r.selHasImg + ')');
     check(r.ceKept === true, 'contenteditable 编辑器内容未替换');

@@ -12,10 +12,7 @@ const sourceEditor = document.getElementById('source-editor');
 const visualEditor = document.getElementById('visual-editor');
 const sourceModeBtn = document.getElementById('source-mode-btn');
 const visualModeBtn = document.getElementById('visual-mode-btn');
-const openProjectBtn = document.getElementById('open-project-btn');
-const newFileBtn = document.getElementById('new-file-btn');
-const saveBtn = document.getElementById('save-btn');
-const settingsBtn = document.getElementById('settings-btn');
+const menuBar = document.getElementById('menu-bar');
 const statusInfo = document.getElementById('status-info');
 const filePathEl = document.getElementById('file-path');
 const editorTabs = document.querySelector('.editor-tabs');
@@ -349,23 +346,12 @@ function init() {
 function setupEventListeners() {
 
   // 检查元素是否存在
-  if (!openProjectBtn) console.error('openProjectBtn 不存在');
-  if (!newFileBtn) console.error('newFileBtn 不存在');
-  if (!saveBtn) console.error('saveBtn 不存在');
-  if (!settingsBtn) console.error('settingsBtn 不存在');
   if (!sourceModeBtn) console.error('sourceModeBtn 不存在');
   if (!visualModeBtn) console.error('visualModeBtn 不存在');
   if (!codeMirrorEditor) console.error('codeMirrorEditor 不存在');
 
-  // 按钮点击事件 - 添加非空检查
-  if (openProjectBtn) openProjectBtn.addEventListener('click', () => { playSound('click'); openProject(); });
-  if (newFileBtn) newFileBtn.addEventListener('click', () => { playSound('click'); createNewFile(); });
-  if (saveBtn) saveBtn.addEventListener('click', () => { playSound('save'); saveCurrentFile(); });
-  if (settingsBtn) settingsBtn.addEventListener('click', () => { playSound('select'); openSettings(); });
-  const remoteBtn = document.getElementById('remote-btn');
-  if (remoteBtn) remoteBtn.addEventListener('click', () => { playSound('select'); openRemoteMode(); });
-  const aiBtn = document.getElementById('ai-btn');
-  if (aiBtn) aiBtn.addEventListener('click', () => { playSound('select'); openAIPanel(); });
+  // 菜单栏初始化
+  initMenuBar();
 
   // 编辑器模式按钮
   if (sourceModeBtn) sourceModeBtn.addEventListener('click', async () => { playSound('click'); await switchEditorMode(false); });
@@ -513,6 +499,238 @@ function setupEventListeners() {
 }
 
 // ============================================
+// 菜单栏 (文件/编辑/调试/设置/帮助)
+// ============================================
+
+// 最近打开记录: localStorage ceRecentProjects / ceRecentFiles = [{path, name, time}]
+const RECENT_PROJECTS_KEY = 'ceRecentProjects';
+const RECENT_FILES_KEY = 'ceRecentFiles';
+const RECENT_MAX = 10;
+
+function _loadRecent(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
+}
+function _saveRecent(key, list) {
+  try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) {}
+}
+function _addRecent(key, filePath) {
+  const list = _loadRecent(key);
+  const entry = { path: filePath, name: getFileName(filePath), time: Date.now() };
+  const idx = list.findIndex((it) => it.path === filePath);
+  if (idx >= 0) list.splice(idx, 1);
+  list.unshift(entry);
+  if (list.length > RECENT_MAX) list.length = RECENT_MAX;
+  _saveRecent(key, list);
+}
+function addRecentProject(path) {
+  if (path) _addRecent(RECENT_PROJECTS_KEY, path);
+}
+function addRecentFile(path) {
+  if (path) _addRecent(RECENT_FILES_KEY, path);
+}
+function clearRecent() {
+  localStorage.removeItem(RECENT_PROJECTS_KEY);
+  localStorage.removeItem(RECENT_FILES_KEY);
+}
+
+// 渲染「最近打开」子菜单
+function renderRecentMenu() {
+  const panel = document.getElementById('menu-recent-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  const projects = _loadRecent(RECENT_PROJECTS_KEY);
+  const files = _loadRecent(RECENT_FILES_KEY);
+
+  function addGroup(title, list, isProject) {
+    const gt = document.createElement('div');
+    gt.className = 'menu-group-title';
+    gt.textContent = title;
+    panel.appendChild(gt);
+    if (!list.length) {
+      const empty = document.createElement('button');
+      empty.className = 'menu-entry';
+      empty.disabled = true;
+      empty.textContent = I18N.t('menu.empty');
+      panel.appendChild(empty);
+      return;
+    }
+    list.forEach((item) => {
+      const btn = document.createElement('button');
+      btn.className = 'menu-entry recent-item';
+      btn.dataset.recentType = isProject ? 'project' : 'file';
+      btn.dataset.recentPath = item.path;
+      btn.textContent = item.name;
+      btn.title = item.path;
+      btn.addEventListener('click', () => {
+        closeMenus();
+        if (isProject) {
+          playSound('click');
+          openProjectPath(item.path);
+        } else {
+          playSound('click');
+          openFile(item.path);
+        }
+      });
+      panel.appendChild(btn);
+    });
+  }
+
+  addGroup(I18N.t('menu.recentProjects'), projects, true);
+  addGroup(I18N.t('menu.recentFiles'), files, false);
+
+  const sep = document.createElement('div');
+  sep.className = 'menu-sep';
+  panel.appendChild(sep);
+  const clear = document.createElement('button');
+  clear.className = 'menu-entry';
+  clear.textContent = I18N.t('menu.clearRecent');
+  clear.addEventListener('click', () => {
+    clearRecent();
+    renderRecentMenu();
+  });
+  panel.appendChild(clear);
+}
+
+function closeMenus() {
+  if (!menuBar) return;
+  menuBar.querySelectorAll('.menu-item-wrap.open').forEach((w) => w.classList.remove('open'));
+}
+
+function cmExecCommand(cmd) {
+  if (codeMirrorEditor) {
+    codeMirrorEditor.focus();
+    codeMirrorEditor.execCommand(cmd);
+  }
+}
+
+// 文件 → 打开文件…: 对话框选择单个文件并打开
+async function openFileDialog() {
+  if (!_electronAPI || !_electronAPI.openFile) {
+    showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.openDirectoryApi'));
+    return;
+  }
+  const result = await _electronAPI.openFile({
+    properties: ['openFile'],
+    filters: [
+      { name: 'YAML', extensions: ['yml', 'yaml'] },
+      { name: I18N.t('menu.allFiles'), extensions: ['*'] },
+    ],
+  });
+  if (result && result.length > 0) {
+    await openFile(result[0]);
+    addRecentFile(result[0]);
+  }
+}
+
+async function closeAllTabs() {
+  const snapshot = openTabs.slice();
+  for (const p of snapshot) {
+    await closeTab(p, true);
+  }
+}
+
+function showAbout() {
+  let version = '1.0.0';
+  try {
+    if (window.electronAPI && window.electronAPI.appVersion) {
+      version = window.electronAPI.appVersion;
+    }
+  } catch (e) {}
+  UI.alert({
+    title: 'Choten Editor',
+    message: I18N.t('menu.aboutMsg', { version: version }),
+  });
+}
+
+function initMenuBar() {
+  if (!menuBar) return;
+
+  // 快捷键提示 (从设置读取的自定义组合键)
+  menuBar.querySelectorAll('.menu-entry[data-action]').forEach((btn) => {
+    const action = btn.dataset.action;
+    const combo = action === 'save' ? _ceShortcuts.save
+      : action === 'new-file' ? _ceShortcuts.newFile
+      : action === 'open-project' ? _ceShortcuts.openProject
+      : null;
+    if (combo) {
+      const key = document.createElement('span');
+      key.className = 'menu-key';
+      key.textContent = combo;
+      btn.appendChild(key);
+    }
+  });
+
+  // 点击触发器: 展开/折叠
+  menuBar.querySelectorAll('.menu-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = trigger.closest('.menu-item-wrap');
+      const isOpen = wrap.classList.contains('open');
+      closeMenus();
+      if (!isOpen) {
+        wrap.classList.add('open');
+        if (wrap.dataset.menu === 'file') renderRecentMenu();
+      }
+    });
+  });
+
+  // 展开状态下 hover 到其他菜单 → 切换
+  menuBar.querySelectorAll('.menu-item-wrap').forEach((wrap) => {
+    wrap.addEventListener('mouseenter', () => {
+      if (menuBar.querySelector('.menu-item-wrap.open') && !wrap.classList.contains('open')) {
+        wrap.classList.add('open');
+        if (wrap.dataset.menu === 'file') renderRecentMenu();
+      }
+    });
+  });
+
+  // 点击菜单外部关闭
+  document.addEventListener('mousedown', (e) => {
+    if (menuBar.contains(e.target)) return;
+    closeMenus();
+  });
+
+  // Esc 关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menuBar.querySelector('.menu-item-wrap.open')) {
+      closeMenus();
+    }
+  });
+
+  // 动作分发 (委托, 覆盖动态生成的最近打开条目)
+  menuBar.addEventListener('click', (e) => {
+    const entry = e.target.closest('.menu-entry');
+    if (!entry || entry.dataset.recentType) return; // 最近条目自绑监听
+    const action = entry.dataset.action;
+    if (!action || entry.disabled) return;
+    closeMenus();
+    switch (action) {
+      case 'new-file': playSound('click'); createNewFile(); break;
+      case 'open-file': playSound('click'); openFileDialog(); break;
+      case 'open-project': playSound('click'); openProject(); break;
+      case 'save': playSound('save'); saveCurrentFile(); break;
+      case 'close-tab': if (currentFile) closeTab(currentFile); break;
+      case 'close-all-tabs': closeAllTabs(); break;
+      case 'undo': cmExecCommand('undo'); break;
+      case 'redo': cmExecCommand('redo'); break;
+      case 'cut': cmExecCommand('cut'); break;
+      case 'copy': cmExecCommand('copy'); break;
+      case 'paste': cmExecCommand('paste'); break;
+      case 'select-all': cmExecCommand('selectAll'); break;
+      case 'settings': playSound('select'); openSettings(); break;
+      case 'remote': playSound('select'); openRemoteMode(); break;
+      case 'ai': playSound('select'); openAIPanel(); break;
+      case 'about': showAbout(); break;
+      case 'recent':
+        // 子菜单: 打开文件菜单时已渲染, 点击保持展开
+        renderRecentMenu();
+        break;
+      default: break;
+    }
+  });
+}
+
+// ============================================
 // 打开项目
 // ============================================
 
@@ -562,6 +780,9 @@ async function openProjectPath(path) {
   await _updateProjectTypeStatus(path);
 
   saveAppState();
+
+  // 记录最近打开项目
+  addRecentProject(path);
 }
 
 // ============================================
@@ -1008,6 +1229,10 @@ async function openFile(filePath, content) {
     }
 
     saveAppState();
+
+    // 记录最近打开文件
+    addRecentFile(filePath);
+
     if (_openingFile === filePath) _openingFile = null;
   } catch (error) {
     console.error('[RENDERER] 打开文件错误:', error);
