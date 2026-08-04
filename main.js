@@ -12,9 +12,6 @@ function isValidFsPath(p) {
   return typeof p === 'string' && p.length > 0 && p.length < 4096;
 }
 
-// 单实例检测: 多实例共享同一磁盘缓存会导致缓存读写错误, 检测到已有实例时询问是否继续
-const gotLock = app.requestSingleInstanceLock();
-
 let mainWindow;
 
 function createWindow() {
@@ -48,7 +45,27 @@ function startApp() {
   });
 }
 
-if (require.main === module) {
+// 入口判断: Electron 41+ 下 require.main 指向 electron 加载器而非入口脚本 (恒不等),
+// 改用 argv[1] 与 package.json main 比对; 测试脚本 require 本文件时必须判定为非入口,
+// 否则测试进程会占用单实例锁并阻止正常启动
+function isAppEntry() {
+  if (process.defaultApp === false) return true; // 打包应用: 入口必是 main.js
+  if (!process.argv[1]) return false;
+  let entryFile = path.resolve(process.argv[1]);
+  try {
+    if (fs.statSync(entryFile).isDirectory()) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(entryFile, 'package.json'), 'utf-8'));
+      if (pkg.main) entryFile = path.resolve(entryFile, pkg.main);
+    }
+  } catch (e) { /* 目录解析失败按非入口处理 */ }
+  return entryFile === path.resolve(__filename);
+}
+
+// 单实例检测: 多实例共享同一磁盘缓存会导致缓存读写错误, 检测到已有实例时询问是否继续。
+// 必须在 isAppEntry() 内执行: 测试脚本 require 本文件时不得占用实例锁,
+// 否则残留测试进程会一直阻止正常启动
+if (isAppEntry()) {
+  const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
     // 直接拦截: 多实例同时运行会因共享磁盘缓存/用户数据导致缓存错误与数据异常, 提示关闭现有实例后退出
     console.log('[MAIN] another instance detected, blocking startup');
