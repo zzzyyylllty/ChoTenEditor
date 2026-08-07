@@ -82,7 +82,8 @@ app.whenReady().then(async () => {
     check(await waitFor(`document.getElementById('st-overlay').style.display === 'flex'`), 'B1 设置弹窗打开');
     check(await waitFor(`(function () {
       var fr = document.getElementById('st-frame');
-      return fr && fr.contentDocument && fr.contentDocument.readyState === 'complete';
+      return fr && fr.contentDocument && fr.contentDocument.readyState === 'complete' &&
+        fr.contentDocument.URL.indexOf('settings.html') !== -1;
     })()`), 'B2 设置 iframe 加载完成');
 
     const b = await evalJS(`(function () {

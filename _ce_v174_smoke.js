@@ -99,7 +99,8 @@ app.whenReady().then(async () => {
     check(await waitFor(`document.getElementById('st-overlay').style.display !== 'none'`), 'B1 设置弹窗打开');
     check(await waitFor(`(function () {
       var f = document.getElementById('st-frame');
-      return f && f.contentDocument && f.contentDocument.readyState === 'complete';
+      return f && f.contentDocument && f.contentDocument.readyState === 'complete' &&
+        f.contentDocument.URL.indexOf('settings.html') !== -1;
     })()`), 'B2 iframe 加载完成');
     await evalJS(`(function () {
       var f = document.getElementById('st-frame');

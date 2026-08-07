@@ -2111,7 +2111,7 @@ function renderVisualEditor() {
     ? CraftEngineInterpreter.detectFileType(content, currentFile) : null;
 
   try {
-    if (overrideType === 'craftengine' || ceType) {
+    if (overrideType === 'craftengine' || ceType === 'craftengine') {
       // CE 配置 → CraftEngine 可视化编辑器
       CraftEngineInterpreter.render(currentFile, content, visualEditor, {
         forceType: overrideType || null,

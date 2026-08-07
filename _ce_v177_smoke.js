@@ -119,10 +119,12 @@ app.whenReady().then(async () => {
       return true;
     })()`);
     check(await waitFor(`!!document.getElementById('st-overlay') && getComputedStyle(document.getElementById('st-overlay')).display !== 'none'`), 'B1 设置弹窗打开');
-    // 等 iframe 加载完成
+    // 等 iframe 加载完成 (URL 必须是 settings.html, 排除无 src 时的 about:blank 竞态)
     check(await waitFor(`(function () {
       var fr = document.getElementById('st-frame');
-      return !!fr && fr.contentDocument && fr.contentDocument.readyState === 'complete';
+      return !!fr && fr.contentDocument &&
+        fr.contentDocument.readyState === 'complete' &&
+        fr.contentDocument.URL.indexOf('settings.html') !== -1;
     })()`), 'B2 设置 iframe 加载完成');
     const b = await evalJS(`(function () {
       var fr = document.getElementById('st-frame');

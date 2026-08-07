@@ -1,6 +1,9 @@
 /* ce-select.js — 自研下拉选择组件 (替代原生 select) + 字体补全输入框 (ce-combo)
  * 兼容设计: 包装原生 select (隐藏但保留 id/value/change), 外部代码读写与原来完全一致。
- * 用法: 页面内所有 <select> 自动升级; 字体输入框用 <input data-font-combo> 标记。 */
+ * 用法: 页面内所有 <select> 自动升级 (含动态插入的, MutationObserver 监听);
+ *       字体输入框用 <input data-font-combo> 标记。
+ * 尺寸: 不在 .select-wrapper 内的 select (如可视化编辑器动态控件) 自动使用紧凑模式;
+ *       带 cv-select-lg / ce-select-lg 类使用大号紧凑模式。 */
 (function () {
   'use strict';
 
@@ -31,6 +34,21 @@
     var wrap = document.createElement('div');
     wrap.className = 'ce-select';
     if (sel.id) wrap.dataset.ceFor = sel.id;
+    var wrapper = sel.closest('.select-wrapper');
+    // 不在 .select-wrapper 内 = 编辑器/紧凑场景
+    if (!wrapper) {
+      wrap.classList.add('ce-select-sm');
+      if (sel.classList.contains('cv-select-lg') || sel.classList.contains('ce-select-lg')) {
+        wrap.classList.remove('ce-select-sm');
+        wrap.classList.add('ce-select-lg');
+      }
+    }
+    // 继承内联布局样式 (编辑器动态 select 常用 width/flex-shrink/margin)
+    ['width', 'minWidth', 'maxWidth', 'flexShrink', 'flexGrow', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach(function (p) {
+      var v = sel.style[p];
+      if (v) wrap.style[p] = v;
+    });
+    sel.__ceWrap = wrap;
 
     var trigger = document.createElement('button');
     trigger.type = 'button';
@@ -62,7 +80,6 @@
 
     // 原生 select 隐藏但保留 (外部代码继续用 .value / change / options)
     sel.classList.add('ce-select-native');
-    var wrapper = sel.closest('.select-wrapper');
     if (wrapper) wrapper.style.display = 'none';
     (wrapper || sel).parentNode.insertBefore(wrap, (wrapper || sel).nextSibling);
 
@@ -71,13 +88,22 @@
       var shown = 0;
       var q = (filter || '').toLowerCase();
       Array.prototype.forEach.call(sel.options, function (opt, idx) {
-        var label = opt.textContent || opt.text || '';
+        var optText = opt.textContent || opt.text || '';
         if (opt.disabled) return;
-        if (q && label.toLowerCase().indexOf(q) === -1) return;
+        if (q && optText.toLowerCase().indexOf(q) === -1) return;
         var item = document.createElement('div');
         item.className = 'ce-select-option' + (idx === sel.selectedIndex ? ' selected' : '');
         item.dataset.index = String(idx);
-        item.textContent = label;
+        if (idx === sel.selectedIndex) {
+          var check = document.createElement('span');
+          check.className = 'ce-select-check';
+          check.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+          item.appendChild(check);
+        }
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'ce-select-label';
+        labelSpan.textContent = optText;
+        item.appendChild(labelSpan);
         item.addEventListener('click', function () {
           sel.selectedIndex = idx;
           sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -179,6 +205,7 @@
     wrap.className = 'ce-combo';
     input.parentNode.insertBefore(wrap, input);
     wrap.appendChild(input);
+    input.__ceComboWrap = wrap;
 
     var panel = document.createElement('div');
     panel.className = 'ce-combo-panel';
@@ -271,9 +298,54 @@
 
   /* ─────────────── 初始化 ─────────────── */
 
+  // 动态插入的 select (可视化编辑器渲染) 自动升级; 移除时清理对应 wrap
+  var upgradeObserver = null;
+
+  function collect(root, selector) {
+    var found = [];
+    if (root.matches && root.matches(selector)) found.push(root);
+    if (root.querySelectorAll) {
+      root.querySelectorAll(selector).forEach(function (s) { found.push(s); });
+    }
+    return found;
+  }
+
+  function startObserver() {
+    if (upgradeObserver || !document.body) return;
+    upgradeObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type !== 'childList') return;
+        m.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          collect(node, 'select').forEach(buildSelect);
+          collect(node, 'input[data-font-combo]').forEach(buildFontCombo);
+        });
+        m.removedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          collect(node, 'select').forEach(function (sel) {
+            if (sel.__ceWrap) {
+              sel.__ceWrap.remove();
+              delete sel.__ceWrap;
+            }
+            delete sel.dataset.ceBuilt;
+          });
+          collect(node, 'input[data-font-combo]').forEach(function (i) {
+            if (i.__ceComboWrap) {
+              i.__ceComboWrap.remove();
+              delete i.__ceComboWrap;
+            }
+            delete i.dataset.ceComboBuilt;
+          });
+        });
+      });
+    });
+    upgradeObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   function init() {
     document.querySelectorAll('select').forEach(buildSelect);
     document.querySelectorAll('input[data-font-combo]').forEach(buildFontCombo);
+    startObserver();
   }
 
   document.addEventListener('click', closeAll);
