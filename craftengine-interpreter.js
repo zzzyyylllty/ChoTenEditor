@@ -1078,6 +1078,11 @@
     var h = null;
     var srcKey = null;
     if (db && k) { h = db[k]; srcKey = k; }
+    // 连字符键文件 (方块设置等): 提示库键为下划线形式, 如 settings.push-reaction → settings.push_reaction
+    if (!h && db && k && k.indexOf('-') !== -1) {
+      var ks = k.replace(/-/g, '_');
+      if (db[ks]) { h = db[ks]; srcKey = ks; }
+    }
     if (!h && db && def && def.key) { h = db[def.key]; srcKey = def.key; }
     if (!h && def) h = def.hint;
     if (h && srcKey && srcKey.indexOf('.') === -1 && def && def.key && def.hint && _sfAmbiguousShortKeys[def.key]) h = def.hint;
@@ -1801,10 +1806,13 @@
     if (td.widget) return _sfFieldHtml(td.widget, path, value, sub);
     var modeled = {};
     if (td.fields) {
+      var keyStyle = _sfObjKeyStyle(value, td.fields);
+      sub.keyStyle = keyStyle;
       html += '<div class="ce-sf-type-card">';
       td.fields.forEach(function (fld) {
-        modeled[fld.key] = 1;
-        html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, sub);
+        var fk = _sfObjFldKey(fld, value, keyStyle);
+        modeled[fk] = 1;
+        html += _sfFieldHtml(fld, path + '.' + fk, (value && typeof value === 'object') ? value[fk] : undefined, sub);
       });
       html += '</div>';
     }
@@ -1889,9 +1897,11 @@
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'object', def, opts);
     var html = '<div class="ce-sf-object" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
     var modeled = {};
+    var keyStyle = _sfObjKeyStyle(value, def.fields);
     (def.fields || []).forEach(function (fld) {
-      modeled[fld.key] = 1;
-      html += _sfFieldHtml(fld, path + '.' + fld.key, (value && typeof value === 'object') ? value[fld.key] : undefined, { inList: opts && opts.inList });
+      var fk = _sfObjFldKey(fld, value, keyStyle);
+      modeled[fk] = 1;
+      html += _sfFieldHtml(fld, path + '.' + fk, (value && typeof value === 'object') ? value[fk] : undefined, { inList: opts && opts.inList, keyStyle: keyStyle });
     });
     html += '</div>';
     // 未知字段: 折叠 kv
@@ -2010,9 +2020,11 @@
     }
     var modeled = {};
     var html = '';
+    var keyStyle = _sfObjKeyStyle(value, panel.fields);
     (panel.fields || []).forEach(function (fld) {
-      modeled[fld.key] = 1;
-      html += _sfFieldHtml(fld, _sfKeyPath(path, fld.key), value ? value[fld.key] : undefined, opts);
+      var fk = _sfObjFldKey(fld, value, keyStyle);
+      modeled[fk] = 1;
+      html += _sfFieldHtml(fld, _sfKeyPath(path, fk), value ? value[fk] : undefined, opts);
     });
     var rest = [];
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -2035,6 +2047,29 @@
       html += '</details>';
     }
     return html;
+  }
+  // ---- 对象字段键名兼容: 官方中文文档/旧版文件用连字符 (push-reaction), 英文新版 wiki 用下划线 (push_reaction) ----
+  // 检测对象内已有键的风格 (同键数下划线优先), 新建键沿用文件风格, 保证写回不破坏用户键名
+  function _sfObjKeyStyle(value, fields) {
+    if (!fields || !value || typeof value !== 'object' || Array.isArray(value)) return 'snake';
+    var snake = 0, kebab = 0;
+    for (var i = 0; i < fields.length; i++) {
+      var k = fields[i].key;
+      if (String(k).indexOf('_') === -1) continue;
+      if (value[k] !== undefined) snake++;
+      else if (value[k.replace(/_/g, '-')] !== undefined) kebab++;
+    }
+    return kebab > snake ? 'kebab' : 'snake';
+  }
+  function _sfObjFldKey(fld, value, keyStyle) {
+    if (String(fld.key).indexOf('_') === -1) return fld.key;
+    var has = value && typeof value === 'object' && !Array.isArray(value);
+    if (keyStyle === 'kebab') {
+      var kb = fld.key.replace(/_/g, '-');
+      // 文件已存在该键 (任一种写法) 时沿用; 新键按文件风格
+      if (!has || value[kb] !== undefined || value[fld.key] === undefined) return kb;
+    }
+    return fld.key;
   }
   // ---- item 根级键风格: 检测文件已有写法 (snake 新版 / kebab 旧版), 新建用设置默认 ----
   function _sfItemKeyStyle(entryData) {

@@ -1704,6 +1704,7 @@
     f('is_redstone_conductor', '红石导体', 'Is Redstone Conductor', 'bool'),
     f('is_suffocating', '窒息判定', 'Is Suffocating', 'bool'),
     f('is_view_blocking', '阻挡视线', 'Is View Blocking', 'bool'),
+    f('is_randomly_ticking', '接受随机刻', 'Is Randomly Ticking', 'bool', { hint: l('决定方块状态是否接受随机刻 (树木等方块利用随机刻随时间生长)', 'Whether the block state receives random ticks (e.g. trees grow over time)') }),
     f('sounds', '音效', 'Sounds', 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') }),
     f('require_correct_tools', '需要正确工具', 'Require Correct Tools', 'bool', { hint: l('设置 correct_tools 时自动为 true', 'Automatically true when correct_tools is set') }),
     f('respect_tool_component', '尊重工具组件', 'Respect Tool Component', 'bool'),
