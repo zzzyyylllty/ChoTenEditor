@@ -178,8 +178,8 @@ typeScope:
 welcome:
   title: "欢迎使用 ChoTenEditor!"
   version: "当前版本为 {version}"
-  descPre: "本编辑器旨在提供通用的 Minecraft 插件编辑工具，目前只适配 "
-  descPost: " 一个插件，后续将添加 Sertraline、LithiumCarbon 等插件。"
+  descPre: "本编辑器旨在提供通用的 Minecraft 插件配置编辑，支持 "
+  descPost: " 任务与对话、CraftEngine 物品/方块/家具等基础编辑，以及 Kether 脚本。"
   channelsTitle: "如有任何问题、意见，欢迎通过以下渠道反馈："
   channelQq: "📢 QQ群："
   channelDiscord: "🌐 Discord："

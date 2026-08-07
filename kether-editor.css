@@ -7,7 +7,8 @@
 
 .ke-overlay {
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  z-index: 9999;
+  /* 全屏接管: 必须盖过标题栏 (1000000) 与菜单栏 (1000001), 顶部按钮才能露出来 */
+  z-index: 2000000;
   background: var(--color-bg-primary);
   animation: ke-fade-in 0.12s ease;
   display: flex;
@@ -25,7 +26,7 @@
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0; z-index: 10;
 }
-.ke-header h2 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+.ke-header h2 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; -webkit-app-region: drag; app-region: drag; }
 .ke-header-actions { display: flex; align-items: center; gap: 6px; }
 .ke-header-winctrl {
   display: flex;

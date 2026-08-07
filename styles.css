@@ -3560,7 +3560,7 @@ textarea.ce-input {
 .ce-yaml-ta {
   position: relative;
   background: transparent !important;
-  color: transparent;
+  color: transparent !important; /* ce-select.css 的 textarea.ce-input 规则 (更高优先级) 会把文字改回白色, 与下方高亮层重叠 */
   caret-color: var(--color-text-primary);
   overflow: auto;
 }

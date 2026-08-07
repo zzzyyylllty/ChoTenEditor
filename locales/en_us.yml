@@ -178,8 +178,8 @@ typeScope:
 welcome:
   title: "Welcome to ChoTenEditor!"
   version: "Current version: {version}"
-  descPre: "This editor is a general-purpose Minecraft plugin editing tool. Currently it supports "
-  descPost: " only, with Sertraline, LithiumCarbon and more coming later."
+  descPre: "This editor is a general-purpose Minecraft plugin configuration editor, supporting "
+  descPost: " quests & conversations, CraftEngine basic editing (items/blocks/furniture...), and Kether scripts."
   channelsTitle: "For any questions or feedback, please reach out via:"
   channelQq: "📢 QQ Group:"
   channelDiscord: "🌐 Discord:"
