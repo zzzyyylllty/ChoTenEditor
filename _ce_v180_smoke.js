@@ -13,6 +13,7 @@ const f = (p) => path.join(FIXTURE, p);
 
 fs.rmSync(FIXTURE, { recursive: true, force: true });
 fs.mkdirSync(f('resources/test/configuration/blocks'), { recursive: true });
+fs.mkdirSync(f('resources/test/configuration/items'), { recursive: true });
 fs.writeFileSync(f('resources/test/configuration/blocks/test.yml'), [
   'blocks:',
   '  simple:test_block:',
@@ -39,6 +40,23 @@ fs.writeFileSync(f('resources/test/configuration/blocks/test.yml'), [
   '      incorrect-tool-dig-speed: 0.3',
   '      instrument: BASEDRUM',
   '      support-shape: minecraft:stone',
+].join('\n') + '\n');
+// 内联方块 (block_item.block 内直接定义, 用户格式)
+fs.writeFileSync(f('resources/test/configuration/items/test.yml'), [
+  'items:',
+  '  kangelblocks:xxx:',
+  '    behavior:',
+  '      type: block_item',
+  '      block:',
+  '        settings:',
+  '          hardness: 10',
+  '          push-reaction: NORMAL',
+  '          burnable: false',
+  '          is-randomly-ticking: false',
+  '          correct-tools:',
+  '            - minecraft:wooden_pickaxe',
+  '        state:',
+  '          auto-state: solid',
 ].join('\n') + '\n');
 
 let fails = 0;
@@ -185,6 +203,86 @@ app.whenReady().then(async () => {
     check(c6.autoState === c5, 'C5 popup 确定 → auto-state 写回 (' + c5 + ' → got ' + c6.autoState + ')');
     check(!c6.snake, 'C6 无 auto_state 下划线键');
     check(c6.yaml.indexOf('auto-state: ' + c5) !== -1, 'C7 序列化保持 auto-state: ' + c5);
+
+    // ---------- D. 内联方块 (item → behavior: block_item → block: 内联定义) ----------
+    const itemContent = fs.readFileSync(f('resources/test/configuration/items/test.yml'), 'utf8');
+    const itemPath = f('resources/test/configuration/items/test.yml').replace(/\\/g, '/');
+    const it = await evalJS(`(function () {
+      return window.CraftEngineInterpreter.detectFileType('items: {}\\n', '${itemPath}');
+    })()`);
+    check(it === 'craftengine', 'D1 items 文件 detectFileType → craftengine (got ' + it + ')');
+    const d = await evalJS(`(function () {
+      var container = document.createElement('div');
+      document.body.appendChild(container);
+      var content = ${JSON.stringify(itemContent)};
+      var parsed = window.CraftEngineInterpreter.render('${itemPath}', content, container);
+      window.__ce180i = { container: container, parsed: parsed };
+      var tabs = container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      function val(sel) { var el = tabs.querySelector(sel); return el ? el.value : null; }
+      function chk(sel) { var el = tabs.querySelector(sel); return el ? el.checked : null; }
+      var btns = tabs ? Array.prototype.slice.call(tabs.querySelectorAll('.ce-sf-subtab-btn')).map(function (b) { return b.textContent; }) : [];
+      return {
+        hasTabs: !!tabs,
+        btns: btns,
+        collapses: tabs ? tabs.querySelectorAll('.ce-sf-collapse').length : -1,
+        hardness: val('input[data-sf-path="behavior.block.settings.hardness"]'),
+        pushReaction: val('select[data-sf-path="behavior.block.settings.push-reaction"]'),
+        randomTick: chk('input[data-sf-path="behavior.block.settings.is-randomly-ticking"]'),
+        correctTools: val('textarea[data-sf-path="behavior.block.settings.correct-tools"]'),
+        stateBtn: tabs ? tabs.querySelector('[data-sf-subtab="state"]') : null,
+        settingsBtn: tabs ? tabs.querySelector('[data-sf-subtab="settings"]') : null,
+      };
+    })()`);
+    check(d.hasTabs, 'D2 内联方块渲染为选项卡 (behavior.block)');
+    check(d.btns.length >= 4 && d.btns.indexOf('设置') !== -1 && d.btns.indexOf('行为') !== -1, 'D3 选项卡含 状态/设置/行为/掉落/自定义 (got ' + d.btns.join(',') + ')');
+    check(d.collapses === 0, 'D4 内联方块内无「其他字段」折叠 (got ' + d.collapses + ')');
+    check(d.hardness === '10', 'D5 settings.hardness = 10 (got ' + d.hardness + ')');
+    check(d.pushReaction === 'NORMAL', 'D6 settings.push-reaction = NORMAL (got ' + d.pushReaction + ')');
+    check(d.randomTick === false, 'D7 settings.is-randomly-ticking 渲染 (got ' + d.randomTick + ')');
+    check(d.correctTools !== null && d.correctTools.indexOf('minecraft:wooden_pickaxe') !== -1, 'D8 correct-tools 含 wooden_pickaxe (got ' + d.correctTools + ')');
+    // E. 选项卡切换 + state popup + 写回
+    const e1 = await evalJS(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      tabs.querySelector('[data-sf-subtab="settings"]').click();
+      return tabs.querySelector('[data-sf-subtabpanel="settings"]').classList.contains('active');
+    })()`);
+    check(e1, 'E1 点击「设置」→ 面板切换 active');
+    const e2 = await evalJS(`(function () {
+      var c = window.__ce180i.container;
+      var btn = c.querySelector('[data-sf-action="popup-edit"][data-sf-path="behavior.block.state"]');
+      if (btn) btn.click();
+      return !!btn;
+    })()`);
+    check(e2, 'E2 state popup 按钮存在 (behavior.block.state)');
+    check(await waitFor(`document.getElementById('ce-popup-modal') ? true : false`), 'E3 popup 弹窗打开');
+    const e4 = await evalJS(`(function () {
+      var m = document.getElementById('ce-popup-modal');
+      var sel = m.querySelector('select[data-sf-path="__popup__.auto-state"][data-sf-kind="field"]');
+      return sel ? sel.value : null;
+    })()`);
+    check(e4 === 'solid', 'E4 内联块 auto-state = solid (got ' + e4 + ')');
+    await evalJS(`(function () {
+      var m = document.getElementById('ce-popup-modal');
+      m.querySelector('[data-ce-popup="cancel"]').click();
+      return true;
+    })()`);
+    const e5 = await evalJS(`(function () {
+      var c = window.__ce180i.container;
+      var p = window.__ce180i.parsed;
+      var burnable = c.querySelector('input[data-sf-path="behavior.block.settings.burnable"]');
+      burnable.checked = true;
+      burnable.dispatchEvent(new Event('change', { bubbles: true }));
+      var yaml = window.CraftEngineInterpreter.generateYAML(p);
+      return {
+        burnable: yaml.indexOf('burnable: true') !== -1,
+        reaction: yaml.indexOf('push-reaction: NORMAL') !== -1,
+        snakeLeak: yaml.indexOf('push_reaction') !== -1,
+        randomLeak: yaml.indexOf('is_randomly_ticking') !== -1,
+      };
+    })()`);
+    check(e5.burnable, 'E5 写回保持 burnable: true (连字符)');
+    check(e5.reaction && !e5.snakeLeak, 'E6 写回保持 push-reaction, 无下划线泄漏');
+    check(!e5.randomLeak, 'E7 无 is_randomly_ticking 下划线泄漏');
 
     win.destroy();
   } catch (e) {

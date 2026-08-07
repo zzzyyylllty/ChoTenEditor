@@ -1276,23 +1276,50 @@
     f('against_block_tags', '可放置方块标签', 'Against Block Tags', 'lines'),
     f('blacklist', '黑名单', 'Blacklist', 'bool'),
   ];
-  var INLINE_BLOCK_SETTINGS = [
-    f('hardness', '硬度', 'Hardness', 'number'),
-    f('resistance', '抗性', 'Resistance', 'number'),
-    f('item', '物品', 'Item', 'text'),
-    f('map-color', '地图颜色', 'Map Color', 'number'),
-    f('tags', '标签', 'Tags', 'lines'),
-    f('sounds', '音效', 'Sounds', 'popup', { content: BLOCK_SOUND_OBJECT, label: l('音效', 'Sounds') }),
-  ];
-  var INLINE_BLOCK_FIELDS = [
-    f('settings', '设置', 'Settings', 'object', { fields: INLINE_BLOCK_SETTINGS, label: l('设置', 'Settings') }),
-    f('behavior', '行为', 'Behavior', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behavior') }),
-    f('loot', '掉落', 'Loot', 'object', { fields: LOOT_OBJECT_FIELDS, label: l('掉落', 'Loot') }),
-    f('state', '状态', 'State', 'popup', { content: { type: 'object', fields: blockAppearanceFields(true), label: l('状态', 'State') }, label: l('状态', 'State') }),
-  ];
+  // 内联方块 (block_item.block 内直接定义): 与 block section 同构的选项卡结构 (状态/设置/行为/掉落/自定义)
+  // 懒构建: 引用的字段表 (BLOCK_SETTINGS_FIELDS/BLOCK_LOOT_FIELDS/PROPERTY_TYPES/...) 在本文件后面定义
+  var INLINE_BLOCK_TABS = null;
+  function inlineBlockWidget() {
+    if (!INLINE_BLOCK_TABS) {
+      INLINE_BLOCK_TABS = {
+        type: 'tabs',
+        tabs: [
+          { key: 'state', label: l('状态', 'State'), fields: [
+            f('state', '单状态', 'State', 'popup', { content: { type: 'object', fields: blockAppearanceFields(true), label: l('单状态', 'State') }, label: l('单状态', 'State') }),
+            f('states', '多状态', 'States', 'popup', { content: { type: 'object', fields: [
+              f('id', '起始 ID', 'Start ID', 'number', { hint: l('固定内部 ID, 变体占用连续区间', 'Fixed internal ID; variants occupy a continuous range') }),
+              f('properties', '属性', 'Properties', 'mapOf', { valueType: { type: 'union', types: PROPERTY_TYPES, label: l('属性', 'Property') }, label: l('属性', 'Properties'), hint: l('属性类型与特殊名称 (axis/facing/waterlogged...) 见 Wiki', 'Property types & special names (axis/facing/waterlogged...) per Wiki') }),
+              f('appearances', '外观', 'Appearances', 'mapOf', { valueType: { type: 'object', fields: blockAppearanceFields(false), label: l('外观', 'Appearance') }, label: l('外观', 'Appearances'), hint: l('第一个外观为默认回退', 'First appearance is the default fallback') }),
+              f('variants', '变体映射', 'Variants', 'mapOf', { valueType: { type: 'object', fields: [
+                f('appearance', '外观', 'Appearance', 'text', { hint: l('对应 appearances 中的名称', 'A name from appearances') }),
+                f('settings', '设置覆盖', 'Settings Override', 'object', { fields: BLOCK_SETTINGS_FIELDS, label: l('设置覆盖', 'Settings Override') }),
+              ], label: l('变体', 'Variant') }, label: l('变体映射', 'Variants'), hint: l('键: 如 waterlogged=true,facing=north (未列出属性通配)', 'Key: e.g. waterlogged=true,facing=north (unlisted = wildcard)') }),
+              f('entity_renderer', '实体渲染器', 'Entity Renderer', 'union', ENTITY_RENDERER_UNION),
+              f('entity_culling', '实体剔除', 'Entity Culling', 'union', { noTypeKey: true, allowScalar: { type: 'bool' }, label: l('实体剔除', 'Entity Culling'), types: ENTITY_CULLING_TYPES }),
+            ], label: l('多状态', 'States') }, label: l('多状态', 'States') }),
+          ]},
+          { key: 'settings', label: l('设置', 'Settings'), fields: [
+            f('settings', '设置', 'Settings', 'object', { fields: BLOCK_SETTINGS_FIELDS, label: l('设置', 'Settings') }),
+          ]},
+          { key: 'behavior', label: l('行为', 'Behavior'), fields: [
+            f('behavior', '行为', 'Behavior', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('行为', 'Behavior') }),
+            f('behaviors', '组合行为', 'Behaviors', 'listOf', { itemType: { type: 'union', types: function () { return BLOCK_BEHAVIOR_TYPES; }, label: l('行为', 'Behavior') }, label: l('组合行为', 'Behaviors') }),
+          ]},
+          { key: 'loot', label: l('掉落', 'Loot'), fields: [
+            f('loot', '掉落', 'Loot', 'object', { fields: BLOCK_LOOT_FIELDS, label: l('掉落', 'Loot') }),
+          ]},
+          { key: 'custom', label: l('自定义', 'Custom'), fields: [
+            f('merges', '合并', 'Merges', 'kv'),
+            f('overrides', '覆盖', 'Overrides', 'kv'),
+          ]},
+        ],
+      };
+    }
+    return INLINE_BLOCK_TABS;
+  }
   var BLOCK_ITEM_FIELDS = [
-    f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: {
-      inline: { label: l('内联方块', 'Inline Block'), widget: { type: 'object', fields: INLINE_BLOCK_FIELDS } },
+    f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: function () {
+      return { inline: { label: l('内联方块', 'Inline Block'), widget: inlineBlockWidget() } };
     } }),
   ];
   var ITEM_BEHAVIOR_TYPES = {
@@ -1304,8 +1331,8 @@
     ground_block_item: { label: l('地面方块 (ground_block_item)', 'Ground Block Item'), fields: BLOCK_ITEM_FIELDS },
     liquid_collision_block_item: { label: l('液体碰撞方块 (liquid_collision_block_item)', 'Liquid Collision Block'), fields: [
       f('offset_y', '偏移 Y', 'Offset Y', 'number'),
-      f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: {
-        inline: { label: l('内联方块', 'Inline Block'), widget: { type: 'object', fields: INLINE_BLOCK_FIELDS } },
+      f('block', '方块', 'Block', 'union', { noTypeKey: true, allowScalar: { type: 'text', datalist: 'blocks' }, label: l('方块', 'Block'), types: function () {
+        return { inline: { label: l('内联方块', 'Inline Block'), widget: inlineBlockWidget() } };
       } }),
     ] },
     liquid_collision_furniture_item: { label: l('液体碰撞家具 (liquid_collision_furniture_item)', 'Liquid Collision Furniture'), fields: FURNITURE_ITEM_FIELDS.concat([

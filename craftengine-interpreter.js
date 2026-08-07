@@ -837,7 +837,7 @@
     var t = def.type;
     if (t === 'listOf') return [];
     if (t === 'mapOf') return {};
-    if (t === 'union' || t === 'object') return {};
+    if (t === 'union' || t === 'object' || t === 'tabs') return {};
     if (t === 'lines' || t === 'linesScalar') return [];
     if (t === 'kv' || t === 'kvRest') return {};
     if (t === 'bool') return false;
@@ -1779,7 +1779,7 @@
           }
           for (var j = 0; j < ks.length; j++) {
             var w2 = (types[ks[j]].widget || {}).type;
-            if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest' || w2 === 'union') return { key: ks[j], neg: false };
+            if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest' || w2 === 'union' || w2 === 'tabs') return { key: ks[j], neg: false };
           }
         }
         return { key: ks.length ? ks[0] : '', neg: false };
@@ -2597,7 +2597,7 @@
               // 目标为对象值 widget 且当前为单元素数组 → 解包 cur[0]
               var wt = td.widget.type;
               var listLike = wt === 'listOf' || wt === 'lines' || wt === 'linesScalar';
-              var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model';
+              var objLike = wt === 'object' || wt === 'union' || wt === 'mapOf' || wt === 'kv' || wt === 'kvRest' || wt === 'components' || wt === 'model' || wt === 'tabs';
               if (listLike && cur !== undefined && cur !== null) {
                 defVal = Array.isArray(cur) ? cur : [cur];
               } else if (objLike && Array.isArray(cur)) {
