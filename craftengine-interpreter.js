@@ -259,9 +259,11 @@
         for (var e = 0; e < entries.length; e++) {
           var ekey = entries[e];
           var edata = doc[key][ekey];
-          // 版本键分组 (equipments 等 root-map section): 组内装备展开为条目, 版本键只作分组标记
-          if (isRootMap && _sfVersionKeyRe.test(ekey) && edata !== null && typeof edata === 'object' &&
-              !Array.isArray(edata) && Object.keys(edata).length > 0) {
+          // 版本键分组 (equipments 等 root-map / items 等条目 section): 组内条目展开为条目, 版本键只作分组标记;
+          // 非 root-map section 要求组内键全部为 namespace:path 条目 (排除把物品字段直接写在版本键下的扁平写法)
+          if (_sfVersionKeyRe.test(ekey) && edata !== null && typeof edata === 'object' &&
+              !Array.isArray(edata) && Object.keys(edata).length > 0 &&
+              (isRootMap || (TYPE_SECTIONS[m[1]] && _sfVersionGroupChildrenAreEntries(edata)))) {
             var gkeys = Object.keys(edata);
             var shareC = { before: {}, inline: {}, afterKey: {} };
             for (var g = 0; g < gkeys.length; g++) {
@@ -794,6 +796,15 @@
       if (s.fields[i].custom === 'root-map') return true;
     }
     return false;
+  }
+  // 版本键值是否全部为 namespace:path 条目键 ($$<约束>#<id> 包裹真实条目, 如 items 文件写法)
+  function _sfVersionGroupChildrenAreEntries(gdata) {
+    var ks = Object.keys(gdata);
+    if (!ks.length) return false;
+    for (var i = 0; i < ks.length; i++) {
+      if (ks[i].indexOf(':') === -1) return false;
+    }
+    return true;
   }
   function _labelOf(field) {
     if (field === null || field === undefined) return '';
