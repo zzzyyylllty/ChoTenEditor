@@ -898,7 +898,7 @@
   }
 
   // ---- 布局: 两栏 (行) / 堆叠 ----
-  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1, popup: 1, tabs: 1 };
+  var _SF_STACK_TYPES = { textarea: 1, miniText: 1, lines: 1, linesScalar: 1, kv: 1, kvRest: 1, listOf: 1, mapOf: 1, union: 1, object: 1, wholeText: 1, kvWhole: 1, components: 1, model: 1, popup: 1, tabs: 1, events: 1 };
   function _sfIsStack(t) { return _SF_STACK_TYPES[t] === 1; }
 
   // ---- 控件 (无标签) ----
@@ -1660,6 +1660,7 @@
     if (t === 'model') return _sfModelHtml(def, path, value, opts);
     if (t === 'popup') return _sfPopupHtml(def, path, value, opts);
     if (t === 'tabs') return _sfTabsWidgetHtml(def, path, value, opts);
+    if (t === 'events') return _sfEventsWidgetHtml(def, path, value, opts);
     return _sfControl(def, path, value);
   }
   function _sfListHtml(def, path, value, opts) {
@@ -2047,6 +2048,51 @@
       html += '</details>';
     }
     return html;
+  }
+  // ---- 事件 widget (内联方块等嵌套位置): 与根级事件面板同机制, 状态存 _sfUidMap[uid].evKey, 局部重渲染 ----
+  function _sfEventsWidgetHtml(def, path, value, opts) {
+    var uid = (opts && opts.uid) || _sfUidAlloc(path, 'events', def, opts);
+    var rec = _sfUidMap[uid];
+    var evKey = (rec && rec.evKey) || '';
+    var evs = value;
+    var isArr = Array.isArray(evs);
+    var isMap = evs && typeof evs === 'object' && !Array.isArray(evs);
+    var html = '<div class="ce-sf-events" data-sf-kind="events" data-sf-path="' + _escHtml(path) + '" data-sf-uid="' + uid + '">';
+    if (evKey !== '') {
+      if (isArr) {
+        var iIdx = parseInt(evKey, 10);
+        if (!isNaN(iIdx) && evs[iIdx] !== undefined) {
+          return html + _eventsSubHtml(null, String(iIdx), evs[iIdx], true, path, uid) + '</div>';
+        }
+      } else if (isMap && evs[evKey] !== undefined) {
+        return html + _eventsSubHtml(null, evKey, evs[evKey], false, path, uid) + '</div>';
+      }
+    }
+    html += '<div class="ce-events-header">' +
+      '<span class="ce-events-title">' + _escHtml(_t('craftengine.eventsCount', { count: isArr ? evs.length : (isMap ? Object.keys(evs).length : 0) })) + '</span>' +
+      '<button type="button" class="cv-btn cv-btn-primary cv-btn-sm" data-sf-action="sf-event-add" data-sf-uid="' + uid + '">' + _escHtml(_t('craftengine.eventsAdd')) + '</button>' +
+      '</div>';
+    if (isArr && evs.length) {
+      for (var i = 0; i < evs.length; i++) {
+        var item = evs[i];
+        var label = item && typeof item === 'object' ? (item.on !== undefined ? (Array.isArray(item.on) ? item.on.join(', ') : String(item.on)) : String(i + 1)) : String(i + 1);
+        html += '<div class="ce-event-item">' +
+          '<span class="ce-event-name" data-sf-action="sf-event-open" data-sf-ev="' + i + '" data-sf-uid="' + uid + '">' + _escHtml(label) + '</span>' +
+          '<button type="button" class="cv-btn cv-btn-danger cv-btn-sm ce-event-del" data-sf-action="sf-event-del" data-sf-ev="' + i + '" data-sf-uid="' + uid + '">✕</button>' +
+          '</div>';
+      }
+    } else if (isMap && Object.keys(evs).length) {
+      var mk = Object.keys(evs);
+      for (var m = 0; m < mk.length; m++) {
+        html += '<div class="ce-event-item">' +
+          '<span class="ce-event-name" data-sf-action="sf-event-open" data-sf-ev="' + _escHtml(mk[m]) + '" data-sf-uid="' + uid + '">' + _escHtml(mk[m]) + '</span>' +
+          '<button type="button" class="cv-btn cv-btn-danger cv-btn-sm ce-event-del" data-sf-action="sf-event-del" data-sf-ev="' + _escHtml(mk[m]) + '" data-sf-uid="' + uid + '">✕</button>' +
+          '</div>';
+      }
+    } else {
+      html += '<div class="ce-events-empty">' + _escHtml(_t('craftengine.eventsEmpty')) + '</div>';
+    }
+    return html + '</div>';
   }
   // ---- 对象字段键名兼容: 官方中文文档/旧版文件用连字符 (push-reaction), 英文新版 wiki 用下划线 (push_reaction) ----
   // 检测对象内已有键的风格 (同键数下划线优先), 新建键沿用文件风格, 保证写回不破坏用户键名
@@ -2506,6 +2552,7 @@
     else if (rec.kind === 'components') html = _sfComponentsHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'model') html = _sfModelHtml(rec.def, rec.path, value, { uid: uid });
     else if (rec.kind === 'popup') html = _sfPopupHtml(rec.def, rec.path, value, { uid: uid });
+    else if (rec.kind === 'events') html = _sfEventsWidgetHtml(rec.def, rec.path, value, { uid: uid });
     else return;
     // html 含根节点, 必须替换节点本身 (innerHTML 会把新根嵌套进旧根, 每轮残留一层)
     wrap.outerHTML = html;
@@ -2531,6 +2578,13 @@
           panels[p].classList.toggle('active', panels[p].getAttribute('data-sf-subtabpanel') === key);
         }
       }
+      return;
+    }
+    if (action === 'sf-event-open' || action === 'sf-event-back') {
+      // 事件子页导航: 仅改视图状态, 不改数据
+      if (!rec || rec.kind !== 'events') return;
+      rec.evKey = (action === 'sf-event-back') ? null : (el.getAttribute('data-sf-ev') || '');
+      _sfRerender(uid, containerEl);
       return;
     }
     if (action === 'mini-edit') {
@@ -2742,6 +2796,16 @@
       if (!rec || rec.kind !== 'popup') return;
       var pep = el.getAttribute('data-sf-path') || rec.path;
       _sfOpenPopup(rec, pep, containerEl, entry, parsed, section, uid);
+      return;
+    }
+    if (action === 'sf-event-add') {
+      if (!rec || rec.kind !== 'events') return;
+      _showAddEventModal(containerEl, rec.path, uid);
+      return;
+    }
+    if (action === 'sf-event-del') {
+      if (!rec || rec.kind !== 'events') return;
+      _showEventDeleteConfirm(containerEl, el.getAttribute('data-sf-ev'), rec.path, uid);
       return;
     }
     if (action === 'comp-add') {
@@ -3443,10 +3507,10 @@
       if (isArr) {
         var iIdx = parseInt(evKey, 10);
         if (!isNaN(iIdx) && evs[iIdx] !== undefined) {
-          return _eventsSubHtml(entry, String(iIdx), evs[iIdx], true);
+          return _eventsSubHtml(entry, String(iIdx), evs[iIdx], true, 'events');
         }
       } else if (isMap && evs[evKey] !== undefined) {
-        return _eventsSubHtml(entry, evKey, evs[evKey], false);
+        return _eventsSubHtml(entry, evKey, evs[evKey], false, 'events');
       }
     }
     // 列表视图
@@ -3476,17 +3540,23 @@
       '<button class="cv-btn cv-btn-danger cv-btn-sm ce-event-del" data-action="ce-del-event" data-ce-ev="' + _escHtml(evKey) + '">✕</button>' +
       '</div>';
   }
-  function _eventsSubHtml(entry, evKey, item, isArr) {
-    var html = '<button class="cv-btn cv-btn-secondary cv-btn-sm ce-ev-back" data-action="ce-ev-back">' + _escHtml(_t('craftengine.eventsBack')) + '</button>';
+  function _eventsSubHtml(entry, evKey, item, isArr, basePath, uid) {
+    var isWidget = !!uid;
+    var base = basePath || 'events';
+    var html = '<button type="button" class="cv-btn cv-btn-secondary cv-btn-sm ce-ev-back"' +
+      (isWidget ? ' data-sf-action="sf-event-back" data-sf-uid="' + uid + '"' : ' data-action="ce-ev-back"') +
+      ' data-sf-ev="' + _escHtml(evKey) + '">' + _escHtml(_t('craftengine.eventsBack')) + '</button>';
     if (!_sfSchemas) {
-      html += _renderField(_t('craftengine.eventsTrigger'), _linesScalarField('events.' + evKey + '.on', _getNested(entry.data, 'events.' + evKey + '.on'), 'right_click（多行 = 多个触发器）'));
-      html += _renderField(_t('craftengine.eventsFunctions'), _jsonField('events.' + evKey + '.functions', _getNested(entry.data, 'events.' + evKey + '.functions'), null, '[{"type":"command","command":"say hi"}]'));
-      html += _renderField(_t('craftengine.jsonEditor'), _jsonField('events.' + evKey, item, ['on', 'functions']));
+      if (entry) {
+        html += _renderField(_t('craftengine.eventsTrigger'), _linesScalarField(base + '.' + evKey + '.on', _getNested(entry.data, base + '.' + evKey + '.on'), 'right_click（多行 = 多个触发器）'));
+        html += _renderField(_t('craftengine.eventsFunctions'), _jsonField(base + '.' + evKey + '.functions', _getNested(entry.data, base + '.' + evKey + '.functions'), null, '[{"type":"command","command":"say hi"}]'));
+        html += _renderField(_t('craftengine.jsonEditor'), _jsonField(base + '.' + evKey, item, ['on', 'functions']));
+      }
       return html;
     }
     _sfInit();
     if (isArr) {
-      var p = 'events.' + evKey;
+      var p = base + '.' + evKey;
       html += _sfFieldHtml({
         type: 'linesScalar', label: _sfL(_t('craftengine.eventsTrigger'), _t('craftengine.eventsTrigger')),
         hint: _t('craftengine.eventsTriggerHint'), placeholder: _t('craftengine.eventsTriggerPh'),
@@ -3501,7 +3571,7 @@
         type: 'listOf', label: _sfL(_t('craftengine.eventsContent'), _t('craftengine.eventsContent')),
         hint: _t('craftengine.eventsFunctionsHint'),
         itemType: { type: 'union', types: _sfSchemas.functions, allowScalar: { type: 'text', placeholder: _t('craftengine.eventsScalarPh') } },
-      }, 'events.' + evKey, item);
+      }, base + '.' + evKey, item);
     }
     html += _sfDatalistHtml();
     return html;
@@ -4136,8 +4206,9 @@
     modal.addEventListener('click', function (e) { if (e.target === this) modal.remove(); });
   }
 
-  // ---- 新建事件弹窗 ----
-  function _showAddEventModal(containerEl) {
+  // ---- 新建事件弹窗 (root: path='events'; 内联块 widget: path='behavior.block.events' + uid 局部重渲染) ----
+  function _showAddEventModal(containerEl, path, uid) {
+    path = path || 'events';
     var parsed = containerEl._ceParsed;
     var ui = containerEl._ceUi;
     var section = parsed.sections[ui.section];
@@ -4167,14 +4238,14 @@
     document.getElementById('ce-ev-confirm').addEventListener('click', function () {
       var name = document.getElementById('ce-ev-name').value.trim();
       if (!name) { showErr(_t('craftengine.eventsTriggerRequired')); return; }
-      var evs = entry.data.events;
+      var evs = _getNested(entry.data, path);
       if (!evs || typeof evs !== 'object') {
-        entry.data.events = [];
-        evs = entry.data.events;
-        if (entry._rawOrder.indexOf('events') === -1) entry._rawOrder.push('events');
+        evs = [];
+        _applyValue(entry, path, evs, parsed, section);
       }
       var triggers = name.split(/[\s,]+/).filter(function (t) { return t !== ''; });
       var onVal = triggers.length > 1 ? triggers : triggers[0];
+      var evKey;
       if (Array.isArray(evs)) {
         for (var i = 0; i < evs.length; i++) {
           var e2 = evs[i];
@@ -4183,23 +4254,31 @@
           }
         }
         evs.push({ on: onVal, functions: [] });
-        ui.evKey = String(evs.length - 1);
+        evKey = String(evs.length - 1);
       } else {
         if (evs[name] !== undefined) { showErr(_t('craftengine.eventExists', { name: name })); return; }
         evs[name] = [];
-        ui.evKey = name;
+        evKey = name;
       }
       _sfMarkDirty(parsed);
-      ui.formTab = 'events';
       modal.remove();
-      _ceRenderFn();
+      if (uid) {
+        var rec = _sfUidMap[uid];
+        if (rec) rec.evKey = evKey;
+        _sfRerender(uid, containerEl);
+      } else {
+        ui.evKey = evKey;
+        ui.formTab = 'events';
+        _ceRenderFn();
+      }
     });
     document.getElementById('ce-ev-cancel').addEventListener('click', function () { modal.remove(); });
     modal.addEventListener('click', function (e) { if (e.target === this) modal.remove(); });
   }
 
   // ---- 删除事件确认 ----
-  function _showEventDeleteConfirm(containerEl, evKey) {
+  function _showEventDeleteConfirm(containerEl, evKey, path, uid) {
+    path = path || 'events';
     var parsed = containerEl._ceParsed;
     var ui = containerEl._ceUi;
     var section = parsed.sections[ui.section];
@@ -4222,7 +4301,7 @@
     document.body.appendChild(modal);
 
     document.getElementById('ce-evd-confirm').addEventListener('click', function () {
-      var evs = entry.data.events;
+      var evs = _getNested(entry.data, path);
       if (Array.isArray(evs)) {
         var i = parseInt(evKey, 10);
         if (!isNaN(i) && i >= 0 && i < evs.length) evs.splice(i, 1);
@@ -4230,9 +4309,15 @@
         delete evs[evKey];
       }
       _sfMarkDirty(parsed);
-      ui.evKey = null;
       modal.remove();
-      _ceRenderFn();
+      if (uid) {
+        var rec = _sfUidMap[uid];
+        if (rec) rec.evKey = null;
+        _sfRerender(uid, containerEl);
+      } else {
+        ui.evKey = null;
+        _ceRenderFn();
+      }
     });
     document.getElementById('ce-evd-cancel').addEventListener('click', function () { modal.remove(); });
     modal.addEventListener('click', function (e) { if (e.target === this) modal.remove(); });

@@ -234,7 +234,7 @@ app.whenReady().then(async () => {
       };
     })()`);
     check(d.hasTabs, 'D2 内联方块渲染为选项卡 (behavior.block)');
-    check(d.btns.length >= 4 && d.btns.indexOf('设置') !== -1 && d.btns.indexOf('行为') !== -1, 'D3 选项卡含 状态/设置/行为/掉落/自定义 (got ' + d.btns.join(',') + ')');
+    check(d.btns.length >= 5 && d.btns.indexOf('设置') !== -1 && d.btns.indexOf('行为') !== -1 && d.btns.indexOf('事件') !== -1, 'D3 选项卡含 状态/设置/行为/掉落/事件 (got ' + d.btns.join(',') + ')');
     check(d.collapses === 0, 'D4 内联方块内无「其他字段」折叠 (got ' + d.collapses + ')');
     check(d.hardness === '10', 'D5 settings.hardness = 10 (got ' + d.hardness + ')');
     check(d.pushReaction === 'NORMAL', 'D6 settings.push-reaction = NORMAL (got ' + d.pushReaction + ')');
@@ -283,6 +283,91 @@ app.whenReady().then(async () => {
     check(e5.burnable, 'E5 写回保持 burnable: true (连字符)');
     check(e5.reaction && !e5.snakeLeak, 'E6 写回保持 push-reaction, 无下划线泄漏');
     check(!e5.randomLeak, 'E7 无 is_randomly_ticking 下划线泄漏');
+
+    // ---------- F. 内联方块事件编辑 (嵌套 events 面板) ----------
+    const f1 = await evalJS(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var btn = tabs.querySelector('[data-sf-subtab="events"]');
+      var exists = !!btn;
+      if (btn) btn.click();
+      var panel = tabs.querySelector('[data-sf-subtabpanel="events"]');
+      return { exists: exists, active: panel ? panel.classList.contains('active') : false };
+    })()`);
+    check(f1.exists, 'F1 内联方块含「事件」选项卡');
+    check(f1.active, 'F2 点击事件选项卡 → 面板 active');
+    const f2 = await evalJS(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var panel = tabs.querySelector('[data-sf-subtabpanel="events"]');
+      var w = panel.querySelector('[data-sf-kind="events"]');
+      var addBtn = panel.querySelector('[data-sf-action="sf-event-add"]');
+      if (addBtn) addBtn.click();
+      return { hasWidget: !!w, hasAdd: !!addBtn, empty: !!panel.querySelector('.ce-events-empty') };
+    })()`);
+    check(f2.hasWidget, 'F3 事件 widget 渲染 (data-sf-kind="events")');
+    check(f2.hasAdd, 'F4 事件添加按钮存在');
+    check(f2.empty, 'F5 初始为空态提示');
+    check(await waitFor(`document.getElementById('ce-ev-modal') ? true : false`), 'F6 新建事件弹窗打开');
+    await evalJS(`(function () {
+      document.getElementById('ce-ev-name').value = 'break_boom';
+      document.getElementById('ce-ev-confirm').click();
+      return true;
+    })()`);
+    check(await waitFor(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var w = tabs.querySelector('[data-sf-kind="events"]');
+      return w ? !!w.querySelector('textarea[data-sf-path="behavior.block.events.0.on"]') : false;
+    })()`), 'F7 新事件子编辑器渲染 (behavior.block.events.0.on)');
+    const f8 = await evalJS(`(function () {
+      var inp = window.__ce180i.container.querySelector('textarea[data-sf-path="behavior.block.events.0.on"]');
+      inp.value = 'right_click';
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      var p = window.__ce180i.parsed;
+      var entry = p.sections[0].entries[0];
+      var ev = entry.data.behavior.block.events[0];
+      var yaml = window.CraftEngineInterpreter.generateYAML(p);
+      return { on: ev && ev.on, yaml: yaml };
+    })()`);
+    check(f8.on === 'right_click', 'F8 事件 on 写回 entry.data.behavior.block.events[0].on (got ' + f8.on + ')');
+    check(f8.yaml.indexOf('right_click') !== -1, 'F9 YAML 序列化含事件触发器');
+    const f10 = await evalJS(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var back = tabs.querySelector('[data-sf-action="sf-event-back"]');
+      if (back) back.click();
+      return !!back;
+    })()`);
+    check(f10, 'F10 事件子编辑器返回按钮存在');
+    check(await waitFor(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var w = tabs.querySelector('[data-sf-kind="events"]');
+      return w ? w.querySelectorAll('.ce-event-item').length === 1 : false;
+    })()`), 'F11 返回列表视图显示 1 个事件');
+    const f12 = await evalJS(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var del = tabs.querySelector('[data-sf-action="sf-event-del"]');
+      if (del) del.click();
+      return !!del;
+    })()`);
+    check(f12, 'F12 删除按钮存在');
+    check(await waitFor(`document.getElementById('ce-evd-modal') ? true : false`), 'F13 删除确认弹窗');
+    await evalJS(`(function () {
+      document.getElementById('ce-evd-confirm').click();
+      return true;
+    })()`);
+    check(await waitFor(`(function () {
+      var tabs = window.__ce180i.container.querySelector('[data-sf-kind="tabs"][data-sf-path="behavior.block"]');
+      var w = tabs.querySelector('[data-sf-kind="events"]');
+      var p = window.__ce180i.parsed;
+      var evs = p.sections[0].entries[0].data.behavior.block.events;
+      return w && !!w.querySelector('.ce-events-empty') && Array.isArray(evs) && evs.length === 0;
+    })()`), 'F14 删除后为空态且数据为空数组');
+    const f15 = await evalJS(`(function () {
+      var p = window.__ce180i.parsed;
+      var entry = p.sections[0].entries[0];
+      var yaml = window.CraftEngineInterpreter.generateYAML(p);
+      var evs = entry.data.behavior.block.events;
+      return { evs: evs, yaml: yaml };
+    })()`);
+    check(f15.evs !== undefined && Array.isArray(f15.evs) && f15.evs.length === 0, 'F15 删除后 events 仍为数组 (got ' + JSON.stringify(f15.evs) + ')');
 
     win.destroy();
   } catch (e) {

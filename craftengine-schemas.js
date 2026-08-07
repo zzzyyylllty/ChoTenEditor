@@ -1308,7 +1308,8 @@
           { key: 'loot', label: l('掉落', 'Loot'), fields: [
             f('loot', '掉落', 'Loot', 'object', { fields: BLOCK_LOOT_FIELDS, label: l('掉落', 'Loot') }),
           ]},
-          { key: 'custom', label: l('自定义', 'Custom'), fields: [
+          { key: 'events', label: l('事件', 'Events'), fields: [
+            f('events', '事件', 'Events', 'events', { label: l('事件', 'Events') }),
             f('merges', '合并', 'Merges', 'kv'),
             f('overrides', '覆盖', 'Overrides', 'kv'),
           ]},
