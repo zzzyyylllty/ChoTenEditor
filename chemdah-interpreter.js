@@ -329,6 +329,13 @@ window.ChemdahInterpreter = (() => {
     const { options, dialogues } = parsed;
     const viewMode = containerEl._cvViewMode || 'card';
 
+    // 卡片展开状态: 重渲染 (添加选项等操作) 后保留, 避免所有对话恢复折叠
+    if (!containerEl._cvOpenCards) containerEl._cvOpenCards = new Set();
+    else {
+      const cvNames = new Set(dialogues.map(d => d.name));
+      containerEl._cvOpenCards.forEach(n => { if (!cvNames.has(n)) containerEl._cvOpenCards.delete(n); });
+    }
+
     let html = '<div class="cv-container">';
 
     // === 左侧主内容区 ===
@@ -351,7 +358,7 @@ window.ChemdahInterpreter = (() => {
         html += '<div class="cv-empty">' + I18N.t('chemdah.noDialogues') + '</div>';
       } else {
         for (const d of dialogues) {
-          html += _renderDialogueCard(d);
+          html += _renderDialogueCard(d, containerEl._cvOpenCards.has(d.name));
         }
       }
       html += '</div>'; // cv-dialogue-list
@@ -455,7 +462,7 @@ window.ChemdahInterpreter = (() => {
     return html;
   }
 
-  function _renderDialogueCard(d) {
+  function _renderDialogueCard(d, isOpen) {
     const isSwitch = d.type === 'switch';
     const typeLabel = isSwitch ? I18N.t('chemdah.switch') : I18N.t('chemdah.dialogue');
     const typeClass = isSwitch ? 'cv-type-switch' : 'cv-type-dialogue';
@@ -470,7 +477,7 @@ window.ChemdahInterpreter = (() => {
       preview = npcFirst || I18N.t('chemdah.optionCount', {count: optCount});
     }
 
-    let html = `<div class="cv-dialogue-card collapsed" data-dialogue="${_escHtml(d.name)}">`;
+    let html = `<div class="cv-dialogue-card${isOpen ? ' expanded' : ' collapsed'}" data-dialogue="${_escHtml(d.name)}">`;
     html += `<div class="cv-dialogue-header">
       <span class="cv-header-toggle-area" data-action="toggle-card">
         <span class="cv-toggle-arrow">▶</span>
@@ -684,6 +691,11 @@ window.ChemdahInterpreter = (() => {
           container.querySelectorAll('.cv-sidebar-item').forEach(el => {
             el.classList.toggle('active', el.dataset.sidebarDialogue === cardName && isCollapsed);
           });
+          // 记录展开状态, 重渲染后恢复
+          if (container._cvOpenCards && cardName) {
+            if (isCollapsed) container._cvOpenCards.add(cardName);
+            else container._cvOpenCards.delete(cardName);
+          }
           break;
         }
 
@@ -695,6 +707,7 @@ window.ChemdahInterpreter = (() => {
           if (targetCard) {
             targetCard.classList.remove('collapsed');
             targetCard.classList.add('expanded');
+            if (container._cvOpenCards && targetName) container._cvOpenCards.add(targetName);
             targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             container.querySelectorAll('.cv-sidebar-item').forEach(el => {
               el.classList.toggle('active', el.dataset.sidebarDialogue === targetName);
@@ -905,6 +918,11 @@ window.ChemdahInterpreter = (() => {
           const d = parsed.dialogues.find(d => d.name === oldName);
           if (d) {
             d.name = newName;
+            // 展开状态随重命名转移
+            if (container._cvOpenCards && container._cvOpenCards.has(oldName)) {
+              container._cvOpenCards.delete(oldName);
+              container._cvOpenCards.add(newName);
+            }
             input.closest('[data-dialogue]').dataset.dialogue = newName;
             // 更新所有关联的 data-dialogue 属性
             const card = input.closest('.cv-dialogue-card');
@@ -913,6 +931,7 @@ window.ChemdahInterpreter = (() => {
                 el.dataset.dialogue = newName;
               }
             });
+            card.dataset.dialogue = newName;
             // 更新侧栏名称
             const sidebarItem = container.querySelector(`.cv-sidebar-item[data-sidebar-dialogue="${_escHtml(oldName)}"]`);
             if (sidebarItem) {
@@ -1597,6 +1616,7 @@ window.ChemdahInterpreter = (() => {
 
       function navigateToDialogue(nid) {
         containerEl._cvViewMode = 'card';
+        if (containerEl._cvOpenCards) containerEl._cvOpenCards.add(nid);
         if (window._cvRenderFn) window._cvRenderFn();
         requestAnimationFrame(function () {
           var card = containerEl.querySelector('.cv-dialogue-card[data-dialogue="' + _escHtml(nid) + '"]');
@@ -2261,6 +2281,13 @@ window.ChemdahInterpreter = (() => {
       return;
     }
 
+    // 卡片展开状态: 重渲染后保留
+    if (!containerEl._qvOpenCards) containerEl._qvOpenCards = new Set();
+    else {
+      const qvIds = new Set(parsed.quests.map(q => q.id));
+      containerEl._qvOpenCards.forEach(id => { if (!qvIds.has(id)) containerEl._qvOpenCards.delete(id); });
+    }
+
     let html = '<div class="cv-container cv-quest-container">';
 
     // === 左侧主内容区 ===
@@ -2274,7 +2301,7 @@ window.ChemdahInterpreter = (() => {
       html += '<div class="cv-empty">' + I18N.t('chemdah.noQuests') + '</div>';
     } else {
       for (let qi = 0; qi < parsed.quests.length; qi++) {
-        html += _renderQuestCard(parsed.quests[qi], qi);
+        html += _renderQuestCard(parsed.quests[qi], qi, containerEl._qvOpenCards.has(parsed.quests[qi].id));
       }
     }
 
@@ -2309,13 +2336,13 @@ window.ChemdahInterpreter = (() => {
     _bindQuestEvents(containerEl, parsed);
   }
 
-  function _renderQuestCard(quest, qi) {
+  function _renderQuestCard(quest, qi, isOpen) {
     const label = quest.meta.name || quest.id;
     const typeLabel = quest.meta.type || 'L1';
     // class 只允许字母数字下划线连字符, 防止 meta.type 注入 HTML
     const typeCls = String(typeLabel).replace(/[^\w-]/g, '') || 'L1';
 
-    let html = `<div class="qv-card collapsed" data-q-index="${qi}">`;
+    let html = `<div class="qv-card${isOpen ? '' : ' collapsed'}" data-q-index="${qi}">`;
 
     // === 头部 ===
     html += `<div class="qv-header">
@@ -3684,6 +3711,12 @@ window.ChemdahInterpreter = (() => {
           if (!card) break;
           card.classList.toggle('collapsed');
           playSound('collapse');
+          // 记录展开状态, 重渲染后恢复
+          const quest = parsed.quests[qi];
+          if (quest && container._qvOpenCards) {
+            if (card.classList.contains('collapsed')) container._qvOpenCards.delete(quest.id);
+            else container._qvOpenCards.add(quest.id);
+          }
           // 更新导航高亮
           container.querySelectorAll('.cv-sidebar-item').forEach(el => {
             el.classList.toggle('active', el.dataset.qIndex === String(qi) && !card.classList.contains('collapsed'));
@@ -3705,6 +3738,8 @@ window.ChemdahInterpreter = (() => {
           const card = container.querySelector(`.qv-card[data-q-index="${qi}"]`);
           if (card) {
             card.classList.remove('collapsed');
+            const quest = parsed.quests[qi];
+            if (quest && container._qvOpenCards) container._qvOpenCards.add(quest.id);
             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
             container.querySelectorAll('.cv-sidebar-item').forEach(el => {
               el.classList.toggle('active', el.dataset.qIndex === String(qi));
