@@ -50,6 +50,7 @@ let checkboxMarkOn;
 let checkboxMarkOff;
 let hidePremiumHints;
 let hideVersionHints;
+let ceElementPicker;
 let itemKeyStyle;
 let uiFont;
 let editorFontFamily;
@@ -152,6 +153,7 @@ const defaultConfig = {
   checkboxMarkOff: false,
   hidePremiumHints: false,
   hideVersionHints: false,
+  ceElementPicker: true,
   blockFontSize: '11',
   categoryColors: {
     '实体操作': '#c06262',
@@ -418,6 +420,7 @@ function initializeDOMElements() {
   checkboxMarkOff = document.getElementById('checkbox-mark-off');
   hidePremiumHints = document.getElementById('hide-premium-hints');
   hideVersionHints = document.getElementById('hide-version-hints');
+  ceElementPicker = document.getElementById('ce-element-picker');
 
   // AI 设置
   aiEndpoint = document.getElementById('ai-endpoint');
@@ -928,6 +931,12 @@ function applyVersionHint(config) {
   document.body.classList.toggle('ce-hide-version-hints', config.hideVersionHints === true);
 }
 
+// CE 元素预载开关 (body class: ce-element-picker)
+// 勾选后预载工程 CE 元素并在输入框右侧显示快速填入按钮; 默认开启
+function applyElementPicker(config) {
+  document.body.classList.toggle('ce-element-picker', config.ceElementPicker !== false);
+}
+
 // 字体名 → CSS font-family (含空格/引号的单 family 自动加引号; 已有 CSS 列表保持原样)
 function normalizeFontFamily(name) {
   name = (name || '').trim();
@@ -1163,6 +1172,7 @@ async function saveSettings() {
     checkboxMarkOff: checkboxMarkOff ? checkboxMarkOff.checked : defaultConfig.checkboxMarkOff,
     hidePremiumHints: hidePremiumHints ? hidePremiumHints.checked : defaultConfig.hidePremiumHints,
     hideVersionHints: hideVersionHints ? hideVersionHints.checked : defaultConfig.hideVersionHints,
+    ceElementPicker: ceElementPicker ? ceElementPicker.checked : defaultConfig.ceElementPicker,
     itemKeyStyle: itemKeyStyle ? itemKeyStyle.value : defaultConfig.itemKeyStyle,
     prewarm: {
       files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
@@ -1243,6 +1253,7 @@ async function saveSettings() {
   applyCheckboxMarks(config);
   applyPremiumHint(config);
   applyVersionHint(config);
+  applyElementPicker(config);
   _settingsDirty = false;
   showNotification(I18N.t('settings.saved'), 'success');
 }
@@ -1460,6 +1471,8 @@ function loadSettings() {
   applyPremiumHint(config);
   if (hideVersionHints) hideVersionHints.checked = config.hideVersionHints === true;
   applyVersionHint(config);
+  if (ceElementPicker) ceElementPicker.checked = config.ceElementPicker !== false;
+  applyElementPicker(config);
   if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';
 
   // 启动预热设置

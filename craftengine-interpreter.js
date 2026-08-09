@@ -787,6 +787,151 @@
       _sfDatalistMap.blocks = vi;
     }
   }
+
+  // ---- CE 元素预载扫描 (picker 数据源) ----
+  // 扫描工程 configuration/<section> 目录收集条目键 (items/blocks/furniture/categories/templates),
+  // 合并进 _sfDatalistMap (items/blocks 与 vanilla 去重合并, 其余直接存储); 结果按 configuration 目录缓存
+  var _CE_ELEM_SECTIONS = { items: 1, blocks: 1, furniture: 1, categories: 1, templates: 1 };
+  var _ceElemCache = Object.create(null); // configDir -> { state: 'loading'|'done', data: {sec:[keys]} }
+  var _ceElemListeners = [];
+  function _ceElemConfigDir(filePath) {
+    var parts = String(filePath || '').replace(/\\/g, '/').split('/');
+    for (var i = parts.length - 2; i >= 1; i--) {
+      if (parts[i] === 'configuration') return parts.slice(0, i + 1).join('/');
+    }
+    return null;
+  }
+  function _ceElemGet(configDir) {
+    var rec = _ceElemCache[configDir];
+    return rec && rec.state === 'done' ? rec.data : null;
+  }
+  function _ceElemEnabled() {
+    // 设置开关 (默认开启): body 有 ce-element-picker 类才启用
+    return typeof document === 'undefined' || !document.body || !document.body.classList ||
+      document.body.classList.contains('ce-element-picker');
+  }
+  function _ceElemOnDone(cb) {
+    if (typeof cb === 'function') _ceElemListeners.push(cb);
+  }
+  function _ceElemFire(rec) {
+    if (!rec) return;
+    var ls = _ceElemListeners;
+    _ceElemListeners = [];
+    for (var i = 0; i < ls.length; i++) {
+      try { ls[i](rec.data); } catch (e) {}
+    }
+  }
+  function _ceElemFileKeys(content) {
+    var doc;
+    try { doc = YAML.load(content); } catch (e) { return []; }
+    if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) return [];
+    var keys = [];
+    Object.keys(doc).forEach(function (k) {
+      var m = k.match(SECTION_BASE_RE);
+      if (!m || !_CE_ELEM_SECTIONS[m[1]]) return;
+      var v = doc[k];
+      if (v === null || typeof v !== 'object' || Array.isArray(v)) return;
+      Object.keys(v).forEach(function (ek) {
+        if (_sfVersionKeyRe.test(ek) && v[ek] !== null && typeof v[ek] === 'object' && !Array.isArray(v[ek])) {
+          // 版本键分组 ($$...): 展开组内条目
+          Object.keys(v[ek]).forEach(function (gk) { if (keys.indexOf(gk) === -1) keys.push(gk); });
+        } else if (keys.indexOf(ek) === -1) {
+          keys.push(ek);
+        }
+      });
+    });
+    return keys;
+  }
+  function _ceElemMerge(data) {
+    if (!data) return;
+    _sfInit();
+    Object.keys(_CE_ELEM_SECTIONS).forEach(function (sec) {
+      var arr = data[sec] || [];
+      if (sec === 'items' || sec === 'blocks') {
+        var existing = _sfDatalistMap[sec] || [];
+        var seen = {}, out = [];
+        function push(v) { v = String(v); if (v && !seen[v]) { seen[v] = 1; out.push(v); } }
+        arr.forEach(push);
+        existing.forEach(push);
+        _sfDatalistMap[sec] = out;
+      } else {
+        _sfDatalistMap[sec] = arr.slice();
+      }
+      _ceElemRefreshDatalist(sec);
+    });
+  }
+  function _ceElemRefreshDatalist(sec) {
+    if (!ROOT.document) return;
+    var el = ROOT.document.getElementById('ce-dl-' + sec);
+    if (!el) return;
+    var arr = _sfDatalistMap[sec] || [];
+    var html = '';
+    for (var i = 0; i < arr.length; i++) html += '<option value="' + _escHtml(String(arr[i])) + '">';
+    el.innerHTML = html;
+  }
+  function _ceElemStart(configDir) {
+    if (_ceElemCache[configDir]) return;
+    var rec = { state: 'loading', data: null };
+    _ceElemCache[configDir] = rec;
+    var api = ROOT.electronAPI;
+    if (!api || !api.readdir || !api.readFile) {
+      rec.state = 'done';
+      _ceElemFire(rec);
+      return;
+    }
+    var secs = Object.keys(_CE_ELEM_SECTIONS);
+    var data = {};
+    var pending = secs.length;
+    function secDone(sec, keys) {
+      data[sec] = keys;
+      pending--;
+      if (pending === 0) {
+        rec.data = data;
+        rec.state = 'done';
+        _ceElemMerge(data);
+        _ceElemFire(rec);
+      }
+    }
+    secs.forEach(function (sec) {
+      api.readdir(configDir + '/' + sec).then(function (res) {
+        if (!res || !res.success) { secDone(sec, []); return; }
+        var files = res.files.filter(function (f) { return !f.isDirectory && /\.ya?ml$/i.test(f.name); });
+        var keys = [];
+        var fi = 0;
+        (function next() {
+          if (fi >= files.length) { secDone(sec, keys); return; }
+          var fp = files[fi++].path;
+          api.readFile(fp).then(function (rr) {
+            if (rr && rr.success && rr.content) {
+              var ks = _ceElemFileKeys(rr.content);
+              for (var i = 0; i < ks.length; i++) if (keys.indexOf(ks[i]) === -1) keys.push(ks[i]);
+            }
+            next();
+          }).catch(next);
+        })();
+      }).catch(function () { secDone(sec, []); });
+    });
+  }
+  function _ceElemScan(filePath) {
+    _sfInit();
+    if (!_ceElemEnabled()) return;
+    var configDir = _ceElemConfigDir(filePath);
+    if (!configDir) {
+      // 文件不在 configuration 目录内: 尝试经工程根回溯 (插件根)
+      resolveProjectRoot(filePath).then(function (r) {
+        if (r && r.found && r.pluginRoot) {
+          _ceElemStart(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
+        }
+      });
+      return;
+    }
+    _ceElemStart(configDir);
+  }
+  function _ceElemRescan(configDir) {
+    delete _ceElemCache[configDir];
+    _ceElemStart(configDir);
+  }
+
   // section 的 schema 是否 root-map (条目键 = 直接子键, 版本键可作分组)
   function _sfSectionIsRootMap(base) {
     _sfInit();
@@ -1007,20 +1152,29 @@
     if (t === 'number') return _sfInput(def, path, value, 'number');
     if (t === 'bool') return _sfCheckbox(def, path, value);
     if (t === 'select') return _sfSelect(def, path, value);
-    if (t === 'textarea' || t === 'miniText') return _sfTextarea(def, path, value, t === 'miniText' ? 2 : 0);
+    if (t === 'textarea' || t === 'miniText') return _sfPickWrap(def, path, _sfTextarea(def, path, value, t === 'miniText' ? 2 : 0));
     if (t === 'lines') {
       var lh = _sfLines(def, path, value, false);
-      return def.mini ? _sfMiniWrap(lh) : lh;
+      return _sfPickWrap(def, path, def.mini ? _sfMiniWrap(lh) : lh);
     }
     if (t === 'linesScalar') {
       var ls = _sfLines(def, path, value, true);
-      return def.mini ? _sfMiniWrap(ls) : ls;
+      return _sfPickWrap(def, path, def.mini ? _sfMiniWrap(ls) : ls);
     }
     if (t === 'kv' || t === 'kvRest') return _sfKvTextarea(def, path, value);
-    if (t === 'scalar') return _sfScalarInput(def, path, value);
-    if (t === 'string-scalar') return _sfScalarInput(def, path, value, 'string-scalar');
+    if (t === 'scalar') return _sfPickWrap(def, path, _sfScalarInput(def, path, value));
+    if (t === 'string-scalar') return _sfPickWrap(def, path, _sfScalarInput(def, path, value, 'string-scalar'));
     var html = _sfInput(def, path, value, 'text');
-    return def.mini ? _sfMiniWrap(html) : html;
+    return _sfPickWrap(def, path, def.mini ? _sfMiniWrap(html) : html);
+  }
+  // CE 元素 picker: 带 datalist/picker 标记的文本类输入框右侧加 ▾ 按钮 (设置关闭时不渲染)
+  function _sfPickWrap(def, path, html) {
+    var name = def.picker || def.datalist;
+    if (!name || typeof document === 'undefined') return html;
+    if (document.body && document.body.classList && !document.body.classList.contains('ce-element-picker')) return html;
+    return '<span class="ce-sf-pick-wrap">' + html +
+      '<button type="button" class="ce-sf-pick-btn" data-sf-action="picker-open" data-sf-picker="' + _escHtml(name) + '" data-sf-path="' + _escHtml(path) + '" data-tip="' + _escHtml(_t('craftengine.pickerBtn')) + '" title="' + _escHtml(_t('craftengine.pickerBtn')) + '">▾</button>' +
+      '</span>';
   }
   // MiniMessage 快捷按钮: 输入框右侧留出小段距离放置铅笔按钮
   function _sfMiniWrap(html) {
@@ -1039,6 +1193,139 @@
       html += '</datalist>';
     });
     return html;
+  }
+
+  // ---- CE 元素 picker 下拉面板 ----
+  var _cePickerOpen = null;
+  var _cePickerBound = false;
+  function _sfClosePicker() {
+    var p = _cePickerOpen;
+    _cePickerOpen = null;
+    if (p && p.panel && p.panel.parentNode) p.panel.parentNode.removeChild(p.panel);
+  }
+  function _sfPickerTarget(btn) {
+    var wrap = btn.closest ? btn.closest('.ce-sf-pick-wrap') : null;
+    return wrap ? wrap.querySelector('input.ce-input, textarea.ce-input') : null;
+  }
+  function _sfPickerItems(name) {
+    _sfInit();
+    return (_sfDatalistMap[name] || []).slice();
+  }
+  function _sfPickerRender(panel, st, query) {
+    var q = String(query || '').trim().toLowerCase();
+    var items = st.list.filter(function (v) { return !q || String(v).toLowerCase().indexOf(q) !== -1; });
+    var cfg = _ceElemConfigDir(st.file);
+    var rec = cfg ? _ceElemCache[cfg] : null;
+    var body;
+    if (!st.list.length && rec && rec.state === 'loading') {
+      body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerScanning')) + '</div>';
+    } else if (!st.list.length) {
+      body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerEmpty')) + '</div>';
+    } else if (!items.length) {
+      body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerNoMatch')) + '</div>';
+    } else {
+      body = items.map(function (v) {
+        return '<div class="ce-picker-item" data-ce-picker-value="' + _escHtml(String(v)) + '" title="' + _escHtml(String(v)) + '">' + _escHtml(String(v)) + '</div>';
+      }).join('');
+    }
+    var foot = '<span>' + _escHtml(_t('craftengine.pickerCount', { n: items.length })) + '</span>';
+    if (cfg) {
+      foot += '<button type="button" class="ce-picker-rescan" data-ce-picker-action="rescan" title="' + _escHtml(_t('craftengine.pickerRescan')) + '">⟳</button>';
+    }
+    var listEl = panel.querySelector('.ce-picker-list');
+    if (listEl) listEl.innerHTML = body;
+    var footEl = panel.querySelector('.ce-picker-foot');
+    if (footEl) footEl.innerHTML = foot;
+  }
+  function _sfPickerRefreshOnDone() {
+    var p = _cePickerOpen;
+    if (!p || !p.panel || !p.panel.isConnected) return;
+    p.list = _sfPickerItems(p.name);
+    var sb = p.panel.querySelector('.ce-picker-search');
+    _sfPickerRender(p.panel, p, sb ? sb.value : '');
+  }
+  function _sfPickerFill(target, val) {
+    if (!target) return;
+    var isLines = target.classList.contains('ce-lines-field');
+    if (isLines) {
+      // 多行输入: 追加一行 (去重), 面板保持打开可连续添加
+      var lines = target.value ? target.value.split('\n') : [];
+      if (lines.indexOf(val) === -1) {
+        lines.push(val);
+        target.value = lines.join('\n');
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      target.value = val;
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      _sfClosePicker();
+    }
+  }
+  function _sfPickerRescan(panel) {
+    var st = _cePickerOpen;
+    if (!st) return;
+    var cfg = _ceElemConfigDir(st.file);
+    if (!cfg) return;
+    _ceElemRescan(cfg);
+    var emptyEl = panel.querySelector('.ce-picker-empty');
+    if (emptyEl) emptyEl.textContent = _t('craftengine.pickerScanning');
+  }
+  function _sfPickerBindGlobal() {
+    if (_cePickerBound || !ROOT.document) return;
+    _cePickerBound = true;
+    var doc = ROOT.document;
+    doc.addEventListener('mousedown', function (e) {
+      if (!_cePickerOpen) return;
+      var t = e.target;
+      if (t && t.closest && t.closest('.ce-picker-panel')) return;
+      if (t && t.closest && t.closest('.ce-sf-pick-btn')) return;
+      _sfClosePicker();
+    }, true);
+    doc.addEventListener('keydown', function (e) {
+      if (_cePickerOpen && e.key === 'Escape') _sfClosePicker();
+    }, true);
+    doc.addEventListener('scroll', function () { _sfClosePicker(); }, true);
+    if (doc.defaultView) doc.defaultView.addEventListener('resize', _sfClosePicker);
+  }
+  function _sfOpenPicker(btn, name, containerEl) {
+    var doc = ROOT.document;
+    if (!doc || !doc.body) return;
+    if (_cePickerOpen && _cePickerOpen.btn === btn) { _sfClosePicker(); return; }
+    var target = _sfPickerTarget(btn);
+    if (!target) return;
+    _sfClosePicker();
+    _sfInit();
+    _sfPickerBindGlobal();
+    var panel = doc.createElement('div');
+    panel.className = 'ce-picker-panel';
+    panel.setAttribute('data-ce-picker', name);
+    panel.innerHTML = '<div class="ce-picker-head"><input class="ce-picker-search" placeholder="' +
+      _escHtml(_t('craftengine.pickerSearch')) + '" spellcheck="false"></div>' +
+      '<div class="ce-picker-list"></div><div class="ce-picker-foot"></div>';
+    doc.body.appendChild(panel);
+    _cePickerOpen = { panel: panel, btn: btn, target: target, name: name, list: _sfPickerItems(name), file: containerEl._ceFilePath };
+    _sfPickerRender(panel, _cePickerOpen, '');
+    var rect = btn.getBoundingClientRect();
+    var top = rect.bottom + 4;
+    var maxTop = doc.defaultView.innerHeight - panel.offsetHeight - 8;
+    if (top > maxTop) top = Math.max(8, maxTop);
+    panel.style.top = Math.round(top) + 'px';
+    panel.style.right = Math.round(Math.max(8, doc.defaultView.innerWidth - rect.right)) + 'px';
+    var sb = panel.querySelector('.ce-picker-search');
+    if (sb) {
+      sb.focus();
+      sb.addEventListener('input', function () { _sfPickerRender(panel, _cePickerOpen, sb.value); });
+    }
+    panel.addEventListener('click', function (e) {
+      var it = e.target.closest ? e.target.closest('[data-ce-picker-value], [data-ce-picker-action]') : null;
+      if (!it) return;
+      if (it.getAttribute('data-ce-picker-action') === 'rescan') { _sfPickerRescan(panel); return; }
+      var val = it.getAttribute('data-ce-picker-value');
+      if (val == null) return;
+      var cur = _cePickerOpen;
+      _sfPickerFill(cur && cur.panel === panel ? cur.target : null, val);
+    });
+    _ceElemOnDone(_sfPickerRefreshOnDone);
   }
   // 容器类字段标签: object (内含子字段) 作为分类标题加大加深, 与子字段区分 (如 INSERT LORE / LEGACY MODEL)
   // 仅 object; listOf/union 等数据容器不算分类, 避免 INSERT LORE 内部的 INSERT 列表标签也被加大
@@ -2559,6 +2846,7 @@
   function _sfRerender(uid, containerEl) {
     var rec = _sfUidMap[uid];
     if (!rec || !containerEl || !containerEl.querySelectorAll) return;
+    _sfClosePicker();
     var wraps = containerEl.querySelectorAll('[data-sf-uid="' + uid + '"]');
     if (!wraps.length) return;
     var wrap = wraps[0];
@@ -2632,6 +2920,13 @@
       var spLabel = el.getAttribute('data-sf-label') || '';
       var spDef = (spFtype || spLabel) ? { type: spFtype || 'text', label: spLabel } : null;
       _sfOpenSpecPopup(spDef, spPath, _sfUidOf(el), entry, parsed, section, containerEl);
+      return;
+    }
+    if (action === 'picker-open') {
+      // CE 元素快速填入面板: 不修改数据, 填入由 input change 事件负责
+      var pkName = el.getAttribute('data-sf-picker') || '';
+      if (!pkName) return;
+      _sfOpenPicker(el, pkName, containerEl);
       return;
     }
     _sfMarkDirty(parsed); // 所有 schema 动作都会修改数据
@@ -3604,6 +3899,7 @@
     var parsed = containerEl._ceParsed;
     var ui = containerEl._ceUi;
     if (!parsed) return;
+    _sfClosePicker(); // 重渲染会替换输入框, 关闭可能指向旧 DOM 的 picker 面板
 
     // 全量重建会重置 .ce-entry-scroll 滚动位置, 选中远处条目后视口会跳回顶部
     var prevScroll = 0;
@@ -4373,6 +4669,7 @@
     _sfLastParsed = parsed;
     containerEl._ceParsed = parsed;
     containerEl._ceFilePath = filePath;
+    _ceElemScan(filePath);
     if (!containerEl._ceUi) containerEl._ceUi = { section: 0, entry: 0 };
     ROOT._ceRenderFn = function () { _renderFromParsed(containerEl); };
     _bindEvents(containerEl);
@@ -4391,5 +4688,14 @@
     render: render,
     generateYAML: generateYAML,
     syncToSource: syncToSource,
+  };
+  ROOT._ceElem = {
+    scan: _ceElemScan,
+    rescan: _ceElemRescan,
+    get: _ceElemGet,
+    configDir: _ceElemConfigDir,
+    enabled: _ceElemEnabled,
+    onDone: _ceElemOnDone,
+    fileKeys: _ceElemFileKeys,
   };
 })();
