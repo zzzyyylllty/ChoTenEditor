@@ -794,12 +794,41 @@
   var _CE_ELEM_SECTIONS = { items: 1, blocks: 1, furniture: 1, categories: 1, templates: 1 };
   var _ceElemCache = Object.create(null); // configDir -> { state: 'loading'|'done', data: {sec:[keys]} }
   var _ceElemListeners = [];
+  // 同步: 文件路径中显式含 configuration 段 (标准布局)
   function _ceElemConfigDir(filePath) {
     var parts = String(filePath || '').replace(/\\/g, '/').split('/');
     for (var i = parts.length - 2; i >= 1; i--) {
       if (parts[i] === 'configuration') return parts.slice(0, i + 1).join('/');
     }
     return null;
+  }
+  // 异步: 配置目录名可自定义 (如"工程内容"), 从文件所在目录向上探测,
+  // 第一个含 section 子目录 (items/blocks/categories/...) 或根下散落 section 单文件
+  // (categories.yml 等, 兼容单文件布局) 的目录即配置目录
+  function _ceElemLocate(filePath) {
+    var cfg = _ceElemConfigDir(filePath);
+    if (cfg) return Promise.resolve(cfg);
+    var api = ROOT.electronAPI;
+    if (!api || !api.readdir) return Promise.resolve(null);
+    var parts = String(filePath || '').replace(/\\/g, '/').split('/');
+    if (parts.length < 3) return Promise.resolve(null);
+    return _ceElemProbeUp(parts.slice(0, -1).join('/'), 0, api);
+  }
+  function _ceElemProbeUp(dir, depth, api) {
+    if (depth > 8) return Promise.resolve(null);
+    return api.readdir(dir).then(function (res) {
+      if (!res || !res.success) return null;
+      for (var i = 0; i < res.files.length; i++) {
+        if (res.files[i].isDirectory && _CE_ELEM_SECTIONS[res.files[i].name]) return dir;
+      }
+      for (var j = 0; j < res.files.length; j++) {
+        if (!res.files[j].isDirectory && _CE_ELEM_SECTIONS[res.files[j].name.replace(/\.ya?ml$/i, '')]) return dir;
+      }
+      var parts = dir.split('/');
+      parts.pop();
+      if (parts.length < 3) return null;
+      return _ceElemProbeUp(parts.join('/'), depth + 1, api);
+    }).catch(function () { return null; });
   }
   function _ceElemGet(configDir) {
     var rec = _ceElemCache[configDir];
@@ -821,26 +850,37 @@
       try { ls[i](rec.data); } catch (e) {}
     }
   }
-  function _ceElemFileKeys(content) {
+  // 解析文件内容, 按 section 分组收集条目键 (顶层 items:/blocks:/... 各键下的直接子键,
+  // $$ 版本键组展开; 单文件可同时含多个 section, 如 categories.yml)
+  function _ceElemFileKeysBySec(content) {
     var doc;
-    try { doc = YAML.load(content); } catch (e) { return []; }
-    if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) return [];
-    var keys = [];
+    try { doc = YAML.load(content); } catch (e) { return {}; }
+    if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) return {};
+    var bySec = {};
     Object.keys(doc).forEach(function (k) {
       var m = k.match(SECTION_BASE_RE);
       if (!m || !_CE_ELEM_SECTIONS[m[1]]) return;
       var v = doc[k];
       if (v === null || typeof v !== 'object' || Array.isArray(v)) return;
+      var out = bySec[m[1]] = bySec[m[1]] || [];
       Object.keys(v).forEach(function (ek) {
         if (_sfVersionKeyRe.test(ek) && v[ek] !== null && typeof v[ek] === 'object' && !Array.isArray(v[ek])) {
           // 版本键分组 ($$...): 展开组内条目
-          Object.keys(v[ek]).forEach(function (gk) { if (keys.indexOf(gk) === -1) keys.push(gk); });
-        } else if (keys.indexOf(ek) === -1) {
-          keys.push(ek);
+          Object.keys(v[ek]).forEach(function (gk) { if (out.indexOf(gk) === -1) out.push(gk); });
+        } else if (out.indexOf(ek) === -1) {
+          out.push(ek);
         }
       });
     });
-    return keys;
+    return bySec;
+  }
+  function _ceElemFileKeys(content) {
+    var bySec = _ceElemFileKeysBySec(content);
+    var out = [];
+    Object.keys(bySec).forEach(function (sec) {
+      for (var i = 0; i < bySec[sec].length; i++) if (out.indexOf(bySec[sec][i]) === -1) out.push(bySec[sec][i]);
+    });
+    return out;
   }
   function _ceElemMerge(data) {
     if (!data) return;
@@ -892,44 +932,83 @@
         _ceElemFire(rec);
       }
     }
-    secs.forEach(function (sec) {
-      api.readdir(configDir + '/' + sec).then(function (res) {
-        if (!res || !res.success) { secDone(sec, []); return; }
-        var files = res.files.filter(function (f) { return !f.isDirectory && /\.ya?ml$/i.test(f.name); });
-        var keys = [];
-        var fi = 0;
-        (function next() {
-          if (fi >= files.length) { secDone(sec, keys); return; }
-          var fp = files[fi++].path;
-          api.readFile(fp).then(function (rr) {
-            if (rr && rr.success && rr.content) {
-              var ks = _ceElemFileKeys(rr.content);
-              for (var i = 0; i < ks.length; i++) if (keys.indexOf(ks[i]) === -1) keys.push(ks[i]);
-            }
-            next();
-          }).catch(next);
-        })();
-      }).catch(function () { secDone(sec, []); });
+    // 递归收集配置目录下全部 .yml 文件, 逐个解析按顶层键分组:
+    // 标准 <sec>/ 子目录、根下散落单文件 (categories.yml / sword.yml)、任意分组子目录 (armor/) 均覆盖
+    var files = [];
+    (function walk(dir, depth) {
+      return api.readdir(dir).then(function (res) {
+        if (!res || !res.success) return;
+        var dirs = [];
+        for (var i = 0; i < res.files.length; i++) {
+          var fl = res.files[i];
+          if (fl.isDirectory) { dirs.push(fl); continue; }
+          if (/\.ya?ml$/i.test(fl.name)) files.push(fl);
+        }
+        if (depth < 3 && dirs.length) {
+          return Promise.all(dirs.map(function (d) { return walk(d.path, depth + 1); }));
+        }
+      }).catch(function () {});
+    })(configDir, 0).then(function () {
+      var keys = {}; // sec -> [keys]
+      var fi = 0;
+      (function next() {
+        if (fi >= files.length) { finish(); return; }
+        var fp = files[fi++].path;
+        api.readFile(fp).then(function (rr) {
+          if (rr && rr.success && rr.content) {
+            var bySec = _ceElemFileKeysBySec(rr.content);
+            Object.keys(bySec).forEach(function (sec) {
+              var arr = keys[sec] = keys[sec] || [];
+              for (var i = 0; i < bySec[sec].length; i++) {
+                if (arr.indexOf(bySec[sec][i]) === -1) arr.push(bySec[sec][i]);
+              }
+            });
+          }
+          next();
+        }).catch(next);
+      })();
+      function finish() {
+        secs.forEach(function (sec) { secDone(sec, keys[sec] || []); });
+      }
     });
   }
   function _ceElemScan(filePath) {
     _sfInit();
     if (!_ceElemEnabled()) return;
-    var configDir = _ceElemConfigDir(filePath);
-    if (!configDir) {
-      // 文件不在 configuration 目录内: 尝试经工程根回溯 (插件根)
+    // 1) 显式 configuration 段 / 向上探测含 section 子目录的目录 (兼容自定义配置目录名)
+    _ceElemLocate(filePath).then(function (configDir) {
+      if (configDir) { _ceElemStart(configDir); return; }
+      // 2) 兜底: 经工程根回溯 (插件根 / 数据包根 都试)
       resolveProjectRoot(filePath).then(function (r) {
-        if (r && r.found && r.pluginRoot) {
-          _ceElemStart(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
+        if (r && r.found) {
+          if (r.pluginRoot) _ceElemStart(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
+          if (r.packRoot && String(r.packRoot).replace(/\\/g, '/') !== String(r.pluginRoot || '').replace(/\\/g, '/')) {
+            _ceElemStart(String(r.packRoot).replace(/\\/g, '/') + '/configuration');
+          }
         }
       });
-      return;
-    }
-    _ceElemStart(configDir);
+    });
   }
-  function _ceElemRescan(configDir) {
-    delete _ceElemCache[configDir];
-    _ceElemStart(configDir);
+  function _ceElemRescan(filePath) {
+    // filePath 为当前打开文件; 重新定位并重扫
+    _ceElemLocate(filePath).then(function (configDir) {
+      if (configDir) {
+        delete _ceElemCache[configDir];
+        _ceElemStart(configDir);
+      } else {
+        resolveProjectRoot(filePath).then(function (r) {
+          if (r && r.found) {
+            var cand = [];
+            if (r.pluginRoot) cand.push(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
+            if (r.packRoot) cand.push(String(r.packRoot).replace(/\\/g, '/') + '/configuration');
+            for (var i = 0; i < cand.length; i++) {
+              delete _ceElemCache[cand[i]];
+              _ceElemStart(cand[i]);
+            }
+          }
+        });
+      }
+    });
   }
 
   // section 的 schema 是否 root-map (条目键 = 直接子键, 版本键可作分组)
@@ -1214,13 +1293,15 @@
   function _sfPickerRender(panel, st, query) {
     var q = String(query || '').trim().toLowerCase();
     var items = st.list.filter(function (v) { return !q || String(v).toLowerCase().indexOf(q) !== -1; });
-    var cfg = _ceElemConfigDir(st.file);
-    var rec = cfg ? _ceElemCache[cfg] : null;
     var body;
-    if (!st.list.length && rec && rec.state === 'loading') {
-      body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerScanning')) + '</div>';
-    } else if (!st.list.length) {
-      body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerEmpty')) + '</div>';
+    if (!st.list.length) {
+      var scanning = false;
+      if (st.file) {
+        var cfg0 = _ceElemConfigDir(st.file);
+        var rec0 = cfg0 ? _ceElemCache[cfg0] : null;
+        scanning = !!(rec0 && rec0.state === 'loading');
+      }
+      body = '<div class="ce-picker-empty">' + _escHtml(_t(scanning ? 'craftengine.pickerScanning' : 'craftengine.pickerEmpty')) + '</div>';
     } else if (!items.length) {
       body = '<div class="ce-picker-empty">' + _escHtml(_t('craftengine.pickerNoMatch')) + '</div>';
     } else {
@@ -1229,7 +1310,7 @@
       }).join('');
     }
     var foot = '<span>' + _escHtml(_t('craftengine.pickerCount', { n: items.length })) + '</span>';
-    if (cfg) {
+    if (st.file) {
       foot += '<button type="button" class="ce-picker-rescan" data-ce-picker-action="rescan" title="' + _escHtml(_t('craftengine.pickerRescan')) + '">⟳</button>';
     }
     var listEl = panel.querySelector('.ce-picker-list');
@@ -1264,11 +1345,9 @@
   function _sfPickerRescan(panel) {
     var st = _cePickerOpen;
     if (!st) return;
-    var cfg = _ceElemConfigDir(st.file);
-    if (!cfg) return;
-    _ceElemRescan(cfg);
     var emptyEl = panel.querySelector('.ce-picker-empty');
     if (emptyEl) emptyEl.textContent = _t('craftengine.pickerScanning');
+    _ceElemRescan(st.file);
   }
   function _sfPickerBindGlobal() {
     if (_cePickerBound || !ROOT.document) return;
