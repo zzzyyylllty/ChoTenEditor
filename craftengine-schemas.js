@@ -637,7 +637,7 @@
     fields: [
       f('keywords', '关键词', 'Keywords', 'lines', { hint: l('每行一个', 'One per line') }),
       f('content', '内容', 'Content', 'textarea'),
-      f('image', '图片', 'Image', 'text', { hint: l('如 assets/emoji/xxx.png', 'e.g. assets/emoji/xxx.png') }),
+      f('image', '图片', 'Image', 'text', { hint: l('图片单元引用: namespace:id:row:column (单格图片可省略 :row:column), 如 default:emojis:0:0', 'Image cell reference: namespace:id:row:column (single-cell may omit :row:column), e.g. default:emojis:0:0') }),
       f('permission', '权限', 'Permission', 'text'),
       f('chat_completion', '聊天补全', 'Chat Completion', 'bool'),
       f('template', '模板', 'Template', 'text'),
@@ -1135,7 +1135,8 @@
       f('note', '说明', 'Note', 'text', { hint: l('读取 minecraft:banner_patterns 与 minecraft:base_color 组件, 无额外字段', 'Reads minecraft:banner_patterns and minecraft:base_color components, no extra fields') }),
     ] },
     'minecraft:banner': { label: l('旗帜 (banner)', 'Banner'), fields: [
-      f('note', '说明', 'Note', 'text', { hint: l('读取 minecraft:banner_patterns 组件, 无额外字段', 'Reads the minecraft:banner_patterns component, no extra fields') }),
+      f('color', '颜色', 'Color', 'select', { options: S.constants.bannerColors, hint: l('必填, 16 色之一', 'Required, one of 16 colors') }),
+      f('attachment', '附着方式', 'Attachment', 'select', { options: ['ground', 'wall'], hint: l('26.1+; 地面或墙面', '"ground" | "wall" (26.1+)') }),
     ] },
     'minecraft:trident': { label: l('三叉戟 (trident)', 'Trident'), fields: [
       f('note', '说明', 'Note', 'text', { hint: l('渲染三叉戟, 无额外字段', 'Renders a trident, no extra fields') }),
@@ -1186,6 +1187,9 @@
         f('type', '类型', 'Type', 'select', { options: ['minecraft:constant', 'minecraft:dye', 'minecraft:firework', 'minecraft:grass', 'minecraft:map_color', 'minecraft:potion', 'minecraft:team', 'minecraft:custom_model_data'] }),
         f('value', '值', 'Value', 'text', { hint: l('十进制 (16711680) / RGB 0-255 (255,0,0) / RGB 0.0-1.0 (1.0,0.0,0.0)', 'Decimal / RGB 0-255 / RGB 0.0-1.0') }),
         f('default', '默认色', 'Default', 'text'),
+        f('temperature', '温度', 'Temperature', 'number', { hint: l('minecraft:grass 类型: 0.0~1.0 气候采样', 'minecraft:grass: climate sample 0.0-1.0') }),
+        f('downfall', '湿度', 'Downfall', 'number', { hint: l('minecraft:grass 类型: 0.0~1.0 气候采样', 'minecraft:grass: climate sample 0.0-1.0') }),
+        f('index', '索引', 'Index', 'number', { hint: l('minecraft:custom_model_data 类型: colors 数组位置; 默认 0', 'minecraft:custom_model_data: position in colors array; default 0') }),
       ], label: l('色调', 'Tint') }, label: l('色调', 'Tints') }),
       f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
     ] },
@@ -1196,24 +1200,38 @@
     ] },
     'minecraft:condition': { label: l('条件 (minecraft:condition)', 'Condition'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:condition'] }),
-      f('property', '属性', 'Property', 'text', { hint: l('布尔属性类型, 如 custom_model_data / item_model', 'Boolean property type, e.g. custom_model_data / item_model') }),
+      f('property', '属性', 'Property', 'text', { hint: l('布尔属性类型, 如 broken / using_item / custom_model_data', 'Boolean property type, e.g. broken / using_item / custom_model_data') }),
       f('on_true', '为真时', 'On True', 'union', { types: MODEL_TREE_REF, label: l('为真时', 'On True'), hint: l('属性为 true 时使用的模型', 'Model when property is true') }),
       f('on_false', '为假时', 'On False', 'union', { types: MODEL_TREE_REF, label: l('为假时', 'On False'), hint: l('属性为 false 时使用的模型', 'Model when property is false') }),
       f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
+      // 以下为 property 特定附加字段 (仅对应的 property 时生效)
+      f('predicate', '组件谓词', 'Component Predicate', 'text', { hint: l('property=minecraft:component (1.21.5+): 谓词类型, 如 minecraft:damage', 'For property minecraft:component (1.21.5+): predicate type, e.g. minecraft:damage') }),
+      f('value', '谓词值', 'Predicate Value', 'kv', { hint: l('property=minecraft:component: 谓词值结构随谓词变化', 'For property minecraft:component: structure depends on the predicate') }),
+      f('component', '组件', 'Component', 'text', { hint: l('property=minecraft:has_component: 检查存在的组件 ID, 如 minecraft:enchantments', 'For property minecraft:has_component: component ID to check, e.g. minecraft:enchantments') }),
+      f('ignore_default', '忽略默认值', 'Ignore Default', 'bool', { hint: l('property=minecraft:has_component: 默认值的组件视为不存在; 默认 false', 'For property minecraft:has_component: treat default-valued components as absent; default false') }),
+      f('keybind', '按键绑定', 'Keybind', 'text', { hint: l('property=minecraft:keybind_down: 按住的按键 ID, 如 key.left / key.sprint', 'For property minecraft:keybind_down: keybind ID, e.g. key.left / key.sprint') }),
+      f('index', '索引', 'Index', 'number', { hint: l('property=minecraft:custom_model_data: flags 数组位置; 默认 0', 'For property minecraft:custom_model_data: position in flags array; default 0') }),
     ] },
     'minecraft:select': { label: l('选择 (minecraft:select)', 'Select'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:select'] }),
-      f('property', '属性', 'Property', 'text', { hint: l('如 component / item_model', 'e.g. component / item_model') }),
+      f('property', '属性', 'Property', 'text', { hint: l('离散属性类型, 如 charge_type / display_context / item_model', 'Discrete property type, e.g. charge_type / display_context / item_model') }),
       f('cases', '分支', 'Cases', 'listOf', { itemType: { type: 'object', fields: [
-        f('when', '条件', 'When', 'text'),
+        f('when', '条件', 'When', 'text', { hint: l('值或值列表 (区分大小写)', 'Value or list of values (case-sensitive)') }),
         f('model', '模型', 'Model', 'union', { types: MODEL_TREE_REF, label: l('模型', 'Model') }),
       ], label: l('分支', 'Case') }, label: l('分支', 'Cases') }),
-      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback') }),
+      f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback'), hint: l('无分支匹配时使用; 省略渲染为空', 'Model when no case matches; omitted renders as empty') }),
       f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
+      // 以下为 property 特定附加字段 (仅对应的 property 时生效)
+      f('block_state_property', '方块状态属性', 'Block State Property', 'text', { hint: l('property=minecraft:block_state: 读取的方块状态键, 如 facing', 'For property minecraft:block_state: block state key to read, e.g. facing') }),
+      f('component', '组件', 'Component', 'text', { hint: l('property=minecraft:component (1.21.5+): 读取的组件 ID, 如 minecraft:unbreakable', 'For property minecraft:component (1.21.5+): component ID, e.g. minecraft:unbreakable') }),
+      f('index', '索引', 'Index', 'number', { hint: l('property=minecraft:custom_model_data: strings 数组位置; 默认 0', 'For property minecraft:custom_model_data: position in strings array; default 0') }),
+      f('pattern', '时间格式', 'Time Pattern', 'text', { hint: l('property=minecraft:local_time: ICU 日期时间格式, 如 HH:mm:ss', 'For property minecraft:local_time: ICU date/time pattern, e.g. HH:mm:ss') }),
+      f('locale', '区域', 'Locale', 'text', { hint: l('property=minecraft:local_time: 格式化区域; 默认系统', 'For property minecraft:local_time: locale; default system') }),
+      f('time_zone', '时区', 'Time Zone', 'text', { hint: l('property=minecraft:local_time: 时区 ID, 如 GMT+8:00; 默认客户端时区', 'For property minecraft:local_time: time zone ID, e.g. GMT+8:00; default client TZ') }),
     ] },
     'minecraft:range_dispatch': { label: l('区间分发 (minecraft:range_dispatch)', 'Range Dispatch'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:range_dispatch'] }),
-      f('property', '属性', 'Property', 'text', { hint: l('数值属性类型, 如 custom_model_data', 'Numeric property type, e.g. custom_model_data') }),
+      f('property', '属性', 'Property', 'text', { hint: l('数值属性类型, 如 damage / custom_model_data', 'Numeric property type, e.g. damage / custom_model_data') }),
       f('scale', '缩放系数', 'Scale', 'number', { hint: l('比较前与属性值相乘的系数; 默认 1.0', 'Multiplier applied to the property value before comparing; default 1.0') }),
       f('entries', '区间', 'Entries', 'listOf', { itemType: { type: 'object', fields: [
         f('threshold', '阈值', 'Threshold', 'number', { hint: l('该模型的最小属性值', 'Minimum property value for this model') }),
@@ -1221,6 +1239,13 @@
       ], label: l('区间', 'Entry') }, label: l('区间', 'Entries') }),
       f('fallback', '回退', 'Fallback', 'union', { types: MODEL_TREE_REF, label: l('回退', 'Fallback'), hint: l('属性低于所有阈值时使用; 默认空', 'Model used when property < all thresholds; default empty') }),
       f('transformation', '变换', 'Transformation', 'union', { types: TRANSFORM_TYPES, label: l('变换', 'Transformation') }),
+      // 以下为 property 特定附加字段 (仅对应的 property 时生效)
+      f('target', '目标', 'Target', 'select', { options: ['spawn', 'lodestone', 'recovery', 'none'], hint: l('property=minecraft:compass: 指向目标', 'For property minecraft:compass: target type') }),
+      f('wobble', '摆动', 'Wobble', 'bool', { hint: l('compass/time: 指针摆动/平滑振荡; 默认 true', 'For compass/time: simulate wobble/oscillation; default true') }),
+      f('normalize', '归一化', 'Normalize', 'bool', { hint: l('count/damage: 除以最大值缩放至 0.0~1.0; 默认 true', 'For count/damage: scale to 0.0-1.0; default true') }),
+      f('source', '时间来源', 'Time Source', 'select', { options: ['daytime', 'moon_phase', 'random'], hint: l('property=minecraft:time: daytime (太阳角度) / moon_phase / random', 'For property minecraft:time: daytime (sun angle) / moon_phase / random') }),
+      f('remaining', '剩余时间', 'Remaining', 'bool', { hint: l('property=minecraft:use_duration: 返回剩余而非已用 tick; 默认 false', 'For property minecraft:use_duration: return remaining ticks instead of elapsed; default false') }),
+      f('index', '索引', 'Index', 'number', { hint: l('property=minecraft:custom_model_data: floats 数组位置; 默认 0', 'For property minecraft:custom_model_data: position in floats array; default 0') }),
     ] },
     'minecraft:special': { label: l('特殊 (minecraft:special)', 'Special'), fields: [
       f('type', '类型', 'Type', 'select', { options: ['minecraft:special'] }),
@@ -1274,7 +1299,7 @@
     f('ignore_entities', '忽略实体', 'Ignore Entities', 'bool'),
     f('against_blocks', '可放置方块', 'Against Blocks', 'lines'),
     f('against_block_tags', '可放置方块标签', 'Against Block Tags', 'lines'),
-    f('blacklist', '黑名单', 'Blacklist', 'bool'),
+    f('blacklist', '黑名单', 'Blacklist', 'bool', { hint: l('true = 黑名单模式 (默认), false = 白名单模式', 'true = blacklist mode (default), false = whitelist mode') }),
   ];
   // 内联方块 (block_item.block 内直接定义): 与 block section 同构的选项卡结构 (状态/设置/行为/掉落/自定义)
   // 懒构建: 引用的字段表 (BLOCK_SETTINGS_FIELDS/BLOCK_LOOT_FIELDS/PROPERTY_TYPES/...) 在本文件后面定义
@@ -1337,7 +1362,7 @@
       } }),
     ] },
     liquid_collision_furniture_item: { label: l('液体碰撞家具 (liquid_collision_furniture_item)', 'Liquid Collision Furniture'), fields: FURNITURE_ITEM_FIELDS.concat([
-      f('source_only', '仅源方块', 'Source Only', 'bool'),
+      f('source_only', '仅源方块', 'Source Only', 'bool', { hint: l('仅在液体源方块上放置; 默认 true', 'Only place on liquid source blocks; default true') }),
       f('liquid_type', '液体类型', 'Liquid Type', 'lines'),
     ]) },
     multi_high_block_item: { label: l('多层方块 (multi_high_block_item)', 'Multi High Block Item'), fields: BLOCK_ITEM_FIELDS },
@@ -1385,7 +1410,7 @@
     spreading_block: { label: l('蔓延 (spreading_block)', 'Spreading Block'), fields: _bh([['target_block', 'text']]) },
     stackable_block: { label: l('可堆叠 (stackable_block)', 'Stackable Block'), fields: _bh([['property', 'text'], ['items', 'lines']]) },
     stem_block: { label: l('茎 (stem_block)', 'Stem Block'), fields: _bh([['fruit', 'text'], ['attached_stem', 'text'], ['light_requirement', 'number'], ['max_light_requirement', 'number'], ['fruit_bottom_blocks', 'lines'], ['fruit_bottom_block_tags', 'lines']]) },
-    strippable_block: { label: l('可去皮 (strippable_block)', 'Strippable Block'), fields: _bh([['stripped', 'text'], ['excluded_properties', 'lines'], ['tools', 'lines'], ['sound', 'text']]) },
+    strippable_block: { label: l('可去皮 (strippable_block)', 'Strippable Block'), fields: _bh([['stripped', 'text'], ['excluded_properties', 'lines'], ['tools', 'lines']]).concat([soundRefField('sound', '音效', 'Sound')]) },
     sturdy_base_block: { label: l('坚固底座 (sturdy_base_block)', 'Sturdy Base Block'), fields: _bh([['direction', 'text'], ['support_types', 'lines'], ['stackable', 'bool'], ['max_height', 'number'], ['delay', 'number']]) },
     surface_spreading_block: { label: l('表面蔓延 (surface_spreading_block)', 'Surface Spreading Block'), fields: _bh([['light_requirement', 'number'], ['max_light_requirement', 'number'], ['base_block', 'text']]) },
     tint_source_block: { label: l('色调源 (tint_source_block)', 'Tint Source Block'), fields: _bh([['drop_item', 'bool'], ['data_key', 'text']]) },
@@ -1411,12 +1436,23 @@
     f('display_transform', '显示变换', 'Display Transform', 'text'),
     f('scale', '缩放', 'Scale', 'number'),
   ];
+  // 弹射物音效: 命中目标时按方块/物品切换音效 (wiki item/settings.mdx)
+  function projectileSoundField(key, zh, en, withTargeted) {
+    var types = { map: SOUND_REF_TYPES.map };
+    if (withTargeted) {
+      types.targeted = { label: l('按目标切换', 'Per Target'), widget: { type: 'object', fields: [
+        f('default', '默认音效', 'Default Sound', 'text'),
+        f('overrides', '目标覆盖', 'Overrides', 'mapOf', { valueType: { type: 'text' }, label: l('目标覆盖', 'Overrides'), hint: l('键: 命中方块/物品 ID; 值: 音效 ID', 'Key: hit block/item id; value: sound id') }),
+      ], label: l('按目标切换', 'Per Target') } };
+    }
+    return f(key, zh, en, 'union', { noTypeKey: true, allowScalar: { type: 'text', placeholder: l('minecraft:item.trident.throw', 'minecraft:item.trident.throw') }, label: l('音效', 'Sound'), types: types });
+  }
   var ITEM_PROJECTILE_FIELDS = [
     f('display', '显示', 'Display', 'object', { fields: ITEM_PROJECTILE_DISPLAY_FIELDS, label: l('显示', 'Display') }),
     f('sounds', '音效', 'Sounds', 'object', { fields: [
-      f('throw', '投掷', 'Throw', 'text'),
-      f('hit_entity', '命中实体', 'Hit Entity', 'text'),
-      f('hit_block', '命中方块', 'Hit Block', 'text'),
+      projectileSoundField('throw', '投掷', 'Throw', false),
+      projectileSoundField('hit_entity', '命中实体', 'Hit Entity', true),
+      projectileSoundField('hit_block', '命中方块', 'Hit Block', true),
     ], label: l('音效', 'Sounds') }),
     f('ignore_infinity_enchantment', '忽略无限附魔', 'Ignore Infinity Enchantment', 'bool', { hint: l('作为弹药使用时忽略 Infinity 附魔', 'Whether to ignore the Infinity enchantment when used as ammunition') }),
     f('pickupable', '可拾取', 'Pickupable', 'bool', { hint: l('命中后是否可被拾取', 'Whether the projectile can be picked up after hitting a target') }),

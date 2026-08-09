@@ -1789,6 +1789,18 @@
           for (var kv in value) {
             if (types[kv]) return { key: kv, neg: false };
           }
+          // 字段名推断: value 键是某 object 类型字段名的子集 → 该类型 (如 {default, overrides} → targeted)
+          var best = null, bestScore = 0;
+          for (var t2 = 0; t2 < ks.length; t2++) {
+            var wf = types[ks[t2]].widget;
+            if (!wf || wf.type !== 'object' || !wf.fields) continue;
+            var names = {};
+            for (var fi = 0; fi < wf.fields.length; fi++) names[wf.fields[fi].key] = 1;
+            var score = 0;
+            for (var vk in value) { if (names[vk]) score++; else if (vk !== 'type') score--; }
+            if (score > bestScore) { bestScore = score; best = ks[t2]; }
+          }
+          if (best) return { key: best, neg: false };
           for (var j = 0; j < ks.length; j++) {
             var w2 = (types[ks[j]].widget || {}).type;
             if (w2 === 'object' || w2 === 'mapOf' || w2 === 'kv' || w2 === 'kvRest' || w2 === 'union' || w2 === 'tabs') return { key: ks[j], neg: false };
