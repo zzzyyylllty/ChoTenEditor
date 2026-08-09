@@ -1458,7 +1458,13 @@
     doc.addEventListener('keydown', function (e) {
       if (_cePickerOpen && e.key === 'Escape') _sfClosePicker();
     }, true);
-    doc.addEventListener('scroll', function () { _sfClosePicker(); }, true);
+    // 捕获阶段拦截滚动: 面板内部滚动 (条目列表滚动条) 不关闭, 仅外部滚动 (编辑器/页面) 关闭
+    doc.addEventListener('scroll', function (e) {
+      if (!_cePickerOpen) return;
+      var t = e.target;
+      if (t && t !== doc && typeof t.closest === 'function' && t.closest('.ce-picker-panel')) return;
+      _sfClosePicker();
+    }, true);
     if (doc.defaultView) doc.defaultView.addEventListener('resize', _sfClosePicker);
   }
   function _sfOpenPicker(btn, name, containerEl) {

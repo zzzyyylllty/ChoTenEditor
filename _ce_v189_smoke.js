@@ -165,6 +165,20 @@ app.whenReady().then(async () => {
     })`);
     check(d2.ok, 'D2 旧命名空间条目已清理, 只剩新工程 (got ' + (d2.ok ? d2.items.join(',') : JSON.stringify(d2.items)) + ')');
 
+    // ---------- E. 面板内滚动条拖动不关闭面板; 外部滚动关闭 ----------
+    const e = await evalJS(`(function () {
+      var panel = document.querySelector('.ce-picker-panel');
+      if (!panel) return { ok: false, why: 'no panel' };
+      var list = panel.querySelector('.ce-picker-list');
+      list.dispatchEvent(new Event('scroll', { bubbles: true }));
+      var stillOpen = !!document.querySelector('.ce-picker-panel');
+      document.body.dispatchEvent(new Event('scroll', { bubbles: true }));
+      var closed = !document.querySelector('.ce-picker-panel');
+      return { ok: true, stillOpen: stillOpen, closed: closed };
+    })()`);
+    check(e.ok && e.stillOpen, 'E1 面板内列表滚动不关闭面板');
+    check(e.ok && e.closed, 'E2 外部滚动关闭面板');
+
     console.log('fails=' + fails);
     win.destroy();
   } catch (e) {
