@@ -794,13 +794,31 @@
   var _CE_ELEM_SECTIONS = { items: 1, blocks: 1, furniture: 1, categories: 1, templates: 1 };
   var _ceElemCache = Object.create(null); // configDir -> { state: 'loading'|'done', data: {sec:[keys]} }
   var _ceElemListeners = [];
-  // 同步: 文件路径中显式含 configuration 段 (标准布局)
+  // 同步: 文件路径中显式含 configuration(s) 段 (标准布局)
   function _ceElemConfigDir(filePath) {
     var parts = String(filePath || '').replace(/\\/g, '/').split('/');
     for (var i = parts.length - 2; i >= 1; i--) {
-      if (parts[i] === 'configuration') return parts.slice(0, i + 1).join('/');
+      if (parts[i] === 'configuration' || parts[i] === 'configurations') return parts.slice(0, i + 1).join('/');
     }
     return null;
+  }
+  // 标准布局 resources/<命名空间>/configuration(s): 上溯两级得 resources 根; 非标准布局返回 null
+  function _ceElemResourcesRoot(configDir) {
+    var parts = String(configDir || '').replace(/\\/g, '/').split('/');
+    var last = parts[parts.length - 1] || '';
+    if (last !== 'configuration' && last !== 'configurations') return null;
+    parts.pop(); // configuration
+    parts.pop(); // <命名空间>
+    if (parts.length < 2) return null;
+    return parts.join('/');
+  }
+  // 当前文件的命名空间 (resources/<ns>/configuration 的 <ns>)
+  function _sfCurNamespace(st) {
+    if (!st || !st.file) return '';
+    var cfg = _ceElemConfigDir(st.file);
+    if (!cfg) return '';
+    var parts = cfg.split('/');
+    return parts.length >= 2 ? parts[parts.length - 2] : '';
   }
   // 异步: 配置目录名可自定义 (如"工程内容"), 从文件所在目录向上探测,
   // 第一个含 section 子目录 (items/blocks/categories/...) 或根下散落 section 单文件
@@ -840,14 +858,12 @@
       document.body.classList.contains('ce-element-picker');
   }
   function _ceElemOnDone(cb) {
-    if (typeof cb === 'function') _ceElemListeners.push(cb);
+    if (typeof cb === 'function' && _ceElemListeners.indexOf(cb) === -1) _ceElemListeners.push(cb);
   }
   function _ceElemFire(rec) {
     if (!rec) return;
-    var ls = _ceElemListeners;
-    _ceElemListeners = [];
-    for (var i = 0; i < ls.length; i++) {
-      try { ls[i](rec.data); } catch (e) {}
+    for (var i = 0; i < _ceElemListeners.length; i++) {
+      try { _ceElemListeners[i](rec.data); } catch (e) {}
     }
   }
   // 解析文件内容, 按 section 分组收集条目键 (顶层 items:/blocks:/... 各键下的直接子键,
@@ -882,20 +898,37 @@
     });
     return out;
   }
-  function _ceElemMerge(data) {
+  // 各命名空间扫描结果按 configDir 记录贡献, 合并时从全部贡献重建 (跨命名空间聚合, 重扫幂等)
+  var _ceElemContrib = Object.create(null); // configDir -> {sec:[keys]}
+  function _ceElemMerge(configDir, data) {
     if (!data) return;
+    if (!_ceElemCache[configDir]) return; // 已被清除 (切换项目) 的旧扫描结果丢弃
     _sfInit();
+    _ceElemContrib[configDir] = data;
+    _ceElemRebuild();
+  }
+  function _ceElemRebuild() {
+    _sfInit();
+    var out = {};
+    Object.keys(_CE_ELEM_SECTIONS).forEach(function (sec) { out[sec] = []; });
+    Object.keys(_ceElemContrib).forEach(function (cd) {
+      var d = _ceElemContrib[cd];
+      Object.keys(_CE_ELEM_SECTIONS).forEach(function (sec) {
+        var arr = d[sec] || [];
+        var o = out[sec];
+        for (var i = 0; i < arr.length; i++) if (o.indexOf(arr[i]) === -1) o.push(arr[i]);
+      });
+    });
+    var vi = (_sfSchemas && _sfSchemas.constants && _sfSchemas.constants.vanillaItems) || [];
     Object.keys(_CE_ELEM_SECTIONS).forEach(function (sec) {
-      var arr = data[sec] || [];
       if (sec === 'items' || sec === 'blocks') {
-        var existing = _sfDatalistMap[sec] || [];
-        var seen = {}, out = [];
-        function push(v) { v = String(v); if (v && !seen[v]) { seen[v] = 1; out.push(v); } }
-        arr.forEach(push);
-        existing.forEach(push);
-        _sfDatalistMap[sec] = out;
+        var seen = {}, merged = [];
+        function push(v) { v = String(v); if (v && !seen[v]) { seen[v] = 1; merged.push(v); } }
+        out[sec].forEach(push);
+        vi.forEach(push);
+        _sfDatalistMap[sec] = merged;
       } else {
-        _sfDatalistMap[sec] = arr.slice();
+        _sfDatalistMap[sec] = out[sec];
       }
       _ceElemRefreshDatalist(sec);
     });
@@ -928,7 +961,7 @@
       if (pending === 0) {
         rec.data = data;
         rec.state = 'done';
-        _ceElemMerge(data);
+        _ceElemMerge(configDir, data);
         _ceElemFire(rec);
       }
     }
@@ -972,43 +1005,85 @@
       }
     });
   }
+  // 清理不属于当前工程 (resources 根不同) 的旧贡献/缓存, 避免跨项目条目残留
+  function _ceElemPruneOutside(prefixes) {
+    var changed = false;
+    Object.keys(_ceElemContrib).forEach(function (cd) {
+      var keep = false;
+      for (var i = 0; i < prefixes.length; i++) {
+        if (cd === prefixes[i] || cd.indexOf(prefixes[i] + '/') === 0) { keep = true; break; }
+      }
+      if (!keep) { delete _ceElemContrib[cd]; delete _ceElemCache[cd]; changed = true; }
+    });
+    if (changed) _ceElemRebuild();
+  }
+  // 扫描 resources 根下所有命名空间目录 (含 configuration(s) 子目录的才扫描)
+  function _ceElemStartSiblings(resRoot) {
+    var api = ROOT.electronAPI;
+    if (!api || !api.readdir) return;
+    api.readdir(resRoot).then(function (res) {
+      if (!res || !res.success) return;
+      for (var i = 0; i < res.files.length; i++) {
+        var fl = res.files[i];
+        if (!fl.isDirectory) continue;
+        var nsDir = String(fl.path).replace(/\\/g, '/');
+        (function (nd) {
+          api.readdir(nd).then(function (r2) {
+            if (!r2 || !r2.success) return;
+            for (var j = 0; j < r2.files.length; j++) {
+              if (r2.files[j].isDirectory &&
+                  (r2.files[j].name === 'configuration' || r2.files[j].name === 'configurations')) {
+                _ceElemStart(nd + '/' + r2.files[j].name);
+                break;
+              }
+            }
+          }).catch(function () {});
+        })(nsDir);
+      }
+    }).catch(function () {});
+  }
   function _ceElemScan(filePath) {
     _sfInit();
     if (!_ceElemEnabled()) return;
     // 1) 显式 configuration 段 / 向上探测含 section 子目录的目录 (兼容自定义配置目录名)
     _ceElemLocate(filePath).then(function (configDir) {
-      if (configDir) { _ceElemStart(configDir); return; }
+      if (configDir) {
+        // 当前命名空间 + resources 根下所有命名空间一起扫; 非当前工程的旧贡献清掉
+        var resRoot = _ceElemResourcesRoot(configDir);
+        _ceElemPruneOutside(resRoot ? [resRoot] : [configDir]);
+        _ceElemStart(configDir);
+        if (resRoot) _ceElemStartSiblings(resRoot);
+        return;
+      }
       // 2) 兜底: 经工程根回溯 (插件根 / 数据包根 都试)
       resolveProjectRoot(filePath).then(function (r) {
         if (r && r.found) {
-          if (r.pluginRoot) _ceElemStart(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
-          if (r.packRoot && String(r.packRoot).replace(/\\/g, '/') !== String(r.pluginRoot || '').replace(/\\/g, '/')) {
-            _ceElemStart(String(r.packRoot).replace(/\\/g, '/') + '/configuration');
+          var prefixes = [];
+          var pr = r.pluginRoot ? String(r.pluginRoot).replace(/\\/g, '/') : '';
+          if (pr) {
+            prefixes.push(pr + '/configuration');
+            _ceElemStart(pr + '/configuration');
+            _ceElemStartSiblings(pr + '/resources');
+            prefixes.push(pr + '/resources');
           }
+          var pk = r.packRoot ? String(r.packRoot).replace(/\\/g, '/') : '';
+          if (pk && pk !== pr) {
+            prefixes.push(pk + '/configuration');
+            _ceElemStart(pk + '/configuration');
+            _ceElemStartSiblings(pk + '/resources');
+            prefixes.push(pk + '/resources');
+          }
+          _ceElemPruneOutside(prefixes);
         }
       });
     });
   }
   function _ceElemRescan(filePath) {
-    // filePath 为当前打开文件; 重新定位并重扫
-    _ceElemLocate(filePath).then(function (configDir) {
-      if (configDir) {
-        delete _ceElemCache[configDir];
-        _ceElemStart(configDir);
-      } else {
-        resolveProjectRoot(filePath).then(function (r) {
-          if (r && r.found) {
-            var cand = [];
-            if (r.pluginRoot) cand.push(String(r.pluginRoot).replace(/\\/g, '/') + '/configuration');
-            if (r.packRoot) cand.push(String(r.packRoot).replace(/\\/g, '/') + '/configuration');
-            for (var i = 0; i < cand.length; i++) {
-              delete _ceElemCache[cand[i]];
-              _ceElemStart(cand[i]);
-            }
-          }
-        });
-      }
-    });
+    // 清空全部贡献与缓存后按当前文件重扫 (含所有命名空间)
+    Object.keys(_ceElemContrib).forEach(function (k) { delete _ceElemContrib[k]; });
+    Object.keys(_ceElemCache).forEach(function (k) { delete _ceElemCache[k]; });
+    _ceElemRebuild();
+    _ceElemScan(filePath);
   }
 
   // section 的 schema 是否 root-map (条目键 = 直接子键, 版本键可作分组)
@@ -1293,6 +1368,16 @@
   function _sfPickerRender(panel, st, query) {
     var q = String(query || '').trim().toLowerCase();
     var items = st.list.filter(function (v) { return !q || String(v).toLowerCase().indexOf(q) !== -1; });
+    var ns = _sfCurNamespace(st);
+    if (ns && items.length > 1) {
+      // 当前命名空间条目优先, 其余按字母序
+      items = items.slice().sort(function (a, b) {
+        var na = String(a).split(':')[0] === ns ? 0 : 1;
+        var nb = String(b).split(':')[0] === ns ? 0 : 1;
+        if (na !== nb) return na - nb;
+        return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
+      });
+    }
     var body;
     if (!st.list.length) {
       var scanning = false;
@@ -1300,6 +1385,16 @@
         var cfg0 = _ceElemConfigDir(st.file);
         var rec0 = cfg0 ? _ceElemCache[cfg0] : null;
         scanning = !!(rec0 && rec0.state === 'loading');
+        // 同 resources 根下其它命名空间仍在扫描也算扫描中
+        if (!scanning && cfg0) {
+          var res0 = _ceElemResourcesRoot(cfg0);
+          if (res0) {
+            Object.keys(_ceElemCache).forEach(function (cd) {
+              if (!scanning && _ceElemCache[cd] && _ceElemCache[cd].state === 'loading' &&
+                  _ceElemResourcesRoot(cd) === res0) scanning = true;
+            });
+          }
+        }
       }
       body = '<div class="ce-picker-empty">' + _escHtml(_t(scanning ? 'craftengine.pickerScanning' : 'craftengine.pickerEmpty')) + '</div>';
     } else if (!items.length) {
