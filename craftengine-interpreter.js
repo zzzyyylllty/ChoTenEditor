@@ -765,6 +765,7 @@
   var _sfDatalistMap = null;
   var _sfUidSeq = 0;
   var _sfUidMap = {};
+  var _sfActiveContainer = null; // 当前渲染/交互中的容器 (events widget 导航状态按容器持久)
   var _sfL = function (zh, en) { return { zh: zh, en: en }; };
   var _sfNumRe = /^-?\d+(\.\d+)?$/;
   var _sfLastParsed = null; // 最近一次 render 的 parsed, 用于标记"尚未同步到源码"的更改
@@ -881,8 +882,11 @@
       var out = bySec[m[1]] = bySec[m[1]] || [];
       Object.keys(v).forEach(function (ek) {
         if (_sfVersionKeyRe.test(ek) && v[ek] !== null && typeof v[ek] === 'object' && !Array.isArray(v[ek])) {
-          // 版本键分组 ($$...): 展开组内条目
-          Object.keys(v[ek]).forEach(function (gk) { if (out.indexOf(gk) === -1) out.push(gk); });
+          // 版本键分组 ($$...): 展开组内条目 (要求完整命名键, 跳过普通说明键)
+          Object.keys(v[ek]).forEach(function (gk) {
+            if (gk.indexOf(':') === -1) return;
+            if (out.indexOf(gk) === -1) out.push(gk);
+          });
         } else if (out.indexOf(ek) === -1) {
           out.push(ek);
         }
@@ -900,6 +904,7 @@
   }
   // 各命名空间扫描结果按 configDir 记录贡献, 合并时从全部贡献重建 (跨命名空间聚合, 重扫幂等)
   var _ceElemContrib = Object.create(null); // configDir -> {sec:[keys]}
+  var _ceElemRescanAt = 0; // 最近一次全量重扫时间, 扫描中状态 (loading) 可据此保持"扫描中"提示
   function _ceElemMerge(configDir, data) {
     if (!data) return;
     if (!_ceElemCache[configDir]) return; // 已被清除 (切换项目) 的旧扫描结果丢弃
@@ -961,8 +966,11 @@
       if (pending === 0) {
         rec.data = data;
         rec.state = 'done';
-        _ceElemMerge(configDir, data);
-        _ceElemFire(rec);
+        // 身份检查: 重扫/切换工程已替换缓存记录时, 丢弃本次过期结果 (避免旧数据覆盖新扫描)
+        if (_ceElemCache[configDir] === rec) {
+          _ceElemMerge(configDir, data);
+          _ceElemFire(rec);
+        }
       }
     }
     // 递归收集配置目录下全部 .yml 文件, 逐个解析按顶层键分组:
@@ -1083,6 +1091,7 @@
     Object.keys(_ceElemContrib).forEach(function (k) { delete _ceElemContrib[k]; });
     Object.keys(_ceElemCache).forEach(function (k) { delete _ceElemCache[k]; });
     _ceElemRebuild();
+    _ceElemRescanAt = Date.now();
     _ceElemScan(filePath);
   }
 
@@ -1394,6 +1403,11 @@
                   _ceElemResourcesRoot(cd) === res0) scanning = true;
             });
           }
+        }
+        // 重扫后缓存记录重建前的空窗期 (记录缺失或仍在 loading) 视为扫描中
+        if (!scanning && cfg0) {
+          var recC0 = _ceElemCache[cfg0];
+          if ((!recC0 || recC0.state === 'loading') && Date.now() - _ceElemRescanAt < 30000) scanning = true;
         }
       }
       body = '<div class="ce-picker-empty">' + _escHtml(_t(scanning ? 'craftengine.pickerScanning' : 'craftengine.pickerEmpty')) + '</div>';
@@ -2543,7 +2557,7 @@
   function _sfEventsWidgetHtml(def, path, value, opts) {
     var uid = (opts && opts.uid) || _sfUidAlloc(path, 'events', def, opts);
     var rec = _sfUidMap[uid];
-    var evKey = (rec && rec.evKey) || '';
+    var evKey = (rec && rec.evKey) || (_sfActiveContainer && _sfActiveContainer._ceEvKeys ? _sfActiveContainer._ceEvKeys[path] : '') || '';
     var evs = value;
     var isArr = Array.isArray(evs);
     var isMap = evs && typeof evs === 'object' && !Array.isArray(evs);
@@ -3026,6 +3040,8 @@
   function _sfRerender(uid, containerEl) {
     var rec = _sfUidMap[uid];
     if (!rec || !containerEl || !containerEl.querySelectorAll) return;
+    _sfActiveContainer = containerEl;
+    if (!containerEl._ceEvKeys) containerEl._ceEvKeys = {};
     _sfClosePicker();
     var wraps = containerEl.querySelectorAll('[data-sf-uid="' + uid + '"]');
     if (!wraps.length) return;
@@ -3075,6 +3091,8 @@
       // 事件子页导航: 仅改视图状态, 不改数据
       if (!rec || rec.kind !== 'events') return;
       rec.evKey = (action === 'sf-event-back') ? null : (el.getAttribute('data-sf-ev') || '');
+      // 导航状态持久到事件来源容器, 全量重渲染 (uid 重置) 后 events 子页不丢失
+      if (containerEl && containerEl._ceEvKeys) containerEl._ceEvKeys[rec.path] = rec.evKey || '';
       _sfRerender(uid, containerEl);
       return;
     }
@@ -4080,6 +4098,10 @@
     var ui = containerEl._ceUi;
     if (!parsed) return;
     _sfClosePicker(); // 重渲染会替换输入框, 关闭可能指向旧 DOM 的 picker 面板
+    _sfActiveContainer = containerEl;
+    _sfUidSeq = 0;
+    _sfUidMap = {};
+    if (!containerEl._ceEvKeys) containerEl._ceEvKeys = {};
 
     // 全量重建会重置 .ce-entry-scroll 滚动位置, 选中远处条目后视口会跳回顶部
     var prevScroll = 0;

@@ -1347,25 +1347,25 @@ async function openFile(filePath, content) {
           break;
         }
         if (_closingTabs[filePath]) {
-          _openingFile = null;
+          if (_openingFile === filePath) _openingFile = null;
           return;
         }
       }
       if (!content) {
         showErrorDialog(I18N.t('dialog.readFailed'), I18N.t('error.cannotReadRemote'));
-        _openingFile = null;
+        if (_openingFile === filePath) _openingFile = null;
         return;
       }
     } else {
       showErrorDialog(I18N.t('dialog.error'), I18N.t('error.remoteApiUnavailable'));
-      _openingFile = null;
+      if (_openingFile === filePath) _openingFile = null;
       return;
     }
   }
 
   if (!content && (!_electronAPI || !_electronAPI.readFile)) {
     showErrorDialog(I18N.t('dialog.apiError'), I18N.t('error.readFileApi'));
-    _openingFile = null;
+    if (_openingFile === filePath) _openingFile = null;
     return;
   }
 
@@ -1712,7 +1712,12 @@ async function closeTab(filePath, force = false) {
       delete _closingTabs[filePath]; return;
     }
     if (result === 'save' && currentFile === filePath) {
-      await saveCurrentFile();
+      const savedOk = await saveCurrentFile();
+      if (savedOk === false) {
+        // 保存失败: 中止关闭, 保留标签与脏标记, 避免丢失用户数据
+        delete _closingTabs[filePath];
+        return;
+      }
     }
     // 后台标签: 缓冲区已不属于它(切换标签时内容即丢失), 按放弃处理, 防止把当前文件内容写入被关闭文件
   }
@@ -1938,7 +1943,9 @@ async function switchEditorMode(visual) {
   // 从激活标签页 DOM 获取当前文件路径（比 currentFile 更可靠）
   var tabEl = document.querySelector('.editor-tab.active');
   var activeTabPath = tabEl ? tabEl.dataset.path : null;
-  if (activeTabPath && activeTabPath !== currentFile) {
+  // 仅在确实是已打开且有缓冲区内容的标签时采用, 防止 openFile 失败后残留 DOM 把保存指向错误路径
+  if (activeTabPath && activeTabPath !== currentFile &&
+      openTabs.indexOf(activeTabPath) !== -1 && _fileContents[activeTabPath] !== undefined) {
     currentFile = activeTabPath;
   }
 
@@ -3269,8 +3276,10 @@ function initRemoteEvents() {
         }
         if (data.success) {
           setRemoteStatus('rm-client-status', I18N.t('rm.fileSavedOk', { path: wpath }));
-          // 管理员批准等延迟确认路径: 结果到达后无条件清除脏标记
-          if (dirtyTabs[wpath]) {
+          // 管理员批准等延迟确认路径: 结果到达后清除脏标记;
+          // 无等待者时 (保存早已在别处处理/标签已关) 不动脏状态, 防止旧结果误清新修改
+          const hadWaiter = !!(waiters && waiters.length);
+          if (hadWaiter && dirtyTabs[wpath]) {
             dirtyTabs[wpath] = false;
             updateTabDirtyIndicator(wpath);
           }

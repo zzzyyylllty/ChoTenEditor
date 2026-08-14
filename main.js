@@ -128,10 +128,13 @@ ipcMain.handle('fs:readdir', async (event, dirPath) => {
   if (!isValidFsPath(dirPath)) return { success: false, error: '无效路径' };
   try {
     const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    const files = entries.map(entry => ({
-      name: entry.name,
-      isDirectory: entry.isDirectory(),
-      path: path.join(dirPath, entry.name),
+    const files = await Promise.all(entries.map(async entry => {
+      // symlink 的 isDirectory() 恒为 false, 需 stat 目标判定, 否则符号链接目录会被当作文件跳过
+      let isDir = entry.isDirectory();
+      if (!isDir && entry.isSymbolicLink()) {
+        try { isDir = (await fs.promises.stat(path.join(dirPath, entry.name))).isDirectory(); } catch (e) {}
+      }
+      return { name: entry.name, isDirectory: isDir, path: path.join(dirPath, entry.name) };
     }));
     // 目录在前, 名称排序 (与文件树展示一致)
     files.sort((a, b) => (a.isDirectory === b.isDirectory)

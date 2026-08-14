@@ -646,6 +646,30 @@ if (compUid) {
   check(iEntry.data['client-bound-data'].custom_2 !== undefined && typeof iEntry.data['client-bound-data'].custom_2 === 'object', '写回: 重复添加自定义键 → custom_2');
 }
 
+// union-set (noTypeKey): block 字符串 ↔ 内联方块
+// 注意: 必须在 iR 渲染后立即执行, 中间不能再渲染其他文件 —
+// uid 映射按渲染重建 (防泄漏设计), 跨渲染引用的旧 uid 会指向错误 widget
+const blkUidRe = /data-sf-action="union-set" data-sf-path="behavior\.block" data-sf-uid="([^"]+)"/;
+const blkUid = iR.el.innerHTML.match(blkUidRe);
+check(!!blkUid, 'block union-set uid 可定位');
+if (blkUid) {
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, 'inline') });
+  check(iEntry.data.behavior.block !== null && typeof iEntry.data.behavior.block === 'object' && !Array.isArray(iEntry.data.behavior.block), '写回: noTypeKey union-set → inline 默认对象');
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, '__scalar') });
+  check(iEntry.data.behavior.block === '', '写回: noTypeKey union-set → __scalar 存空串显示输入框');
+}
+
+// union-set: 改回"不指定" → 删除字段
+const bvUidRe = /data-sf-action="union-set" data-sf-path="behavior" data-sf-uid="([^"]+)"/;
+const bvUid = iR.el.innerHTML.match(bvUidRe);
+check(!!bvUid, 'behavior union-set uid 可定位 (不指定写回)');
+if (bvUid) {
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, '') });
+  check(iEntry.data.behavior === undefined, '写回: union-set 空值(不指定)删除字段');
+  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, 'plain') });
+  check(!!iEntry.data.behavior && iEntry.data.behavior.type === 'plain', '写回: 删除后仍可重新选择类型');
+}
+
 // v1.0.27: 根级键风格检测 (kebab 文件 → kebab 键名, snake 文件 → snake 键名)
 check(h.includes('data-sf-path="custom-model-data"'), 'kebab 文件检测 → 渲染 kebab 键名 (custom-model-data)');
 const snYaml = `
@@ -675,28 +699,6 @@ check(!!modelClearUid, '模型编辑器清除按钮 (有值时显示)');
 if (modelClearUid) {
   iCh({ target: mk({ 'data-sf-action': 'model-clear', 'data-sf-path': 'model', 'data-sf-uid': modelClearUid[1] }, null) });
   check(iEntry.data.model === undefined, '写回: model-clear 删除模型字段');
-}
-
-// union-set (noTypeKey): block 字符串 ↔ 内联方块
-const blkUidRe = /data-sf-action="union-set" data-sf-path="behavior\.block" data-sf-uid="([^"]+)"/;
-const blkUid = h.match(blkUidRe);
-check(!!blkUid, 'block union-set uid 可定位');
-if (blkUid) {
-  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, 'inline') });
-  check(iEntry.data.behavior.block !== null && typeof iEntry.data.behavior.block === 'object' && !Array.isArray(iEntry.data.behavior.block), '写回: noTypeKey union-set → inline 默认对象');
-  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior.block', 'data-sf-uid': blkUid[1] }, '__scalar') });
-  check(iEntry.data.behavior.block === '', '写回: noTypeKey union-set → __scalar 存空串显示输入框');
-}
-
-// union-set: 改回"不指定" → 删除字段
-const bvUidRe = /data-sf-action="union-set" data-sf-path="behavior" data-sf-uid="([^"]+)"/;
-const bvUid = h.match(bvUidRe);
-check(!!bvUid, 'behavior union-set uid 可定位 (不指定写回)');
-if (bvUid) {
-  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, '') });
-  check(iEntry.data.behavior === undefined, '写回: union-set 空值(不指定)删除字段');
-  iCh({ target: mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'behavior', 'data-sf-uid': bvUid[1] }, 'plain') });
-  check(!!iEntry.data.behavior && iEntry.data.behavior.type === 'plain', '写回: 删除后仍可重新选择类型');
 }
 
 // ---------- 2.3 block 写回 (Phase 3) ----------
