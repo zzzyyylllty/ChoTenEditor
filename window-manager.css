@@ -1,0 +1,63 @@
+/* ============================================
+   窗口系统 (WindowManager) — 无遮罩可拖动可关闭窗口
+   ============================================ */
+.cw-window {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  min-width: 320px;
+  min-height: 180px;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+.cw-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 10px 14px;
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
+  cursor: move;
+  flex-shrink: 0;
+}
+.cw-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.cw-close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 15px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+.cw-close:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
+.cw-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.cw-window.is-dragging { cursor: move; }
+.cw-window.is-dragging .cw-body { pointer-events: none; }

@@ -1,18 +1,17 @@
-/* ---- MiniMessage 编辑器独立页面 ---- */
-.mini-overlay {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  z-index: 99999;
-  background: var(--color-bg-primary);
+/* ---- MiniMessage 编辑器 (窗口系统: window-manager.css 提供外层窗口) ---- */
+/* 窗口 body 内布局: 填满窗口内容区, 内部纵向排列, 间距由 content 统一控制 */
+.mini-content {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: ke-fade-in 0.12s ease;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
   font-size: 13px;
-  -webkit-app-region: no-drag;
 }
 .mini-modal {
-  width: min(760px, 92vw);
-  max-height: 90vh;
+  width: min(560px, 92%);
+  max-height: 88%;
   display: flex;
   flex-direction: column;
   background: var(--color-bg-secondary);
@@ -41,10 +40,24 @@
 }
 .mini-close:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
 
+/* 详细添加: 窗口内弹层 (覆盖窗口自身, 半透明底仅限窗口内) */
+.mini-detail-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  animation: ke-fade-in 0.12s ease;
+}
+/* 窗口内容区需要作为绝对定位参照 (供详细弹层 / 颜色面板定位) */
+.cw-body { position: relative; }
+
 /* ---- 预览区 ---- */
 .mini-preview-box {
   position: relative;
-  margin: 12px 16px 0;
+  margin: 0;
   border: 1px dashed var(--color-border);
   border-radius: 10px;
   background: var(--color-bg-tertiary);
@@ -98,7 +111,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  padding: 10px 16px 4px;
+  padding: 0;
   position: relative;
   flex-shrink: 0;
 }
@@ -169,7 +182,7 @@
 
 /* ---- 输入区 ---- */
 .mini-input {
-  margin: 8px 16px 0;
+  margin: 0;
   flex: 1;
   min-height: 160px;
   resize: vertical;
@@ -190,7 +203,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 16px 14px;
+  padding: 0;
   flex-shrink: 0;
 }
 .mini-btn {
@@ -214,7 +227,6 @@
 .mini-btn-sm { padding: 4px 10px; font-size: 12px; }
 
 /* ---- 详细添加弹窗 ---- */
-.mini-overlay.is-top { z-index: 999999; }
 .mini-detail-body {
   padding: 12px 16px;
   display: flex;

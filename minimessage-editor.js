@@ -89,7 +89,7 @@
     return html;
   }
 
-  var overlay = null, inputEl = null, previewEl = null, colorPanel = null, cb = null;
+  var win = null, inputEl = null, previewEl = null, colorPanel = null, cb = null;
 
   // 预览底色: 黑白切换 (localStorage 记忆)
   var previewBg = 'black';
@@ -106,11 +106,13 @@
   }
 
   function closeOverlay(result) {
-    if (!overlay) return;
-    var o = overlay;
-    overlay = null; inputEl = null; previewEl = null; colorPanel = null;
+    if (!win) return;
+    // DOM 移除由 WindowManager.close 负责; 这里只清理内部状态并触发回调
+    var closedWin = win;
+    win = null; inputEl = null; previewEl = null; colorPanel = null;
     var fn = cb; cb = null;
-    o.remove();
+    // 如果窗口还存在则关闭它 (openDetail 等场景由调用方自行关闭)
+    if (!closedWin._closed) closedWin.close();
     if (fn) fn(result);
   }
 
@@ -258,39 +260,42 @@
   }
 
   function openEditor(value, callback) {
-    var old = document.getElementById('mini-editor-overlay');
-    if (old) old.remove();
+    var oldWin = document.querySelector('.cw-win-mini');
+    if (oldWin) { var w = oldWin.win; if (w) w.close(); }
     cb = callback;
 
-    overlay = document.createElement('div');
-    overlay.id = 'mini-editor-overlay';
-    overlay.className = 'mini-overlay';
-    overlay.innerHTML =
-      '<div class="mini-modal">' +
-        '<div class="mini-header">' +
-          '<span class="mini-title">✏️ ' + esc(t('minimessage.title', 'MiniMessage 编辑器')) + '</span>' +
-          '<button class="mini-close" id="mini-close" data-tip="' + esc(t('common.close', '关闭')) + '">✕</button>' +
-        '</div>' +
-        '<div class="mini-preview-box">' +
-          '<div class="mini-preview-label">' + esc(t('minimessage.preview', '预览')) + '</div>' +
-          '<button type="button" class="mini-preview-bg" id="mini-preview-bg" data-tip="' + esc(t('minimessage.previewBg', '切换黑白底色')) + '">◐</button>' +
-          '<div class="mini-preview" id="mini-preview"></div>' +
-        '</div>' +
-        '<div class="mini-toolbar" id="mini-toolbar"></div>' +
-        '<textarea class="mini-input" id="mini-input" spellcheck="false"></textarea>' +
-        '<div class="mini-footer">' +
-          '<button class="mini-btn" id="mini-cancel">' + esc(t('common.cancel', '取消')) + '</button>' +
-          '<button class="mini-btn mini-btn-primary" id="mini-save">' + esc(t('common.save', '保存')) + '</button>' +
-        '</div>' +
+    // 构建窗口内容 (不包括外层窗口; 窗口系统提供标题栏/拖动/关闭)
+    var content = document.createElement('div');
+    content.className = 'mini-content';
+    content.innerHTML =
+      '<div class="mini-preview-box">' +
+        '<div class="mini-preview-label">' + esc(t('minimessage.preview', '预览')) + '</div>' +
+        '<button type="button" class="mini-preview-bg" id="mini-preview-bg" data-tip="' + esc(t('minimessage.previewBg', '切换黑白底色')) + '">◐</button>' +
+        '<div class="mini-preview" id="mini-preview"></div>' +
+      '</div>' +
+      '<div class="mini-toolbar" id="mini-toolbar"></div>' +
+      '<textarea class="mini-input" id="mini-input" spellcheck="false"></textarea>' +
+      '<div class="mini-footer">' +
+        '<button class="mini-btn" id="mini-cancel">' + esc(t('common.cancel', '取消')) + '</button>' +
+        '<button class="mini-btn mini-btn-primary" id="mini-save">' + esc(t('common.save', '保存')) + '</button>' +
       '</div>';
-    document.body.appendChild(overlay);
 
-    inputEl = overlay.querySelector('#mini-input');
-    previewEl = overlay.querySelector('#mini-preview');
-    var toolbar = overlay.querySelector('#mini-toolbar');
+    win = WindowManager.open({
+      title: '✏️ ' + t('minimessage.title', 'MiniMessage 编辑器'),
+      content: content,
+      width: 780, height: 580,
+      className: 'cw-mini',
+      onClose: function () { closeOverlay(null); },
+    });
+    // 把 win 引用挂到 el 上, 以便 closeOverlay 内部调用 win.close()
+    win.el.win = win;
+
+    inputEl = content.querySelector('#mini-input');
+    previewEl = content.querySelector('#mini-preview');
+    var toolbar = content.querySelector('#mini-toolbar');
     loadPreviewBg();
     applyPreviewBg();
-    overlay.querySelector('#mini-preview-bg').addEventListener('click', togglePreviewBg);
+    content.querySelector('#mini-preview-bg').addEventListener('click', togglePreviewBg);
 
     inputEl.value = (value == null) ? '' : String(value);
     inputEl.addEventListener('input', updatePreview);
@@ -299,10 +304,8 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); closeOverlay(inputEl.value); }
     });
 
-    overlay.querySelector('#mini-close').addEventListener('click', function () { closeOverlay(null); });
-    overlay.querySelector('#mini-cancel').addEventListener('click', function () { closeOverlay(null); });
-    overlay.querySelector('#mini-save').addEventListener('click', function () { closeOverlay(inputEl.value); });
-    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeOverlay(null); });
+    content.querySelector('#mini-cancel').addEventListener('click', function () { closeOverlay(null); });
+    content.querySelector('#mini-save').addEventListener('click', function () { closeOverlay(inputEl.value); });
 
     // 标签按钮: 左键=详细添加弹窗, 右键=快速添加 (和之前一样直接应用标签)
     for (var i = 0; i < TAGS.length; i++) {
@@ -401,17 +404,17 @@
     return { before: d.tag.before + d.tag.after, suffix: d.tag.suffix };
   }
   function openDetail(def) {
-    if (!inputEl) return;
-    var old = document.getElementById('mini-detail-overlay');
+    if (!win || !inputEl) return;
+    var old = document.getElementById('mini-detail-layer');
     if (old) old.remove();
     var selStart = inputEl.selectionStart || 0;
     var selEnd = inputEl.selectionEnd || 0;
     var curSel = inputEl.value.substring(selStart, selEnd);
 
-    var overlay = document.createElement('div');
-    overlay.id = 'mini-detail-overlay';
-    overlay.className = 'mini-overlay is-top';
-    overlay.innerHTML =
+    var layer = document.createElement('div');
+    layer.id = 'mini-detail-layer';
+    layer.className = 'mini-detail-layer';
+    layer.innerHTML =
       '<div class="mini-modal">' +
         '<div class="mini-header">' +
           '<span class="mini-title" id="mini-detail-title">✏️ ' + esc(t('minimessage.detailTitle', '详细添加')) + '</span>' +
@@ -434,13 +437,13 @@
           '<button class="mini-btn mini-btn-primary" id="mini-detail-ok">' + esc(t('minimessage.detailAdd', '添加')) + '</button>' +
         '</div>' +
       '</div>';
-    document.body.appendChild(overlay);
+    win.body.appendChild(layer);
 
-    var titleEl = overlay.querySelector('#mini-detail-title');
-    var contentTa = overlay.querySelector('#mini-detail-content');
-    var typeSel = overlay.querySelector('#mini-detail-type');
-    var extraBox = overlay.querySelector('#mini-detail-extra');
-    var tagHint = overlay.querySelector('#mini-detail-tag');
+    var titleEl = layer.querySelector('#mini-detail-title');
+    var contentTa = layer.querySelector('#mini-detail-content');
+    var typeSel = layer.querySelector('#mini-detail-type');
+    var extraBox = layer.querySelector('#mini-detail-extra');
+    var tagHint = layer.querySelector('#mini-detail-tag');
     contentTa.value = curSel;
 
     for (var i = 0; i < TAGS.length; i++) {
@@ -459,13 +462,13 @@
       var tag = buildDetailTag(d.id, detailFields(d.id));
       tagHint.textContent = tag.before + contentTa.value + tag.suffix;
     }
-    function closeDetail() { overlay.remove(); }
+    function closeDetail() { layer.remove(); }
 
     typeSel.addEventListener('change', refresh);
     contentTa.addEventListener('input', refresh);
-    overlay.querySelector('#mini-detail-close').addEventListener('click', closeDetail);
-    overlay.querySelector('#mini-detail-cancel').addEventListener('click', closeDetail);
-    overlay.querySelector('#mini-detail-ok').addEventListener('click', function () {
+    layer.querySelector('#mini-detail-close').addEventListener('click', closeDetail);
+    layer.querySelector('#mini-detail-cancel').addEventListener('click', closeDetail);
+    layer.querySelector('#mini-detail-ok').addEventListener('click', function () {
       var d = detailTypeById(typeSel.value);
       if (!d) return;
       var content = contentTa.value;
@@ -473,10 +476,10 @@
       closeDetail();
       insertDetail(content, tag);
     });
-    overlay.addEventListener('keydown', function (e) {
+    layer.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.stopPropagation(); closeDetail(); }
     });
-    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeDetail(); });
+    layer.addEventListener('mousedown', function (e) { if (e.target === layer) closeDetail(); });
 
     refresh();
     contentTa.focus();
