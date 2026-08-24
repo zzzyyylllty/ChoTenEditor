@@ -339,7 +339,7 @@ check(wParsed._visualDirty === false, 'syncToSource 后 _visualDirty 清除');
 
 // union-set: 切换条件类型 (random → permission)
 const uidRe = /data-sf-action="union-set" data-sf-path="conditions\.0" data-sf-uid="([^"]+)"/;
-const uidMatch = h5.match(uidRe);
+const uidMatch = wR.el.innerHTML.match(uidRe);
 check(!!uidMatch, 'union-set uid 可定位');
 if (uidMatch) {
   fire(mk({ 'data-sf-action': 'union-set', 'data-sf-path': 'conditions.0', 'data-sf-uid': uidMatch[1] }, 'permission'));
@@ -348,9 +348,9 @@ if (uidMatch) {
 
 // list-add: 类型选择器 + 添加按钮
 const listUidRe = /data-sf-action="list-add" data-sf-uid="([^"]+)"/;
-const listUid = h5.match(listUidRe);
+const listUid = wR.el.innerHTML.match(listUidRe);
 check(!!listUid, 'list-add 按钮可定位');
-check(/data-sf-list-pick="1"/.test(h5), 'list-add 类型选择器存在');
+check(/data-sf-list-pick="1"/.test(wR.el.innerHTML), 'list-add 类型选择器存在');
 if (listUid) {
   const pickSel = mk({ 'data-sf-list-pick': '1' }, 'block');
   const addBtn = mk({ 'data-sf-action': 'list-add', 'data-sf-uid': listUid[1] }, null);
@@ -365,9 +365,9 @@ if (listUid) {
 }
 
 // list-del / list-move: 按钮必须携带 data-sf-uid 才能定位容器
-check(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="[^"]+"/.test(h5), 'list-del 按钮带 data-sf-uid');
-check(/data-sf-action="list-move" data-sf-dir="up" data-sf-idx="0" data-sf-uid="[^"]+"/.test(h5), 'list-move 按钮带 data-sf-uid');
-const listDelUid = h5.match(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="([^"]+)"/);
+check(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="[^"]+"/.test(wR.el.innerHTML), 'list-del 按钮带 data-sf-uid');
+check(/data-sf-action="list-move" data-sf-dir="up" data-sf-idx="0" data-sf-uid="[^"]+"/.test(wR.el.innerHTML), 'list-move 按钮带 data-sf-uid');
+const listDelUid = wR.el.innerHTML.match(/data-sf-action="list-del" data-sf-idx="0" data-sf-uid="([^"]+)"/);
 if (listDelUid) {
   fire(mk({ 'data-sf-action': 'list-del', 'data-sf-idx': '0', 'data-sf-uid': listDelUid[1] }, null));
   check(wEntry.data.conditions.length === 1, '写回: list-del 删除条目');
@@ -632,12 +632,12 @@ check(!iEntry.data.data['item-name'] && iEntry.data.data.custom_name === '<!i>Ne
 // comp-add: 客户端数据面板添加数据键 (v1.0.27: data 改为 tabs, components 在 client 面板)
 // itemYaml 是 kebab 文件 (custom-model-data) → 客户端数据键为 client-bound-data
 const compUidRe = /data-sf-action="comp-add" data-sf-uid="([^"]+)"/;
-const compUid = h.match(compUidRe);
+const compUid = iR.el.innerHTML.match(compUidRe);
 check(!!compUid, 'comp-add uid 可定位');
 if (compUid) {
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, 'max_damage') });
   check(iEntry.data['client-bound-data'] && iEntry.data['client-bound-data'].max_damage === '', '写回: comp-add 添加数据键 (默认空值)');
-  check(h.includes('__custom__'), '组件下拉含自定义 (键值对) 选项');
+  check(iR.el.innerHTML.includes('__custom__'), '组件下拉含自定义 (键值对) 选项');
   iCh({ target: mk({ 'data-sf-action': 'comp-add', 'data-sf-uid': compUid[1] }, '__custom__') });
   check(iEntry.data['client-bound-data'].custom !== undefined && typeof iEntry.data['client-bound-data'].custom === 'object' && !Array.isArray(iEntry.data['client-bound-data'].custom), '写回: comp-add 自定义键生成 custom 键');
   iCh({ target: mk({ 'data-sf-kind': 'field', 'data-sf-path': 'client-bound-data.custom', 'data-sf-type': 'kv' }, 'foo: {"bar": 1}\n') });
@@ -683,7 +683,7 @@ check(snH.includes('data-sf-path="custom_model_data"'), 'snake 文件检测 → 
 
 // model-mode: 切换 item_model 为树模式 (原值 undefined → 补 type)
 const modelUidRe = /data-sf-action="model-mode" data-sf-path="item_model" data-sf-uid="([^"]+)"/;
-const modelUid = h.match(modelUidRe);
+const modelUid = iR.el.innerHTML.match(modelUidRe);
 check(!!modelUid, 'model-mode uid 可定位');
 if (modelUid) {
   iCh({ target: mk({ 'data-sf-action': 'model-mode', 'data-sf-path': 'item_model', 'data-sf-uid': modelUid[1] }, 'tree') });
@@ -694,7 +694,7 @@ if (modelUid) {
 
 // model-clear: 模型编辑器清除按钮 (有值时显示)
 const modelClearRe = /data-sf-action="model-clear" data-sf-path="model" data-sf-uid="([^"]+)"/;
-const modelClearUid = h.match(modelClearRe);
+const modelClearUid = iR.el.innerHTML.match(modelClearRe);
 check(!!modelClearUid, '模型编辑器清除按钮 (有值时显示)');
 if (modelClearUid) {
   iCh({ target: mk({ 'data-sf-action': 'model-clear', 'data-sf-path': 'model', 'data-sf-uid': modelClearUid[1] }, null) });

@@ -19,6 +19,9 @@
   function _escHtml(str) {
     return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+  function _safeJsonStringify(val) {
+    try { return JSON.stringify(val); } catch (e) { return '[Circular or unserializable data]'; }
+  }
 
   // ============ 常量 ============
   var SECTION_KEYS = [
@@ -175,6 +178,10 @@
     var dir = filePath.replace(/\\/g, '/').replace(/\/[^/]*$/, '');
     if (_projectCache[dir]) return _projectCache[dir];
     var p = ROOT.electronAPI.ce.resolveProjectRoot(filePath).catch(function () { return { found: false }; });
+    if (Object.keys(_projectCache).length > 50) {
+      var oldest = Object.keys(_projectCache)[0];
+      delete _projectCache[oldest];
+    }
     _projectCache[dir] = p;
     return p;
   }
@@ -905,6 +912,7 @@
   // 各命名空间扫描结果按 configDir 记录贡献, 合并时从全部贡献重建 (跨命名空间聚合, 重扫幂等)
   var _ceElemContrib = Object.create(null); // configDir -> {sec:[keys]}
   var _ceElemRescanAt = 0; // 最近一次全量重扫时间, 扫描中状态 (loading) 可据此保持"扫描中"提示
+  var _ceElemScanning = false; // 互斥锁, 防止并发扫描
   function _ceElemMerge(configDir, data) {
     if (!data) return;
     if (!_ceElemCache[configDir]) return; // 已被清除 (切换项目) 的旧扫描结果丢弃
@@ -1051,8 +1059,10 @@
     }).catch(function () {});
   }
   function _ceElemScan(filePath) {
+    if (_ceElemScanning) return;
+    _ceElemScanning = true;
     _sfInit();
-    if (!_ceElemEnabled()) return;
+    if (!_ceElemEnabled()) { _ceElemScanning = false; return; }
     // 1) 显式 configuration 段 / 向上探测含 section 子目录的目录 (兼容自定义配置目录名)
     _ceElemLocate(filePath).then(function (configDir) {
       if (configDir) {
@@ -1061,6 +1071,7 @@
         _ceElemPruneOutside(resRoot ? [resRoot] : [configDir]);
         _ceElemStart(configDir);
         if (resRoot) _ceElemStartSiblings(resRoot);
+        _ceElemScanning = false;
         return;
       }
       // 2) 兜底: 经工程根回溯 (插件根 / 数据包根 都试)
@@ -1083,7 +1094,8 @@
           }
           _ceElemPruneOutside(prefixes);
         }
-      });
+        _ceElemScanning = false;
+      }).catch(function () { _ceElemScanning = false; });
     });
   }
   function _ceElemRescan(filePath) {
@@ -1093,6 +1105,12 @@
     _ceElemRebuild();
     _ceElemRescanAt = Date.now();
     _ceElemScan(filePath);
+  }
+  function _ceElemCleanup() {
+    _ceElemScanning = false;
+    Object.keys(_ceElemContrib).forEach(function (k) { delete _ceElemContrib[k]; });
+    Object.keys(_ceElemCache).forEach(function (k) { delete _ceElemCache[k]; });
+    _ceElemRebuild();
   }
 
   // section 的 schema 是否 root-map (条目键 = 直接子键, 版本键可作分组)
@@ -1135,7 +1153,8 @@
   function _sfUidAlloc(path, kind, def, opts) {
     _sfUidSeq++;
     var uid = 'ce-sf-' + _sfUidSeq;
-    _sfUidMap[uid] = { path: path, kind: kind, def: def, inList: !!(opts && opts.inList) };
+    var uidMap = (_sfActiveContainer && _sfActiveContainer._ceUi && _sfActiveContainer._ceUi._sfUidMap) || _sfUidMap;
+    uidMap[uid] = { path: path, kind: kind, def: def, inList: !!(opts && opts.inList) };
     return uid;
   }
   function _sfUidOf(el) {
@@ -1462,24 +1481,44 @@
     if (_cePickerBound || !ROOT.document) return;
     _cePickerBound = true;
     var doc = ROOT.document;
-    doc.addEventListener('mousedown', function (e) {
+    function _sfPickerMousedown(e) {
       if (!_cePickerOpen) return;
       var t = e.target;
       if (t && t.closest && t.closest('.ce-picker-panel')) return;
       if (t && t.closest && t.closest('.ce-sf-pick-btn')) return;
       _sfClosePicker();
-    }, true);
-    doc.addEventListener('keydown', function (e) {
+    }
+    function _sfPickerKeydown(e) {
       if (_cePickerOpen && e.key === 'Escape') _sfClosePicker();
-    }, true);
-    // 捕获阶段拦截滚动: 面板内部滚动 (条目列表滚动条) 不关闭, 仅外部滚动 (编辑器/页面) 关闭
-    doc.addEventListener('scroll', function (e) {
+    }
+    function _sfPickerScroll(e) {
       if (!_cePickerOpen) return;
       var t = e.target;
       if (t && t !== doc && typeof t.closest === 'function' && t.closest('.ce-picker-panel')) return;
       _sfClosePicker();
-    }, true);
-    if (doc.defaultView) doc.defaultView.addEventListener('resize', _sfClosePicker);
+    }
+    function _sfPickerResize() { _sfClosePicker(); }
+    _sfPickerBindGlobal._mousedown = _sfPickerMousedown;
+    _sfPickerBindGlobal._keydown = _sfPickerKeydown;
+    _sfPickerBindGlobal._scroll = _sfPickerScroll;
+    _sfPickerBindGlobal._resize = _sfPickerResize;
+    doc.addEventListener('mousedown', _sfPickerMousedown, true);
+    doc.addEventListener('keydown', _sfPickerKeydown, true);
+    doc.addEventListener('scroll', _sfPickerScroll, true);
+    if (doc.defaultView) doc.defaultView.addEventListener('resize', _sfPickerResize);
+  }
+  function _sfPickerUnbindGlobal() {
+    if (!_cePickerBound || !ROOT.document) return;
+    _cePickerBound = false;
+    var doc = ROOT.document;
+    if (_sfPickerBindGlobal._mousedown) doc.removeEventListener('mousedown', _sfPickerBindGlobal._mousedown, true);
+    if (_sfPickerBindGlobal._keydown) doc.removeEventListener('keydown', _sfPickerBindGlobal._keydown, true);
+    if (_sfPickerBindGlobal._scroll) doc.removeEventListener('scroll', _sfPickerBindGlobal._scroll, true);
+    if (doc.defaultView && _sfPickerBindGlobal._resize) doc.defaultView.removeEventListener('resize', _sfPickerBindGlobal._resize);
+    _sfPickerBindGlobal._mousedown = null;
+    _sfPickerBindGlobal._keydown = null;
+    _sfPickerBindGlobal._scroll = null;
+    _sfPickerBindGlobal._resize = null;
   }
   function _sfOpenPicker(btn, name, containerEl) {
     var doc = ROOT.document;
@@ -1647,10 +1686,9 @@
   }
   function _sfBindHintIcons() {
     if (typeof RichTooltip === 'undefined') return;
-    // 立即执行时 tooltip.js 可能尚未加载 (index.html 顺序: interpreter < tooltip), render 时兜底
     if (document.__ceHintIconsBound) return;
     document.__ceHintIconsBound = 1;
-    document.addEventListener('mouseover', function (e) {
+    function _onMouseover(e) {
       var t = e.target;
       if (!t || t.nodeType !== 1) return;
       var icon = (t.classList && t.classList.contains('ce-sf-hint-icon')) ? t : (t.closest ? t.closest('.ce-sf-hint-icon') : null);
@@ -1662,9 +1700,8 @@
       var html = _sfTipEditorHtml(txt, def);
       RichTooltip.bind(icon, function () { return html; });
       RichTooltip.show(e, html);
-    });
-    // 点击 ℹ 打开提示详情弹窗 (编辑器方式 / Wiki 原文 可切换)
-    document.addEventListener('click', function (e) {
+    }
+    function _onClickHint(e) {
       var t = e.target;
       if (!t || t.nodeType !== 1) return;
       var icon = (t.classList && t.classList.contains('ce-sf-hint-icon')) ? t : (t.closest ? t.closest('.ce-sf-hint-icon') : null);
@@ -1672,9 +1709,8 @@
       e.preventDefault();
       e.stopPropagation();
       _sfOpenHintPopup(icon);
-    });
-    // 编辑器方式树: 多种情况选项卡 — 点击切换
-    document.addEventListener('click', function (e) {
+    }
+    function _onClickTab(e) {
       var t = e.target;
       if (!t || t.nodeType !== 1) return;
       var tab = t.classList && t.classList.contains('ce-yv-tab') ? t : (t.closest ? t.closest('.ce-yv-tab') : null);
@@ -1682,9 +1718,8 @@
       var root = tab.parentNode ? tab.parentNode.parentNode : null;
       if (!root || !root.classList || !root.classList.contains('ce-yv-tabs')) return;
       _sfSwitchTab(root, parseInt(tab.getAttribute('data-ce-tab') || '0', 10));
-    });
-    // 左右键切换 (tooltip 或弹窗可见时)
-    document.addEventListener('keydown', function (e) {
+    }
+    function _onKeydownHint(e) {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       var root = _sfCurrentTabs();
       if (!root) return;
@@ -1693,7 +1728,27 @@
       for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('is-active')) { cur = i; break; }
       _sfSwitchTab(root, cur + (e.key === 'ArrowRight' ? 1 : -1));
       e.preventDefault();
-    });
+    }
+    _sfBindHintIcons._mouseover = _onMouseover;
+    _sfBindHintIcons._clickHint = _onClickHint;
+    _sfBindHintIcons._clickTab = _onClickTab;
+    _sfBindHintIcons._keydown = _onKeydownHint;
+    document.addEventListener('mouseover', _onMouseover);
+    document.addEventListener('click', _onClickHint);
+    document.addEventListener('click', _onClickTab);
+    document.addEventListener('keydown', _onKeydownHint);
+  }
+  function _sfUnbindHintIcons() {
+    if (typeof document === 'undefined' || !document.__ceHintIconsBound) return;
+    document.__ceHintIconsBound = 0;
+    if (_sfBindHintIcons._mouseover) document.removeEventListener('mouseover', _sfBindHintIcons._mouseover);
+    if (_sfBindHintIcons._clickHint) document.removeEventListener('click', _sfBindHintIcons._clickHint);
+    if (_sfBindHintIcons._clickTab) document.removeEventListener('click', _sfBindHintIcons._clickTab);
+    if (_sfBindHintIcons._keydown) document.removeEventListener('keydown', _sfBindHintIcons._keydown);
+    _sfBindHintIcons._mouseover = null;
+    _sfBindHintIcons._clickHint = null;
+    _sfBindHintIcons._clickTab = null;
+    _sfBindHintIcons._keydown = null;
   }
   _sfBindHintIcons();
 
@@ -2765,7 +2820,17 @@
     var old = document.getElementById('ce-popup-modal');
     if (old) old.remove();
     var cur = path ? _getNested(entry.data, path) : entry.data;
-    var copy = (cur === undefined || cur === null) ? undefined : JSON.parse(JSON.stringify(cur));
+    var copy;
+    if (cur === undefined || cur === null) {
+      copy = undefined;
+    } else {
+      try { copy = JSON.parse(JSON.stringify(cur)); } catch (e) { copy = Object.assign({}, cur); }
+    }
+    // 保存父容器 UID 状态, 弹窗内渲染使用独立 UID 空间
+    var savedUidMap = _sfUidMap;
+    var savedUidSeq = _sfUidSeq;
+    _sfUidMap = {};
+    _sfUidSeq = Date.now() % 1000000;
 
     var bodyEl = document.createElement('div');
     bodyEl.className = 'ce-popup-body';
@@ -2788,7 +2853,11 @@
     modal.querySelector('.ce-popup-scroll').appendChild(bodyEl);
     document.body.appendChild(modal);
 
-    function close() { modal.remove(); }
+    function close() {
+      modal.remove();
+      _sfUidMap = savedUidMap;
+      _sfUidSeq = savedUidSeq;
+    }
     modal.querySelector('[data-ce-popup="cancel"]').addEventListener('click', close);
     modal.querySelector('[data-ce-popup="ok"]').addEventListener('click', function () {
       var got = bodyEl._ceParsed.sections[0].entries[0].data.__popup__;
@@ -3030,7 +3099,7 @@
       if (invalid) return;
       close();
       _sfMarkDirty(parsed);
-      var rec = uid ? _sfUidMap[uid] : null;
+      var rec = uid ? (containerEl._ceUi._sfUidMap || _sfUidMap)[uid] : null;
       if (rec && rec.kind !== 'tabs') _sfRerender(uid, containerEl);
       else _ceRenderFn();
       if (ROOT.__keAutoSync) syncToSource(parsed);
@@ -3038,7 +3107,7 @@
   }
   // 容器局部重渲染 (list/map/union/object/components/model 内容), 不整页刷新、不丢焦点
   function _sfRerender(uid, containerEl) {
-    var rec = _sfUidMap[uid];
+    var rec = (containerEl._ceUi._sfUidMap || _sfUidMap)[uid];
     if (!rec || !containerEl || !containerEl.querySelectorAll) return;
     _sfActiveContainer = containerEl;
     if (!containerEl._ceEvKeys) containerEl._ceEvKeys = {};
@@ -3063,6 +3132,7 @@
     else return;
     // html 含根节点, 必须替换节点本身 (innerHTML 会把新根嵌套进旧根, 每轮残留一层)
     wrap.outerHTML = html;
+    wrap = containerEl.querySelector('[data-sf-uid="' + uid + '"]');
   }
   // schema 动作: 点击按钮 (list/map/union) / select 变更 (union-set/list-add)
   function _sfHandleAction(action, el, containerEl) {
@@ -3072,7 +3142,7 @@
     var entry = _sfEntry(parsed, ui);
     if (!section || !entry) return;
     var uid = el.getAttribute('data-sf-uid');
-    var rec = uid ? _sfUidMap[uid] : null;
+    var rec = uid ? (containerEl._ceUi._sfUidMap || _sfUidMap)[uid] : null;
     if (action === 'subtab') {
       // 子选项卡切换: 仅切 CSS 类, 不改数据
       var root = el.closest ? el.closest('.ce-sf-subtabs') : null;
@@ -3799,7 +3869,7 @@
       }
       return keyField + _renderField(_t('craftengine.jsonEditor'),
         '<textarea class="ce-input ce-json-field ce-json-whole" data-ce-field-json="__whole__" rows="6" spellcheck="false">' +
-        _escHtml(JSON.stringify(data)) + '</textarea>',
+        _escHtml(_safeJsonStringify(data)) + '</textarea>',
         _t('craftengine.jsonEditorHint'));
     }
     var keys = _entryKeyOrder(entry);
@@ -3962,7 +4032,7 @@
       // 通用 section: 整条 JSON
       return _renderField(_t('craftengine.jsonEditor'),
         '<textarea class="ce-input ce-json-field ce-json-whole" data-ce-field-json="__whole__" rows="6" spellcheck="false">' +
-        _escHtml(JSON.stringify(data)) + '</textarea>',
+        _escHtml(_safeJsonStringify(data)) + '</textarea>',
         _t('craftengine.jsonEditorHint'));
     }
 
@@ -4097,10 +4167,14 @@
     var parsed = containerEl._ceParsed;
     var ui = containerEl._ceUi;
     if (!parsed) return;
+    _sfHintDefs = {};
+    _sfPickerUnbindGlobal();
     _sfClosePicker(); // 重渲染会替换输入框, 关闭可能指向旧 DOM 的 picker 面板
+    _sfActiveContainer = null;
     _sfActiveContainer = containerEl;
-    _sfUidSeq = 0;
-    _sfUidMap = {};
+    _sfLastParsed = null;
+    _sfUidSeq = Date.now() % 1000000;
+    _sfUidMap = containerEl._ceUi._sfUidMap = {};
     if (!containerEl._ceEvKeys) containerEl._ceEvKeys = {};
 
     // 全量重建会重置 .ce-entry-scroll 滚动位置, 选中远处条目后视口会跳回顶部
@@ -4210,9 +4284,8 @@
         }
       });
     }
+    _sfLastParsed = containerEl._ceParsed;
   }
-
-  // ============ 事件绑定 ============
   function _applyValue(entry, path, value, parsed, section) {
     if (path === '__key__') return; // 由 ce-rename 处理
     if (path === '__whole__') {
@@ -4433,13 +4506,13 @@
         var type = target.getAttribute('data-ce-type');
         if (type === 'number') {
           var n = parseFloat(target.value);
-          _applyValue(entry, field, isNaN(n) ? undefined : n);
+          _applyValue(entry, field, isNaN(n) ? undefined : n, parsed, section);
         } else if (type === 'bool') {
-          _applyValue(entry, field, target.checked);
+          _applyValue(entry, field, target.checked, parsed, section);
         } else if (type === 'lines') {
           var arr = target.value.split('\n').map(function (l) { return l.replace(/\r$/, ''); })
             .filter(function (l) { return l.trim() !== ''; });
-          _applyValue(entry, field, arr.length ? arr : undefined);
+          _applyValue(entry, field, arr.length ? arr : undefined, parsed, section);
         } else if (type === 'kv') {
           var obj = {};
           var bad = null;
@@ -4462,11 +4535,11 @@
             return;
           }
           target.classList.remove('ce-invalid');
-          _applyValue(entry, field, Object.keys(obj).length ? obj : undefined);
+          _applyValue(entry, field, Object.keys(obj).length ? obj : undefined, parsed, section);
         } else if (type === 'lines-scalar') {
           var ls = target.value.split('\n').map(function (l) { return l.replace(/\r$/, ''); })
             .filter(function (l) { return l.trim() !== ''; });
-          _applyValue(entry, field, ls.length > 1 ? ls : (ls.length === 1 ? ls[0] : undefined));
+          _applyValue(entry, field, ls.length > 1 ? ls : (ls.length === 1 ? ls[0] : undefined), parsed, section);
         } else if (type === 'lines-json') {
           var lj = [];
           var ljBad = null;
@@ -4480,7 +4553,7 @@
           }
           if (ljBad) { target.classList.add('ce-invalid'); return; }
           target.classList.remove('ce-invalid');
-          _applyValue(entry, field, lj.length ? lj : undefined);
+          _applyValue(entry, field, lj.length ? lj : undefined, parsed, section);
         } else if (type === 'whole-text') {
           _applyValue(entry, '__whole__', target.value, parsed, section);
         } else if (type === 'kv-whole') {
@@ -4504,7 +4577,7 @@
           target.classList.remove('ce-invalid');
           _applyValue(entry, '__whole__', kw, parsed, section);
         } else {
-          _applyValue(entry, field, target.value);
+          _applyValue(entry, field, target.value, parsed, section);
         }
         if (ROOT.__keAutoSync) syncToSource(parsed);
         return;
@@ -4535,11 +4608,12 @@
             if (current[excl[x]] !== undefined) newVal[excl[x]] = current[excl[x]];
           }
         }
-        _applyValue(entry, jsonField, newVal);
+        _applyValue(entry, jsonField, newVal, parsed, section);
         if (ROOT.__keAutoSync) syncToSource(parsed);
       }
     };
     var keyChangeHandler = function (e) {
+      var containerEl = e.currentTarget;
       var target = e.target;
       if (!target || target.getAttribute('data-ce-field') !== '__key__') return;
       var parsed = containerEl._ceParsed;
@@ -4612,7 +4686,8 @@
   }
 
   function _ceRenderFn() {
-    if (ROOT._ceRenderFn) ROOT._ceRenderFn();
+    if (_sfActiveContainer && _sfActiveContainer._ceRenderFn) _sfActiveContainer._ceRenderFn();
+    else if (ROOT._ceRenderFn) ROOT._ceRenderFn();
   }
 
   // ---- 新建条目弹窗 ----
@@ -4784,7 +4859,7 @@
       _sfMarkDirty(parsed);
       modal.remove();
       if (uid) {
-        var rec = _sfUidMap[uid];
+        var rec = (containerEl._ceUi._sfUidMap || _sfUidMap)[uid];
         if (rec) rec.evKey = evKey;
         _sfRerender(uid, containerEl);
       } else {
@@ -4832,7 +4907,7 @@
       _sfMarkDirty(parsed);
       modal.remove();
       if (uid) {
-        var rec = _sfUidMap[uid];
+        var rec = (containerEl._ceUi._sfUidMap || _sfUidMap)[uid];
         if (rec) rec.evKey = null;
         _sfRerender(uid, containerEl);
       } else {
@@ -4860,6 +4935,7 @@
       containerEl._ceAutoSyncHandler = null;
       containerEl._ceYamlHlHandler = null;
       containerEl._ceYamlScrollHandler = null;
+      _ceElemCleanup();
     }
     var parsed = parse(content);
     var fname2 = String(filePath || '').replace(/\\/g, '/').split('/').pop() || '';
@@ -4873,8 +4949,9 @@
     containerEl._ceFilePath = filePath;
     _ceElemScan(filePath);
     if (!containerEl._ceUi) containerEl._ceUi = { section: 0, entry: 0 };
-    ROOT._ceRenderFn = function () { _renderFromParsed(containerEl); };
+    containerEl._ceRenderFn = function () { _renderFromParsed(containerEl); };
     _bindEvents(containerEl);
+    _sfUnbindHintIcons();
     _sfBindHintIcons();
     _renderFromParsed(containerEl);
     return parsed;
