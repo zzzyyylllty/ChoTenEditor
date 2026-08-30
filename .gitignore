@@ -9,3 +9,5 @@ electron.exe
 # Local scratch / debug artifacts
 _ce_tmp/
 debug_*.js
+_ce_v*_smoke.js
+.claude
