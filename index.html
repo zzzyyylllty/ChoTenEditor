@@ -107,7 +107,7 @@
     .lang-picker-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.75);
-      z-index: 9999999;
+      z-index: 999999; /* 低于标题栏 (1000000), 首次启动时右上角关闭/最小化仍可用 */
       display: flex; align-items: center; justify-content: center;
       animation: ke-fade-in 0.2s ease;
     }

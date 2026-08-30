@@ -49,7 +49,7 @@ function startApp() {
 // 改用 argv[1] 与 package.json main 比对; 测试脚本 require 本文件时必须判定为非入口,
 // 否则测试进程会占用单实例锁并阻止正常启动
 function isAppEntry() {
-  if (process.defaultApp === false) return true; // 打包应用: 入口必是 main.js
+  if (process.defaultApp !== true) return true; // 打包应用: 入口必是 main.js (Electron 41+ 打包后 defaultApp 为 undefined 而非 false)
   if (!process.argv[1]) return false;
   let entryFile = path.resolve(process.argv[1]);
   try {
