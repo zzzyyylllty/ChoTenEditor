@@ -4,25 +4,25 @@
 
 A plugin editor that isn't very easy to use. Currently, supports the following features.
 
-[X] Source file editor
-[X] Visual editor
-[X] Editor localization in English and Chinese
-[X] Chemdah quests
-[X] Chemdah dialogues
-[X] Kether editor
-[X] CraftEngine basics
-[X] CraftEngine block editing
-[X] CraftEngine item editing
-[X] CraftEngine font image editing
-[X] MiniMessage editing
-[ ] CraftEngine script editing
-[ ] CraftEngine text parameters
-[ ] CraftEngine font image preview
-[ ] CraftEngine item preview
-[ ] Autocomplete for CraftEngine item/block textures
-[ ] Autocomplete for CraftEngine models
-[ ] Sertraline description editing
-[ ] Sertraline other editing
+- [X] Source file editor
+- [X] Visual editor
+- [X] Editor localization in English and Chinese
+- [X] Chemdah quests
+- [X] Chemdah dialogues
+- [X] Kether editor
+- [X] CraftEngine basics
+- [X] CraftEngine block editing
+- [X] CraftEngine item editing
+- [X] CraftEngine font image editing
+- [X] MiniMessage editing
+- [ ] CraftEngine script editing
+- [ ] CraftEngine text parameters
+- [ ] CraftEngine font image preview
+- [ ] CraftEngine item preview
+- [ ] Autocomplete for CraftEngine item/block textures
+- [ ] Autocomplete for CraftEngine models
+- [ ] Sertraline description editing
+- [ ] Sertraline other editing
 
 
 <p align="center">
