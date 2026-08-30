@@ -65,7 +65,23 @@
       "Bash(findstr /n \"bindTooltip\" kether-editor.js)",
       "PowerShell(Select-String *)",
       "Bash(git restore *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git rev-list *)",
+      "Bash(git cat-file *)",
+      "Bash(sort -k2 -n -r)",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(set FILTER_BRANCH_SQUELCH_WARNING=1)",
+      "Bash(git checkout *)",
+      "Bash(awk '$2 > 10000000')",
+      "Bash(git reflog *)",
+      "Bash(git gc *)",
+      "Bash(awk '$2 > 5000000')",
+      "Bash(Select-String -Path \"C:\\\\Users\\\\Administrator\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\E--ChoTenEditor\\\\a6218812-94f9-416e-9371-b3f7143162c9\\\\tasks\\\\bg8ledt02.output\" -Pattern \".\")",
+      "Bash(Select-Object -Last 5)",
+      "WebFetch(domain:plugins.ptms.ink)"
     ]
   }
 }
