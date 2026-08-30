@@ -19,8 +19,11 @@
     return fallback;
   }
 
-  function closeAll() {
+  function closeAll(e) {
     document.querySelectorAll('.ce-select-panel.open, .ce-combo-panel.open').forEach(function (p) {
+      // 点击落在该面板归属控件内部 (select trigger / 字体输入框 / 面板自身) 时保留打开,
+      // 否则字体输入框 click 冒泡到 document 会把 focus 刚打开的面板立即关闭
+      if (e && p.parentNode && p.parentNode.contains(e.target)) return;
       p.classList.remove('open');
     });
   }
@@ -80,7 +83,7 @@
 
     // 原生 select 隐藏但保留 (外部代码继续用 .value / change / options)
     sel.classList.add('ce-select-native');
-    if (wrapper) wrapper.style.display = 'none';
+    sel.style.display = 'none';
     (wrapper || sel).parentNode.insertBefore(wrap, (wrapper || sel).nextSibling);
 
     function renderOptions(filter) {
@@ -189,6 +192,7 @@
     sel.addEventListener('change', updateValue);
     var observer = new MutationObserver(function () { updateValue(); });
     observer.observe(sel, { childList: true, attributes: true, subtree: true });
+    sel.__ceObserver = observer;
 
     updateValue();
   }
@@ -250,7 +254,8 @@
       if (!merged.length) {
         var empty = document.createElement('div');
         empty.className = 'ce-select-empty';
-        empty.textContent = tr('settings.ceNoMatch', '无匹配项');
+        // 字体列表尚未从主进程返回时显示加载态, 避免误报"无匹配项"
+        empty.textContent = (allFonts.length === 0 && extraFonts.length === 0) ? tr('settings.loading', '加载中…') : tr('settings.ceNoMatch', '无匹配项');
         list.appendChild(empty);
       }
     }
@@ -312,6 +317,7 @@
 
   function startObserver() {
     if (upgradeObserver || !document.body) return;
+    if (upgradeObserver) upgradeObserver.disconnect();
     upgradeObserver = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
         if (m.type !== 'childList') return;
@@ -327,6 +333,7 @@
               sel.__ceWrap.remove();
               delete sel.__ceWrap;
             }
+            if (sel.__ceObserver) { sel.__ceObserver.disconnect(); delete sel.__ceObserver; }
             delete sel.dataset.ceBuilt;
           });
           collect(node, 'input[data-font-combo]').forEach(function (i) {
@@ -348,10 +355,13 @@
     startObserver();
   }
 
+  document.removeEventListener('click', closeAll);
   document.addEventListener('click', closeAll);
-  document.addEventListener('keydown', function (e) {
+  function closeKeydown(e) {
     if (e.key === 'Escape') closeAll();
-  });
+  }
+  document.removeEventListener('keydown', closeKeydown);
+  document.addEventListener('keydown', closeKeydown);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

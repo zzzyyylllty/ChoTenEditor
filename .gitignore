@@ -2,3 +2,10 @@ node_modules
 node_modules/.package-lock.json
 release/
 electron.exe
+
+# Claude Code worktree artifacts
+.claude/worktrees/
+
+# Local scratch / debug artifacts
+_ce_tmp/
+debug_*.js

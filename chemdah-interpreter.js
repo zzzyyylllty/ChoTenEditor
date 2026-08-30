@@ -1366,6 +1366,17 @@ window.ChemdahInterpreter = (() => {
     // 计算树形布局
     _computeTreeLayout(graph.nodes, graph.edges, width, height);
 
+    const nodeW = 130, nodeH = 52, nodeRx = 6;
+
+    // 箭头标记
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = '<marker id="mm-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#667"><polygon points="0 0,10 3.5,0 7"/></marker>';
+    svgEl.appendChild(defs);
+
+    // 主变换组 (声明在缓存加载之前, 供异步回调使用)
+    const mainG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    svgEl.appendChild(mainG);
+
     // 加载内存中的缓存位置（同步），覆盖力导向结果
     var cacheKey = _hashPath(containerEl._cvFilePath);
     var cachedPos = (window._mmCache && window._mmCache[cacheKey]) ? window._mmCache[cacheKey] : null;
@@ -1374,7 +1385,7 @@ window.ChemdahInterpreter = (() => {
     } else {
       // 首次加载：异步从磁盘读取缓存，加载后重新应用位置
       _loadMindMapCache(containerEl).then(function (loadedPos) {
-        if (!loadedPos) return;
+        if (!loadedPos || !mainG || !mainG.isConnected) return;
         _applyCachedPositions(graph.nodes, loadedPos);
         // 直接在 SVG 上更新所有节点位置
         for (var ni2 = 0; ni2 < graph.nodes.length; ni2++) {
@@ -1416,17 +1427,6 @@ window.ChemdahInterpreter = (() => {
     // 确定孤立节点
     const connected = new Set();
     for (const e of graph.edges) { connected.add(e.from); connected.add(e.to); }
-
-    const nodeW = 130, nodeH = 52, nodeRx = 6;
-
-    // 箭头标记
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.innerHTML = '<marker id="mm-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#667"><polygon points="0 0,10 3.5,0 7"/></marker>';
-    svgEl.appendChild(defs);
-
-    // 主变换组
-    const mainG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    svgEl.appendChild(mainG);
 
     /** 计算矩形边框与连线的交点 */
     function _rectEdgePoint(rx, ry, tx, ty, w, h) {
@@ -1562,14 +1562,19 @@ window.ChemdahInterpreter = (() => {
 
     // 鼠标拖拽平移 (window 监听器用共享引用, 渲染前移除旧的, 防止累积泄漏)
     let isPan = false, startPX, startPY;
-    svgEl.addEventListener('mousedown', function (e) {
+    // 移除旧的 svgEl 事件监听
+    if (svgEl._cvMouseDown) svgEl.removeEventListener('mousedown', svgEl._cvMouseDown);
+    if (svgEl._cvWheel) svgEl.removeEventListener('wheel', svgEl._cvWheel, { passive: false });
+    if (svgEl._cvDblClick) svgEl.removeEventListener('dblclick', svgEl._cvDblClick);
+    svgEl._cvMouseDown = function (e) {
       if (e.target === svgEl || e.target.tagName === 'svg') {
         isPan = true;
         startPX = e.clientX - panX;
         startPY = e.clientY - panY;
         svgEl.style.cursor = 'grabbing';
       }
-    });
+    };
+    svgEl.addEventListener('mousedown', svgEl._cvMouseDown);
     if (window._cvPanMove) window.removeEventListener('mousemove', window._cvPanMove);
     if (window._cvPanUp) window.removeEventListener('mouseup', window._cvPanUp);
     window._cvPanMove = function (e) {
@@ -1589,7 +1594,7 @@ window.ChemdahInterpreter = (() => {
     window.addEventListener('mouseup', window._cvPanUp);
 
     // 滚轮缩放
-    svgEl.addEventListener('wheel', function (e) {
+    svgEl._cvWheel = function (e) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       const ns = Math.max(0.2, Math.min(3, scale * delta));
@@ -1599,15 +1604,17 @@ window.ChemdahInterpreter = (() => {
       panY = my - (my - panY) * (ns / scale);
       scale = ns;
       updateTransform();
-    }, { passive: false });
+    };
+    svgEl.addEventListener('wheel', svgEl._cvWheel, { passive: false });
 
     // 双击重置视图
-    svgEl.addEventListener('dblclick', function (e) {
+    svgEl._cvDblClick = function (e) {
       if (e.target === svgEl || e.target.tagName === 'svg') {
         scale = 1; panX = 0; panY = 0;
         updateTransform();
       }
-    });
+    };
+    svgEl.addEventListener('dblclick', svgEl._cvDblClick);
 
     // 节点交互：区分点击（跳转）和拖拽（移动位置）
     (function enableNodeInteraction() {
@@ -1741,9 +1748,9 @@ window.ChemdahInterpreter = (() => {
     if (rootNodes.length > 0) countsHtml += ' · ' + I18N.t('chemdah.entryCount', {count: rootNodes.length});
     infoDiv.innerHTML = '<span>' + I18N.t('chemdah.mindmapHint') + '</span><span class="cv-mindmap-counts">' + countsHtml + '</span>';
     // 移除旧的 info 浮层
-    var oldInfo = wrapper.querySelector('.cv-mindmap-info');
+    var oldInfo = svgEl.parentNode.querySelector('.cv-mindmap-info');
     if (oldInfo) oldInfo.remove();
-    wrapper.appendChild(infoDiv);
+    svgEl.parentNode.appendChild(infoDiv);
   }
 
   // ============================================
@@ -2350,7 +2357,7 @@ window.ChemdahInterpreter = (() => {
         <span class="cv-toggle-arrow">▶</span>
         <span class="cv-card-preview">${_escHtml(label)}</span>
       </span>
-      <span class="qv-type-badge qv-type-${typeCls}">${_escHtml(typeLabel)}</span>
+      <span class="qv-type-badge quest-type-${typeCls}">${_escHtml(typeLabel)}</span>
       <span class="qv-task-count">${I18N.t('chemdah.subtaskCount', {count: quest.tasks.length})}</span>
       <button class="cv-btn-icon" data-action="q-delete-quest" data-q-index="${qi}" data-tip="${I18N.t('chemdah.deleteQuest')}">&times;</button>
     </div>`;
@@ -4653,7 +4660,8 @@ window.ChemdahInterpreter = (() => {
           if (window.__keAutoSync) _syncConversationToSource(current);
         }
       };
-      window._cvRenderFn = reRender;
+      containerEl._cvRenderFn = reRender;
+      window._cvRenderFn = reRender; // 兼容旧版调用方
 
       renderConversationVisual(parsed, containerEl);
 
@@ -4674,7 +4682,8 @@ window.ChemdahInterpreter = (() => {
           if (window.__keAutoSync) _syncQuestToSource(current);
         }
       };
-      window._cvRenderFn = reRender;
+      containerEl._cvRenderFn = reRender;
+      window._cvRenderFn = reRender; // 兼容旧版调用方
 
       renderQuestVisual(parsed, containerEl);
 

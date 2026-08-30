@@ -4,6 +4,7 @@
   if (root.RichTooltip) return;
 
   var tipEl = null;
+  var _rsFrame = null;
   function getTip() {
     if (!tipEl) {
       tipEl = document.createElement('div');
@@ -61,7 +62,14 @@
       show(e, typeof content === 'function' ? content() : content, opts);
     });
     el.addEventListener('mousemove', function (e) {
-      if (tipEl && tipEl.style.display !== 'none' && tipEl.style.display !== '') posTip(e);
+      if (tipEl && tipEl.style.display !== 'none' && tipEl.style.display !== '') {
+        if (!_rsFrame) {
+          _rsFrame = requestAnimationFrame(function() {
+            _rsFrame = null;
+            posTip(e);
+          });
+        }
+      }
     });
     el.addEventListener('mouseleave', hide);
   }
@@ -129,8 +137,19 @@
         if (tm && MD_ALLOWED[tm[1].toLowerCase()]) {
           var tagName = tm[1].toLowerCase();
           var isClose = s[i + 1] === '/';
-          var ge = s.indexOf('>', i);
-          if (ge === -1) { out += '&lt;'; i++; continue; }
+          var ge = -1;
+            var inStr = false;
+            var strChar = '';
+            for (var si = i; si < s.length; si++) {
+              var sch = s[si];
+              if (inStr) {
+                if (sch === strChar) inStr = false;
+              } else {
+                if (sch === '"' || sch === "'") { inStr = true; strChar = sch; }
+                else if (sch === '>') { ge = si; break; }
+              }
+            }
+            if (ge === -1) { out += '&lt;'; i++; continue; }
           // 属性过滤: 仅 <a href> 允许且限定 http/https/mailto 协议, 其余标签/属性全部剥离 (防 XSS)
           if (!isClose && tagName === 'a') {
             var hrefMatch = /href\s*=\s*"([^"]*)"/i.exec(s.slice(i + 1, ge));
@@ -184,8 +203,6 @@
         return;
       }
       if (!bindTip(el)) return;
-      var txt = el.getAttribute('data-tip');
-      RichTooltip.show(e, RichTooltip.md(txt));
     });
     // 键盘可达性: focus 也显示
     document.addEventListener('focusin', function (e) {

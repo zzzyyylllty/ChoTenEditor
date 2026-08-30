@@ -11,10 +11,9 @@
 
   var _windows = [];      // 打开的窗口控制对象
   var _zTop = 990000;     // z-index 起始 (标题栏 1000000 之下)
-  var _zMax = 999000;     // 聚焦递增上限 (防无限增长)
 
   function allocZ() {
-    _zTop = Math.min(_zTop + 1, _zMax);
+    _zTop++;
     return _zTop;
   }
   function frontmostZ() {
@@ -122,7 +121,7 @@
   function clampPos(el, x, y) {
     var w = el.offsetWidth, h = el.offsetHeight;
     var vw = window.innerWidth, vh = window.innerHeight;
-    x = Math.min(Math.max(x, 32 - w), vw - 40);
+    x = Math.min(Math.max(x, 40 - w), vw - 40);
     y = Math.min(Math.max(y, 0), vh - 28);
     el.style.left = x + 'px';
     el.style.top = y + 'px';
@@ -135,7 +134,7 @@
     var i = _windows.indexOf(win);
     if (i >= 0) _windows.splice(i, 1);
     var fn = win.opts.onClose;
-    if (fn) try { fn(); } catch (err) {}
+    if (fn) try { fn(); } catch (err) { console.error('WindowManager onClose error:', err); }
   }
 
   function esc(s) {

@@ -187,7 +187,9 @@
       if (widenSelStart && widenSelEnd) {
         ta.setSelectionRange((ta.selectionStart || 0) - widenSelStart, (ta.selectionEnd || 0) + widenSelEnd);
       }
-      if (!document.execCommand('insertText', false, text)) fallback();
+      var s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+      ta.value = ta.value.substring(0, s) + text + ta.value.substring(e);
+      ta.selectionStart = ta.selectionEnd = s + text.length;
     } catch (err) {
       fallback();
     }
@@ -288,7 +290,6 @@
       onClose: function () { closeOverlay(null); },
     });
     // 把 win 引用挂到 el 上, 以便 closeOverlay 内部调用 win.close()
-    win.el.win = win;
 
     inputEl = content.querySelector('#mini-input');
     previewEl = content.querySelector('#mini-preview');
@@ -462,7 +463,7 @@
       var tag = buildDetailTag(d.id, detailFields(d.id));
       tagHint.textContent = tag.before + contentTa.value + tag.suffix;
     }
-    function closeDetail() { layer.remove(); }
+    function closeDetail() { layer.remove(); if (inputEl && selStart != null) { inputEl.setSelectionRange(selStart, selEnd); } }
 
     typeSel.addEventListener('change', refresh);
     contentTa.addEventListener('input', refresh);

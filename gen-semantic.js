@@ -1,5 +1,11 @@
 // Generate semantic display templates for all Kether actions
-const actions = require('./desc/kether-actions.json');
+var actions;
+try {
+  actions = require('./desc/kether-actions.json');
+} catch(e) {
+  console.error('Cannot load kether-actions.json. Make sure the file exists at ./desc/kether-actions.json');
+  process.exit(1);
+}
 const fs = require('fs');
 
 const NAME_CN = {

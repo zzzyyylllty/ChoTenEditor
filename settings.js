@@ -2,12 +2,6 @@
 // 弹窗模式（嵌入主窗口 iframe）
 // ============================================
 
-// 用户是否实际修改过设置：beforeunload/关闭弹窗时避免用陈旧的 UI 状态全量覆盖配置
-// （iframe 每次打开都会重载, 期间主页面可能已写入 theme/ai 等字段, 无改动时保存会丢失这些并发写入）
-let _settingsDirty = false;
-document.addEventListener('change', function () { _settingsDirty = true; }, true);
-document.addEventListener('input', function () { _settingsDirty = true; }, true);
-
 const IS_EMBEDDED = window.self !== window.top;
 
 if (IS_EMBEDDED) {
@@ -15,9 +9,8 @@ if (IS_EMBEDDED) {
   // 父页面关闭弹窗前会通知保存（弹窗关闭不触发 beforeunload）
   // 保存完成后回复父页面，等它关闭弹窗，避免异步操作（如密码哈希）未完成
   window.addEventListener('message', (e) => {
-    if (e.source !== window.parent) return;
     if (e.data && e.data.type === 'saveSettings') {
-      Promise.resolve(_settingsDirty ? saveSettings() : Promise.resolve()).catch(() => {}).then(() => {
+      Promise.resolve(saveSettings()).catch(() => {}).then(() => {
         window.parent.postMessage({ type: 'settingsSaved' }, '*');
       });
     }
@@ -46,11 +39,6 @@ let editorLineWrapping;
 let editorTheme;
 let editorAutoSync;
 let editorDevtools;
-let checkboxMarkOn;
-let checkboxMarkOff;
-let hidePremiumHints;
-let hideVersionHints;
-let ceElementPicker;
 let itemKeyStyle;
 let uiFont;
 let editorFontFamily;
@@ -66,27 +54,10 @@ let catColorInputs = {};
 let shortcutInputs = {};
 let resetShortcutsBtn;
 let editShortcutsBtn;
-let _scRecording = null;
-
-// 切换快捷键编辑模式 (编辑按钮文案随 i18n 语言切换)
-function setShortcutEditing(on) {
-  document.body.classList.toggle('sc-editing', on);
-  if (!on) {
-    _scRecording = null;
-    document.querySelectorAll('.sc-recording').forEach((el) => el.classList.remove('sc-recording'));
-  }
-  if (editShortcutsBtn) {
-    editShortcutsBtn.textContent = on ? I18N.t('settings.editShortcutDone') : I18N.t('settings.editShortcuts');
-  }
-}
 
 // 远程设置
 let remotePassword;
 let remoteAllowDifferentVersions;
-
-// 实验性功能
-let experimentalRemote;
-let experimentalAIStudio;
 
 // AI 设置
 let aiEndpoint;
@@ -98,7 +69,6 @@ let aiNewKey;
 let aiAddKeyBtn;
 let aiSystemPrompt;
 let aiCustomPrompt;
-let aiCustomPromptGroup;
 let aiMaxTokens;
 let aiTemperature;
 let aiPromptList;
@@ -137,8 +107,6 @@ const defaultConfig = {
     syntaxOperator: '#d4d4d4',
     syntaxPunctuation: '#d4d4d4',
     syntaxProperty: '#9cdcfe',
-    checkboxOff: '#ff1744',
-    checkboxOn: '#00c853',
   },
   editor: {
     fontSize: '14',
@@ -149,11 +117,6 @@ const defaultConfig = {
     fontFamily: '',
   },
   autoSync: false,
-  checkboxMarkOn: true,
-  checkboxMarkOff: false,
-  hidePremiumHints: false,
-  hideVersionHints: false,
-  ceElementPicker: true,
   blockFontSize: '11',
   categoryColors: {
     '实体操作': '#c06262',
@@ -174,6 +137,10 @@ const defaultConfig = {
     newFile: 'Ctrl+N',
     openProject: 'Ctrl+O',
     toggleMode: 'F2',
+    find: 'Ctrl+F',
+    replace: 'Ctrl+H',
+    comment: 'Ctrl+/',
+    format: 'Shift+Alt+F',
   },
   background: {
     filename: '',
@@ -182,10 +149,6 @@ const defaultConfig = {
   remotePasswordHash: '',
   allowDifferentVersions: false,
   devTools: false,
-  experimental: {
-    remote: false,
-    aiStudio: false,
-  },
   prewarm: {
     files: true,
     filesMaxMb: 50,
@@ -317,6 +280,7 @@ const presetThemes = {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[SETTINGS] DOMContentLoaded fired');
 
   await I18N.ready;
 
@@ -331,6 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabNavigation();
 
 
+  console.log('[SETTINGS] 初始化完成?');
 });
 
 // ============================================
@@ -338,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 
 function initializeDOMElements() {
+  console.log('[SETTINGS] 初始化DOM元素');
   
   themeSelect = document.getElementById('theme');
   backBtn = document.getElementById('back-btn');
@@ -365,8 +331,6 @@ function initializeDOMElements() {
     'syntax-operator': document.getElementById('color-syntax-operator'),
     'syntax-punctuation': document.getElementById('color-syntax-punctuation'),
     'syntax-property': document.getElementById('color-syntax-property'),
-    checkboxOff: document.getElementById('color-checkbox-off'),
-    checkboxOn: document.getElementById('color-checkbox-on'),
   };
 
   // 预设按钮
@@ -396,6 +360,10 @@ function initializeDOMElements() {
     newFile: document.getElementById('shortcut-new-file'),
     openProject: document.getElementById('shortcut-open-project'),
     toggleMode: document.getElementById('shortcut-toggle-mode'),
+    find: document.getElementById('shortcut-find'),
+    replace: document.getElementById('shortcut-replace'),
+    comment: document.getElementById('shortcut-comment'),
+    format: document.getElementById('shortcut-format'),
   };
 
   // 背景图片
@@ -408,19 +376,8 @@ function initializeDOMElements() {
   remotePassword = document.getElementById('remote-password');
   remoteAllowDifferentVersions = document.getElementById('remote-allow-different-versions');
 
-  // 实验性功能
-  experimentalRemote = document.getElementById('experimental-remote');
-  experimentalAIStudio = document.getElementById('experimental-ai-studio');
-
   // 开发者工具
   editorDevtools = document.getElementById('editor-devtools');
-
-  // 复选框设置
-  checkboxMarkOn = document.getElementById('checkbox-mark-on');
-  checkboxMarkOff = document.getElementById('checkbox-mark-off');
-  hidePremiumHints = document.getElementById('hide-premium-hints');
-  hideVersionHints = document.getElementById('hide-version-hints');
-  ceElementPicker = document.getElementById('ce-element-picker');
 
   // AI 设置
   aiEndpoint = document.getElementById('ai-endpoint');
@@ -432,7 +389,6 @@ function initializeDOMElements() {
   aiAddKeyBtn = document.getElementById('ai-add-key');
   aiSystemPrompt = document.getElementById('ai-system-prompt');
   aiCustomPrompt = document.getElementById('ai-custom-prompt');
-  aiCustomPromptGroup = document.getElementById('ai-custom-prompt-group');
   aiMaxTokens = document.getElementById('ai-max-tokens');
   aiTemperature = document.getElementById('ai-temperature');
   aiPromptList = document.getElementById('ai-prompt-list');
@@ -446,6 +402,21 @@ function initializeDOMElements() {
   prewarmFilesMax = document.getElementById('prewarm-files-max');
   prewarmKether = document.getElementById('prewarm-kether');
 
+  console.log('  - themeSelect:', !!themeSelect);
+  console.log('  - backBtn:', !!backBtn);
+  console.log('  - saveBtn:', !!saveBtn);
+  console.log('  - resetBtn:', !!resetBtn);
+  console.log('  - exportBtn:', !!exportBtn);
+  console.log('  - importBtn:', !!importBtn);
+  console.log('  - importFile:', !!importFile);
+  console.log('  - presetBtns count:', presetBtns.length);
+  console.log('  - colorInputs count:', Object.keys(colorInputs).length);
+  console.log('  - editorFontSize:', !!editorFontSize);
+  console.log('  - editorTabSize:', !!editorTabSize);
+  console.log('  - editorLineNumbers:', !!editorLineNumbers);
+  console.log('  - editorLineWrapping:', !!editorLineWrapping);
+  console.log('  - editorTheme:', !!editorTheme);
+  console.log('  - shortcutInputs count:', Object.keys(shortcutInputs).filter(key => shortcutInputs[key]).length);
 }
 
 // ============================================
@@ -478,7 +449,7 @@ function initTabNavigation() {
 
   // 恢复上次打开的选项卡
   const saved = sessionStorage.getItem('settingsActiveTab');
-  if (saved && document.querySelector('.settings-nav-item[data-tab="' + saved + '"]')) {
+  if (saved && document.querySelector('.settings-nav-item[data-tab="' + CSS.escape(saved) + '"]')) {
     switchTab(saved);
   }
 }
@@ -488,11 +459,13 @@ function initTabNavigation() {
 // ============================================
 
 function setupEventListeners() {
+  console.log('[SETTINGS] 设置事件监听');
 
   // 主题选择
   if (themeSelect) {
     themeSelect.addEventListener('change', (e) => {
       playSound('click');
+      console.log('[SETTINGS] 主题改变:', e.target.value);
       applyTheme(e.target.value);
       updateColorInputs();
     });
@@ -510,6 +483,7 @@ function setupEventListeners() {
   if (backBtn) {
     backBtn.addEventListener('click', () => {
       playSound('back');
+      console.log('[SETTINGS] 返回到编辑器');
       if (IS_EMBEDDED) {
         // 弹窗模式：通知父页面关闭弹窗
         window.parent.postMessage({ type: 'closeSettings' }, '*');
@@ -523,6 +497,7 @@ function setupEventListeners() {
   Object.values(colorInputs).forEach((input) => {
     if (input) {
       input.addEventListener('input', (e) => {
+        console.log('[SETTINGS] 颜色变更:', e.target.id, e.target.value);
         updateCSSVariable(e.target.id, e.target.value);
         updateColorValue(e.target.id);
       });
@@ -545,7 +520,7 @@ function setupEventListeners() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       playSound('save');
-      setShortcutEditing(false);
+      console.log('[SETTINGS] 保存设置');
       await saveSettings();
     });
   }
@@ -554,6 +529,7 @@ function setupEventListeners() {
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
       playSound('update');
+      console.log('[SETTINGS] 重置设置');
       resetSettings();
     });
   }
@@ -562,6 +538,7 @@ function setupEventListeners() {
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
       playSound('click');
+      console.log('[SETTINGS] 导出设置');
       exportSettings();
     });
   }
@@ -570,6 +547,7 @@ function setupEventListeners() {
   if (importBtn) {
     importBtn.addEventListener('click', () => {
       playSound('click');
+      console.log('[SETTINGS] 导入设置');
       if (importFile) {
         importFile.click();
       }
@@ -587,6 +565,7 @@ function setupEventListeners() {
       btn.addEventListener('click', (e) => {
         playSound('click');
         const preset = e.target.dataset.preset;
+        console.log('[SETTINGS] 应用预设:', preset);
         applyPreset(preset);
       });
     });
@@ -614,70 +593,12 @@ function setupEventListeners() {
   // 快捷键按钮
   const resetShortcutBtn = document.getElementById('reset-shortcuts');
   if (resetShortcutBtn) {
-    resetShortcutBtn.addEventListener('click', () => {
-      playSound('update');
-      setShortcutEditing(false);
-      const defs = defaultConfig.shortcuts;
-      Object.entries(shortcutInputs).forEach(([k, v]) => {
-        if (v && defs[k]) {
-          v.value = defs[k];
-          v.classList.remove('sc-conflict');
-          v.title = '';
-        }
-      });
-    });
+    resetShortcutBtn.addEventListener('click', () => { playSound('update'); console.log('[SETTINGS] 重置快捷键'); });
   }
   const editShortcutBtn = document.getElementById('edit-shortcuts');
   if (editShortcutBtn) {
-    editShortcutBtn.addEventListener('click', () => {
-      playSound('click');
-      setShortcutEditing(!document.body.classList.contains('sc-editing'));
-    });
+    editShortcutBtn.addEventListener('click', () => { playSound('click'); console.log('[SETTINGS] 编辑快捷键'); });
   }
-  // 编辑模式下点击输入框进入录制状态
-  Object.values(shortcutInputs).forEach((input) => {
-    if (!input) return;
-    input.addEventListener('click', () => {
-      if (!document.body.classList.contains('sc-editing')) return;
-      playSound('click');
-      document.querySelectorAll('.sc-recording').forEach((el) => el.classList.remove('sc-recording'));
-      _scRecording = input;
-      input.classList.add('sc-recording');
-      input.title = I18N.t('settings.shortcutHint');
-    });
-  });
-  // 录制: 按组合键写入输入框
-  document.addEventListener('keydown', (e) => {
-    if (!_scRecording) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const k = e.key;
-    if (k === 'Control' || k === 'Shift' || k === 'Alt' || k === 'Meta' || k === 'Escape') {
-      if (k === 'Escape') {
-        _scRecording.classList.remove('sc-recording');
-        _scRecording = null;
-      }
-      return;
-    }
-    const parts = [];
-    if (e.ctrlKey) parts.push('Ctrl');
-    if (e.metaKey) parts.push('Meta');
-    if (e.altKey) parts.push('Alt');
-    if (e.shiftKey) parts.push('Shift');
-    parts.push(k.length === 1 ? k.toUpperCase() : k);
-    const combo = parts.join('+');
-    _scRecording.value = combo;
-    _scRecording.classList.remove('sc-recording');
-    // 冲突检测 (与其他快捷键相同则提示)
-    let conflict = null;
-    Object.entries(shortcutInputs).forEach(([ck, v]) => {
-      if (v && v !== _scRecording && v.value === combo) conflict = ck;
-    });
-    _scRecording.classList.toggle('sc-conflict', !!conflict);
-    _scRecording.title = conflict ? I18N.t('settings.shortcutConflict', { name: conflict }) : '';
-    if (conflict) playSound('error');
-    _scRecording = null;
-  });
 
   // AI 模型切换
   if (aiModel) {
@@ -689,28 +610,20 @@ function setupEventListeners() {
   }
 
   // AI 提示词切换
-  var _promptEditBackup = null;
   if (aiSystemPrompt) {
     aiSystemPrompt.addEventListener('change', function() {
       var val = this.value;
       if (val === 'custom') {
         if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = '';
-        // 切回自定义时恢复用户编辑的内容,避免被磁盘提示词预览覆盖
-        if (_promptEditBackup !== null && aiCustomPrompt) {
-          aiCustomPrompt.value = _promptEditBackup;
-          _promptEditBackup = null;
-        }
       } else {
         if (aiCustomPromptGroup) aiCustomPromptGroup.style.display = 'none';
-        // 备份用户当前编辑内容
-        if (aiCustomPrompt && _promptEditBackup === null) _promptEditBackup = aiCustomPrompt.value;
         // 从磁盘加载该提示词内容预览
         if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
           window.electronAPI.ai.loadPrompts().then(function(result) {
             if (result.success && result.prompts[val]) {
               if (aiCustomPrompt) aiCustomPrompt.value = result.prompts[val].content || '';
             }
-          });
+          }).catch(function(err) { console.warn('Failed to load prompts:', err); });
         }
       }
       updatePromptInfo(val, null, null);
@@ -721,7 +634,7 @@ function setupEventListeners() {
             var cfg2 = getFullConfig();
             updatePromptInfo(val, result.prompts, (cfg2.ai && cfg2.ai.customPrompts) || {});
           }
-        });
+        }).catch(function(err) { console.warn('Failed to load prompts:', err); });
       }
     });
   }
@@ -741,7 +654,7 @@ function setupEventListeners() {
           } else {
             showNotification(I18N.t('settings.promptSaveFailed', {msg: result.error || ''}), 'error');
           }
-        });
+        }).catch(function(err) { console.warn('Failed to save user prompt:', err); });
       } else {
         // fallback: 保存到 localStorage
         var cfg = getFullConfig();
@@ -783,10 +696,6 @@ function setupEventListeners() {
     langSelect.addEventListener('change', function() {
       playSound('click');
       I18N.setLang(this.value);
-      // 嵌入模式: 通知主窗口整页重载应用新语言 (否则语言只对设置页生效)
-      if (window.self !== window.top) {
-        window.parent.postMessage({ type: 'langChanged' }, '*');
-      }
       location.reload();
     });
   }
@@ -804,33 +713,20 @@ function setupEventListeners() {
     });
   });
 
+  console.log('[SETTINGS] 事件监听器设置完成?');
 }
 
 // ============================================
 // 主题应用
 // ============================================
 
-// auto 主题: 跟随系统 prefers-color-scheme
-function resolveTheme(t) {
-  if (t === 'auto') {
-    try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { return 'dark'; }
-  }
-  return t || 'dark';
-}
-
 function applyTheme(theme) {
-  document.body.setAttribute('data-theme', resolveTheme(theme));
+  console.log('[SETTINGS] 应用主题:', theme);
+  document.body.setAttribute('data-theme', theme);
 }
-
-// 系统主题切换时自动重新应用 (仅 auto 模式)
-try {
-  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
-    const t = themeSelect ? themeSelect.value : '';
-    if (t === 'auto') applyTheme('auto');
-  });
-} catch (e) {}
 
 function applyPreset(presetName) {
+  console.log('[SETTINGS] 应用预设主题:', presetName);
   
   const preset = presetThemes[presetName];
   if (!preset) {
@@ -857,8 +753,6 @@ function applyPreset(presetName) {
   });
 
   updatePresetButtonState(presetName);
-  // 程序化赋值不触发 change/input 事件, 需手动标记, 否则关闭设置时更改丢失
-  _settingsDirty = true;
 }
 
 function updatePresetButtonState(activePreset) {
@@ -898,46 +792,21 @@ function updateColorValues() {
 function updateColorInputs() {
   // 根据主题更新颜色输入框：清除自定义覆盖，恢复当前主题默认色，
   // 避免保存的 colors 里残留旧主题色值（否则重启后被锁死导致主题切换失效）
+  var computedStyle = getComputedStyle(document.body);
   Object.entries(colorInputs).forEach(([key, input]) => {
     if (!input) return;
     const cssVarName = `--color-${camelToKebab(key)}`;
     document.documentElement.style.removeProperty(cssVarName);
-    const val = getComputedStyle(document.body).getPropertyValue(cssVarName).trim();
+    const val = computedStyle.getPropertyValue(cssVarName).trim();
     if (val) {
       input.value = val;
       updateColorValue(input.id);
     }
   });
+  console.log('[SETTINGS] 更新颜色输入，当前主题', themeSelect ? themeSelect.value : 'dark');
 }
 
-// 应用复选框标记显示开关 (body class: cb-mark-on 选中√ / cb-mark-off 未选中X)
-// 选中√默认显示 (checkboxMarkOn 缺省视为 true), 可在设置里关闭
-function applyCheckboxMarks(config) {
-  const on = config.checkboxMarkOn !== false;
-  const off = config.checkboxMarkOff === true;
-  document.body.classList.toggle('cb-mark-on', on);
-  document.body.classList.toggle('cb-mark-off', off);
-}
-
-// 高级版专属功能提示开关 (body class: ce-hide-premium-hints)
-// 勾选后 tooltip 不再显示高级版专属红色提示行
-function applyPremiumHint(config) {
-  document.body.classList.toggle('ce-hide-premium-hints', config.hidePremiumHints === true);
-}
-
-// 版本限制提示开关 (body class: ce-hide-version-hints)
-// 勾选后 tooltip 不再显示绿色版本限制提示行
-function applyVersionHint(config) {
-  document.body.classList.toggle('ce-hide-version-hints', config.hideVersionHints === true);
-}
-
-// CE 元素预载开关 (body class: ce-element-picker)
-// 勾选后预载工程 CE 元素并在输入框右侧显示快速填入按钮; 默认开启
-function applyElementPicker(config) {
-  document.body.classList.toggle('ce-element-picker', config.ceElementPicker !== false);
-}
-
-// 字体名 → CSS font-family (含空格/引号的单 family 自动加引号; 已有 CSS 列表保持原样)
+// 字体名 → CSS font-family (含空格/引号/数字开头的单 family 自动加引号; 已有 CSS 列表保持原样)
 function normalizeFontFamily(name) {
   name = (name || '').trim();
   if (!name) return '';
@@ -952,7 +821,7 @@ function displayFontName(v) {
   return v.replace(/^['"]|['"]$/g, '');
 }
 
-// 应用字体（实时预览，读取输入框当前值）
+// 应用字体（实时预览，读取选择框当前值）
 function applyFonts() {
   var ui = uiFont ? normalizeFontFamily(uiFont.value) : '';
   document.body.style.fontFamily = ui;
@@ -1048,16 +917,12 @@ function getBackgroundConfig() {
 }
 
 function saveBackgroundConfig(filename, opacity) {
-  try {
-    const stored = localStorage.getItem('editorConfig');
-    const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
-    if (!config.background) config.background = {};
-    config.background.filename = filename || '';
-    if (opacity !== undefined) config.background.opacity = opacity;
-    localStorage.setItem('editorConfig', JSON.stringify(config));
-  } catch (e) {
-    console.warn('保存背景配置失败', e);
-  }
+  const stored = localStorage.getItem('editorConfig');
+  const config = stored ? JSON.parse(stored) : { theme: 'dark', colors: {} };
+  if (!config.background) config.background = {};
+  config.background.filename = filename || '';
+  if (opacity !== undefined) config.background.opacity = opacity;
+  localStorage.setItem('editorConfig', JSON.stringify(config));
 }
 
 function selectBackground(filename) {
@@ -1086,11 +951,7 @@ function applyBackgroundPreview() {
   const saved = getBackgroundConfig();
   const filename = saved && saved.filename ? saved.filename : '';
   const themeSelectEl = document.getElementById('theme');
-  let theme = themeSelectEl ? themeSelectEl.value : 'dark';
-  // auto 主题按系统实际主题渲染预览, 避免设置页预览与主界面不一致
-  if (theme === 'auto') {
-    try { theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e) { theme = 'dark'; }
-  }
+  const theme = themeSelectEl ? themeSelectEl.value : 'dark';
 
   if (filename) {
     const alpha = String(Math.round((1 - (bgOpacity ? parseFloat(bgOpacity.value) : (saved ? saved.opacity : 0.3))) * 60) / 100);
@@ -1142,17 +1003,24 @@ async function uploadBackground() {
 // 设置保存
 
 async function hashPassword(pw) {
-  var encoder = new TextEncoder();
-  var data = encoder.encode(pw);
-  var hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  try {
+    var encoder = new TextEncoder();
+    var data = encoder.encode(pw);
+    var hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  } catch(e) {
+    console.warn('[SETTINGS] crypto.subtle unavailable, skipping password hash:', e);
+    return '';
+  }
 }
 
 async function saveSettings() {
+  console.log('[SETTINGS] 保存设置');
 
   // 读取现有配置以保留未修改的字段
   var existingRaw = localStorage.getItem('editorConfig');
-  var existing = existingRaw ? JSON.parse(existingRaw) : {};
+  var existing;
+  try { existing = existingRaw ? JSON.parse(existingRaw) : {}; } catch(e) { existing = {}; }
 
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
@@ -1168,15 +1036,10 @@ async function saveSettings() {
     },
     autoSync: editorAutoSync ? editorAutoSync.value === 'true' : defaultConfig.autoSync,
     devTools: editorDevtools ? editorDevtools.checked : defaultConfig.devTools,
-    checkboxMarkOn: checkboxMarkOn ? checkboxMarkOn.checked : defaultConfig.checkboxMarkOn,
-    checkboxMarkOff: checkboxMarkOff ? checkboxMarkOff.checked : defaultConfig.checkboxMarkOff,
-    hidePremiumHints: hidePremiumHints ? hidePremiumHints.checked : defaultConfig.hidePremiumHints,
-    hideVersionHints: hideVersionHints ? hideVersionHints.checked : defaultConfig.hideVersionHints,
-    ceElementPicker: ceElementPicker ? ceElementPicker.checked : defaultConfig.ceElementPicker,
     itemKeyStyle: itemKeyStyle ? itemKeyStyle.value : defaultConfig.itemKeyStyle,
     prewarm: {
       files: prewarmFiles ? prewarmFiles.checked : defaultConfig.prewarm.files,
-      filesMaxMb: prewarmFilesMax ? parseInt(prewarmFilesMax.value) || defaultConfig.prewarm.filesMaxMb : defaultConfig.prewarm.filesMaxMb,
+      filesMaxMb: prewarmFilesMax ? (function(){ var v = parseInt(prewarmFilesMax.value); return isNaN(v) ? defaultConfig.prewarm.filesMaxMb : v; })() : defaultConfig.prewarm.filesMaxMb,
       kether: prewarmKether ? prewarmKether.checked : defaultConfig.prewarm.kether,
     },
     blockFontSize: blockFontSize ? blockFontSize.value : defaultConfig.blockFontSize,
@@ -1186,6 +1049,10 @@ async function saveSettings() {
       newFile: shortcutInputs.newFile ? shortcutInputs.newFile.value : defaultConfig.shortcuts.newFile,
       openProject: shortcutInputs.openProject ? shortcutInputs.openProject.value : defaultConfig.shortcuts.openProject,
       toggleMode: shortcutInputs.toggleMode ? shortcutInputs.toggleMode.value : defaultConfig.shortcuts.toggleMode,
+      find: shortcutInputs.find ? shortcutInputs.find.value : defaultConfig.shortcuts.find,
+      replace: shortcutInputs.replace ? shortcutInputs.replace.value : defaultConfig.shortcuts.replace,
+      comment: shortcutInputs.comment ? shortcutInputs.comment.value : defaultConfig.shortcuts.comment,
+      format: shortcutInputs.format ? shortcutInputs.format.value : defaultConfig.shortcuts.format,
     },
   };
 
@@ -1209,12 +1076,6 @@ async function saveSettings() {
   }
   config.allowDifferentVersions = remoteAllowDifferentVersions ? remoteAllowDifferentVersions.checked : false;
 
-  // 实验性功能
-  config.experimental = {
-    remote: experimentalRemote ? experimentalRemote.checked : false,
-    aiStudio: experimentalAIStudio ? experimentalAIStudio.checked : false,
-  };
-
   // AI 设置
   config.ai = {
     endpoint: aiEndpoint ? aiEndpoint.value : defaultConfig.ai.endpoint,
@@ -1223,8 +1084,8 @@ async function saveSettings() {
     keys: existing.ai && existing.ai.keys ? existing.ai.keys : [],
     systemPrompt: aiSystemPrompt ? aiSystemPrompt.value : 'default',
     customPrompt: aiCustomPrompt ? aiCustomPrompt.value : '',
-    maxTokens: aiMaxTokens ? parseInt(aiMaxTokens.value) || 4096 : 4096,
-    temperature: aiTemperature ? parseFloat(aiTemperature.value) || 0.7 : 0.7,
+    maxTokens: aiMaxTokens ? (function(){ var v = parseInt(aiMaxTokens.value); return isNaN(v) ? 4096 : v; })() : 4096,
+    temperature: aiTemperature ? (function(){ var t = parseFloat(aiTemperature.value); return isNaN(t) ? 0.7 : t; })() : 0.7,
   };
 
   // 保留背景设置
@@ -1235,14 +1096,7 @@ async function saveSettings() {
     config.background = { filename: '', opacity: 0.3 };
   }
 
-  // 保留其他模块管理的字段（不在此表单范围内，全量重建会抹掉它们）
-  if (existing) {
-    if (existing.sound !== undefined) config.sound = existing.sound;
-    if (existing.soundVolume !== undefined) config.soundVolume = existing.soundVolume;
-    if (existing.remoteClient) config.remoteClient = existing.remoteClient;
-    if (existing.remoteServer) config.remoteServer = existing.remoteServer;
-    if (existing.ai && existing.ai.customPrompts) config.ai.customPrompts = existing.ai.customPrompts;
-  }
+  console.log('[SETTINGS] 配置对象:', config);
 
   // 保留语言设置（由 i18n.js 管理，不在此表单范围内）
   if (existing && existing.language) {
@@ -1250,11 +1104,6 @@ async function saveSettings() {
   }
 
   localStorage.setItem('editorConfig', JSON.stringify(config));
-  applyCheckboxMarks(config);
-  applyPremiumHint(config);
-  applyVersionHint(config);
-  applyElementPicker(config);
-  _settingsDirty = false;
   showNotification(I18N.t('settings.saved'), 'success');
 }
 
@@ -1345,7 +1194,7 @@ function renderPromptList(diskPrompts, localCustom) {
             } else {
               showNotification(I18N.t('settings.promptDeleteFailed', {msg: r.error || ''}), 'error');
             }
-          });
+          }).catch(function(err) { console.warn('Failed to delete prompt:', err); });
         }
       });
     });
@@ -1425,10 +1274,12 @@ function escHtml(str) {
 }
 
 function loadSettings() {
+  console.log('[SETTINGS] 加载设置');
   
   const stored = localStorage.getItem('editorConfig');
   const config = stored ? JSON.parse(stored) : defaultConfig;
 
+  console.log('[SETTINGS] 加载的配置', config);
 
   // 应用主题
   if (themeSelect) {
@@ -1455,8 +1306,8 @@ function loadSettings() {
 
   updateColorValues();
 
-  // 应用编辑器设置 (合并默认值, 避免部分配置缺失字段时崩溃)
-  const editorConfig = Object.assign({}, defaultConfig.editor, config.editor || {});
+  // 应用编辑器设置
+  const editorConfig = config.editor || defaultConfig.editor;
   if (editorFontSize) editorFontSize.value = editorConfig.fontSize;
   if (editorTabSize) editorTabSize.value = editorConfig.tabSize;
   if (editorLineNumbers) editorLineNumbers.value = editorConfig.lineNumbers.toString();
@@ -1464,21 +1315,12 @@ function loadSettings() {
   if (editorTheme) editorTheme.value = editorConfig.theme;
   if (editorAutoSync) editorAutoSync.value = String(config.autoSync === true);
   if (editorDevtools) editorDevtools.checked = config.devTools === true;
-  if (checkboxMarkOn) checkboxMarkOn.checked = config.checkboxMarkOn !== false;
-  if (checkboxMarkOff) checkboxMarkOff.checked = config.checkboxMarkOff === true;
-  applyCheckboxMarks(config);
-  if (hidePremiumHints) hidePremiumHints.checked = config.hidePremiumHints === true;
-  applyPremiumHint(config);
-  if (hideVersionHints) hideVersionHints.checked = config.hideVersionHints === true;
-  applyVersionHint(config);
-  if (ceElementPicker) ceElementPicker.checked = config.ceElementPicker !== false;
-  applyElementPicker(config);
   if (itemKeyStyle) itemKeyStyle.value = config.itemKeyStyle || 'snake';
 
   // 启动预热设置
   var pw = config.prewarm || defaultConfig.prewarm;
   if (prewarmFiles) prewarmFiles.checked = pw.files !== false;
-  if (prewarmFilesMax) prewarmFilesMax.value = pw.filesMaxMb || 50;
+  if (prewarmFilesMax) prewarmFilesMax.value = (pw.filesMaxMb !== undefined && pw.filesMaxMb !== null) ? pw.filesMaxMb : 50;
   if (prewarmKether) prewarmKether.checked = pw.kether !== false;
 
   // AI 设置
@@ -1493,11 +1335,8 @@ function loadSettings() {
   if (aiCustomModel) aiCustomModel.value = aiCfg.customModel || '';
   if (aiSystemPrompt) aiSystemPrompt.value = aiCfg.systemPrompt || 'default';
   if (aiCustomPrompt) aiCustomPrompt.value = aiCfg.customPrompt || '';
-  if (aiCustomPromptGroup) {
-    aiCustomPromptGroup.style.display = (aiCfg.systemPrompt || 'default') === 'custom' ? '' : 'none';
-  }
-  if (aiMaxTokens) aiMaxTokens.value = aiCfg.maxTokens || 4096;
-  if (aiTemperature) aiTemperature.value = aiCfg.temperature || 0.7;
+  if (aiMaxTokens) aiMaxTokens.value = (aiCfg.maxTokens !== undefined && aiCfg.maxTokens !== null) ? aiCfg.maxTokens : 4096;
+  if (aiTemperature) aiTemperature.value = (aiCfg.temperature !== undefined && aiCfg.temperature !== null) ? aiCfg.temperature : 0.7;
   renderAiKeys(aiCfg.keys || []);
   loadAiPromptList();
 
@@ -1514,12 +1353,17 @@ function loadSettings() {
     }
   });
 
-  // 应用快捷键设置
+  // 应用快捷键设置（将在任务3中完善）
   const shortcutsConfig = config.shortcuts || defaultConfig.shortcuts;
+  // 暂时只更新显示值
   if (shortcutInputs.save) shortcutInputs.save.value = shortcutsConfig.save;
   if (shortcutInputs.newFile) shortcutInputs.newFile.value = shortcutsConfig.newFile;
   if (shortcutInputs.openProject) shortcutInputs.openProject.value = shortcutsConfig.openProject;
   if (shortcutInputs.toggleMode) shortcutInputs.toggleMode.value = shortcutsConfig.toggleMode;
+  if (shortcutInputs.find) shortcutInputs.find.value = shortcutsConfig.find;
+  if (shortcutInputs.replace) shortcutInputs.replace.value = shortcutsConfig.replace;
+  if (shortcutInputs.comment) shortcutInputs.comment.value = shortcutsConfig.comment;
+  if (shortcutInputs.format) shortcutInputs.format.value = shortcutsConfig.format;
 
   // 加载背景图片列表并应用
   loadBackgroundList().then(() => {
@@ -1548,19 +1392,14 @@ function loadSettings() {
   if (remoteAllowDifferentVersions) {
     remoteAllowDifferentVersions.checked = config.allowDifferentVersions === true;
   }
-
-  // 实验性功能
-  var exp = config.experimental || { remote: false, aiStudio: false };
-  if (experimentalRemote) experimentalRemote.checked = exp.remote === true;
-  if (experimentalAIStudio) experimentalAIStudio.checked = exp.aiStudio === true;
 }
 
 function resetSettings() {
+  console.log('[SETTINGS] 重置设置');
 
   UI.confirm({ message: I18N.t('settings.resetConfirm'), danger: true }).then(function(ok) {
     if (!ok) return;
     localStorage.removeItem('editorConfig');
-    sessionStorage.removeItem('remotePassword');
     loadSettings(); applyTheme(defaultConfig.theme);
     showNotification(I18N.t('settings.resetDone'), 'success');
   });
@@ -1568,6 +1407,7 @@ function resetSettings() {
 
 
 function exportSettings() {
+  console.log('[SETTINGS] 导出设置');
   
   const config = {
     theme: themeSelect ? themeSelect.value : 'dark',
@@ -1593,9 +1433,11 @@ function exportSettings() {
 }
 
 function importSettings(e) {
+  console.log('[SETTINGS] 导入设置');
   
   const file = e.target.files[0];
   if (!file) {
+    console.log('[SETTINGS] 未选择文件');
     return;
   }
 
@@ -1603,6 +1445,7 @@ function importSettings(e) {
   reader.onload = (event) => {
     try {
       const config = JSON.parse(event.target.result);
+      console.log('[SETTINGS] 导入配置', config);
 
       // 验证配置结构
       if (!config.theme || !config.colors) {
@@ -1626,8 +1469,6 @@ function importSettings(e) {
         }
       });
 
-      // 程序化赋值不触发 change/input 事件, 需手动标记, 否则关闭设置时更改丢失
-      _settingsDirty = true;
       showNotification(I18N.t('settings.importDone'), 'success');
     } catch (error) {
       console.error('[SETTINGS] 导入错误:', error);
@@ -1653,6 +1494,7 @@ function kebabToCamel(str) {
 }
 
 function showNotification(message, type = 'info') {
+  console.log('[SETTINGS] 显示通知:', message, type);
   
   // 创建通知元素
   const notification = document.createElement('div');
@@ -1722,11 +1564,16 @@ document.head.appendChild(style);
 // ============================================
 // 页面加载时同步设置
 
-window.addEventListener('beforeunload', () => {
-  if (_settingsDirty) saveSettings();
+window.addEventListener('beforeunload', async function(e) {
+  await saveSettings();
+  // 检查是否有未保存的更改（通过 localStorage 比较实现）
+  // 返回非 void 值触发浏览器确认对话框
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[SETTINGS] 页面 DOMContentLoaded');
   await I18N.ready;
   loadSettings();
   I18N.applyDOM();
@@ -1752,4 +1599,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
-
+
+console.log('[SETTINGS] settings.js 已加载');

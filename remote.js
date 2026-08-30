@@ -43,9 +43,11 @@ function isValidPath(p) {
 
 let _server = null;
 let _serverPassword = '';
+let _serverBaseDir = process.cwd();
 let _serverClients = new Map(); // clientId → { ws, ip, securityCode, approved, permission, filePerms, remoteAddr, editingFiles }
 let _pendingClients = new Map(); // clientId → { ws, ip, securityCode }
 let _clientIdCounter = 0;
+var _allowDifferentVersions;
 
 function getServerStatus() {
   if (!_server) return { running: false };
@@ -74,6 +76,9 @@ function getServerStatus() {
 }
 
 async function startServer(port, password, options = {}) {
+  if (typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535) {
+    return { success: false, error: 'Invalid port number' };
+  }
   if (_server) {
     await stopServer();
   }
@@ -91,11 +96,17 @@ async function startServer(port, password, options = {}) {
         resolve({ success: true });
       });
 
+      var thisServer = _server;
+
       _server.on('error', (err) => {
         console.error('[REMOTE] 服务器错误:', err.message);
         emit('server:error', { message: err.message });
-        _server = null;
-        if (!_server) reject(err);
+        // 不在此处设置 _server = null, 让 close 事件处理清理, 避免 WebSocket 服务器仍在运行但 _server 已丢失
+        if (_server === thisServer) reject(err);
+      });
+
+      _server.on('close', () => {
+        if (_server === thisServer) _server = null;
       });
 
       _server.on('connection', (ws, req) => {
@@ -398,7 +409,8 @@ function handleClientMessage(clientId, msg) {
 }
 
 function broadcastToClients(senderClientId, data) {
-  for (const [cid, c] of _serverClients) {
+  var clients = Array.from(_serverClients);
+  for (const [cid, c] of clients) {
     if (cid !== senderClientId) {
       safeSendTo(c, data);
     }
@@ -417,6 +429,12 @@ function readClientFile(clientId, client, msg) {
   const filePath = msg.path;
   if (!isValidPath(filePath)) {
     safeSendTo(client, { type: 'file:read:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
+    return;
+  }
+  // 路径沙箱: 拒绝逃逸 _serverBaseDir 的路径
+  const resolvedPath = path.resolve(_serverBaseDir, filePath);
+  if (resolvedPath.indexOf(_serverBaseDir + path.sep) !== 0 && resolvedPath !== _serverBaseDir) {
+    safeSendTo(client, { type: 'file:read:result', path: filePath, success: false, error: '路径不允许', errorKey: 'remote.pathNotAllowed' });
     return;
   }
   // 权限检查
@@ -438,6 +456,12 @@ function writeClientFile(clientId, client, msg) {
   const filePath = msg.path;
   if (!isValidPath(filePath) || typeof msg.content !== 'string') {
     safeSendTo(client, { type: 'file:write:result', path: '', success: false, error: '无效路径或内容', errorKey: 'remote.invalidPath' });
+    return;
+  }
+  // 路径沙箱: 拒绝逃逸 _serverBaseDir 的路径
+  const resolvedPath = path.resolve(_serverBaseDir, filePath);
+  if (resolvedPath.indexOf(_serverBaseDir + path.sep) !== 0 && resolvedPath !== _serverBaseDir) {
+    safeSendTo(client, { type: 'file:write:result', path: filePath, success: false, error: '路径不允许', errorKey: 'remote.pathNotAllowed' });
     return;
   }
   const filePerm = checkFilePermission(client, filePath);
@@ -481,6 +505,12 @@ function listClientFiles(clientId, client, msg) {
     safeSendTo(client, { type: 'file:list:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
     return;
   }
+  // 路径沙箱: 拒绝逃逸 _serverBaseDir 的路径
+  const resolvedDir = path.resolve(_serverBaseDir, dirPath);
+  if (resolvedDir.indexOf(_serverBaseDir + path.sep) !== 0 && resolvedDir !== _serverBaseDir) {
+    safeSendTo(client, { type: 'file:list:result', path: dirPath, success: false, error: '路径不允许', errorKey: 'remote.pathNotAllowed' });
+    return;
+  }
   // 目录列举同样受文件权限约束
   const filePerm = checkFilePermission(client, dirPath);
   if (filePerm === 'none') {
@@ -509,11 +539,13 @@ function listClientFiles(clientId, client, msg) {
       safeSendTo(client, { type: 'file:list:result', path: dirPath, success: false, error: err.message });
       return;
     }
-    const files = entries.map(e => ({
-      name: e.name,
-      isDirectory: e.isDirectory(),
-      path: path.join(dirPath, e.name),
-    }));
+    const files = entries.map(function(e) {
+      var isDir = e.isDirectory();
+      if (!isDir && e.isSymbolicLink()) {
+        try { var stat = fs.statSync(path.join(dirPath, e.name)); isDir = stat.isDirectory(); } catch(e) {}
+      }
+      return { name: e.name, isDirectory: isDir, path: path.join(dirPath, e.name) };
+    });
     safeSendTo(client, { type: 'file:list:result', path: dirPath, success: true, files });
   });
 }
@@ -522,6 +554,12 @@ function deleteClientFile(clientId, client, msg) {
   const filePath = msg.path;
   if (!isValidPath(filePath)) {
     safeSendTo(client, { type: 'file:delete:result', path: '', success: false, error: '无效路径', errorKey: 'remote.invalidPath' });
+    return;
+  }
+  // 路径沙箱: 拒绝逃逸 _serverBaseDir 的路径
+  const resolvedPath = path.resolve(_serverBaseDir, filePath);
+  if (resolvedPath.indexOf(_serverBaseDir + path.sep) !== 0 && resolvedPath !== _serverBaseDir) {
+    safeSendTo(client, { type: 'file:delete:result', path: filePath, success: false, error: '路径不允许', errorKey: 'remote.pathNotAllowed' });
     return;
   }
   const filePerm = checkFilePermission(client, filePath);
@@ -563,8 +601,6 @@ function checkFilePermission(client, filePath) {
   // Windows 文件系统大小写不敏感, 归一化后再匹配, 避免管理员授权 C:\Foo 客户端请求 c:\foo 失配
   const fold = process.platform === 'win32' ? s => s.toLowerCase() : s => s;
   const normPath = fold(filePath.replace(/\\/g, '/'));
-  // 按完整路径匹配
-  if (client.filePerms[filePath]) return client.filePerms[filePath];
   // 按目录匹配 (两侧统一斜杠; 目录前缀需以 / 结尾, 避免 C:\foo 误匹配 C:\foobar)
   for (const [pattern, perm] of Object.entries(client.filePerms)) {
     const normPattern = fold(String(pattern).replace(/\\/g, '/').replace(/\/+$/, ''));
@@ -661,6 +697,7 @@ async function connectToServer(host, port, password, version) {
 
       ws.on('open', () => {
         console.log(`[REMOTE] 已连接到服务器 ${url}`);
+        _client = ws;
         // 发送认证请求（含版本信息）
         const authMsg = { type: 'auth:request', password };
         if (version) authMsg.version = version;
@@ -703,7 +740,8 @@ async function connectToServer(host, port, password, version) {
         }
 
         // 认证后的常规消息
-        handleServerMessage(ws, msg);
+        var action = handleServerMessage(ws, msg);
+        if (action === 'disconnect') _client = null;
       });
 
       ws.on('close', () => {
@@ -721,8 +759,6 @@ async function connectToServer(host, port, password, version) {
         _client = null;
         reject(new Error(err.message));
       });
-
-      _client = ws;
     } catch (err) {
       reject(err);
     }
@@ -801,8 +837,7 @@ function handleServerMessage(ws, msg) {
     case 'auth:rejected':
       emit('client:error', { message: msg.reason || '认证被拒绝', errorKey: msg.errorKey || 'remote.authRejected' });
       ws.close();
-      _client = null;
-      break;
+      return 'disconnect';
     case 'auth:challenge':
       emit('client:auth:challenge', { securityCode: msg.securityCode });
       break;

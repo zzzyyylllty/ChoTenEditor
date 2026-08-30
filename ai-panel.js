@@ -7,122 +7,12 @@ var AIPanel = (function() {
   var _overlay = null;
   var _messages = [];
   var _isStreaming = false;
-  var _genSeq = 0; // 请求代次: 停止后旧请求的 chunk/回调不得污染新请求
-  var _fileOps = [];
-  var _currentFileContext = '';
-  var _lastUserMessage = '';
-  var _lastAIMessageEl = null;
+  var _abortController = null;
+  var _fileOps = []; // { type: 'create'|'edit'|'delete', path, content, original?, accepted: bool }
+  var _currentFileContext = ''; // currently open file path
+
+  // 提示词缓存（从文件加载）
   var _promptCache = {};
-
-  // ============================================
-  // Markdown 渲染
-  // ============================================
-
-  function renderMarkdown(text) {
-    if (!text) return '';
-    var codeBlocks = [];
-    var processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
-      var idx = codeBlocks.length;
-      codeBlocks.push({ lang: lang || '', code: code });
-      return '%%CB' + idx + '%%';
-    });
-    processed = escHtml(processed);
-    processed = processed.replace(/`([^`]+)`/g, '<code>$1</code>');
-    processed = processed.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    processed = processed.replace(/~~(.+?)~~/g, '<del>$1</del>');
-
-    var lines = processed.split('\n');
-    var html = '';
-    var inUl = false, inOl = false;
-
-    function closeList() {
-      if (inUl) { html += '</ul>\n'; inUl = false; }
-      if (inOl) { html += '</ol>\n'; inOl = false; }
-    }
-
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      var cbMatch = line.match(/^%%CB(\d+)%%$/);
-      if (cbMatch) {
-        closeList();
-        var idx = parseInt(cbMatch[1]);
-        var block = codeBlocks[idx];
-        var langClass = block.lang ? ' class="language-' + block.lang + '"' : '';
-        html += '<pre><code' + langClass + '>' + escHtml(block.code) + '</code></pre>\n';
-        continue;
-      }
-      var hMatch = line.match(/^(#{1,4})\s+(.+)/);
-      if (hMatch) {
-        closeList();
-        html += '<h' + hMatch[1].length + '>' + hMatch[2].trim() + '</h' + hMatch[1].length + '>\n';
-        continue;
-      }
-      if (/^---$/.test(line.trim())) {
-        closeList();
-        html += '<hr>\n';
-        continue;
-      }
-      var bqMatch = line.match(/^>\s*(.*)/);
-      if (bqMatch) {
-        closeList();
-        html += '<blockquote>' + (bqMatch[1] || '') + '</blockquote>\n';
-        continue;
-      }
-      var ulMatch = line.match(/^[\s]*[-*+]\s+(.+)/);
-      if (ulMatch) {
-        if (inOl) { html += '</ol>\n'; inOl = false; }
-        if (!inUl) { html += '<ul>\n'; inUl = true; }
-        html += '<li>' + ulMatch[1] + '</li>\n';
-        continue;
-      }
-      var olMatch = line.match(/^\s*\d+\.\s+(.+)/);
-      if (olMatch) {
-        if (inUl) { html += '</ul>\n'; inUl = false; }
-        if (!inOl) { html += '<ol>\n'; inOl = true; }
-        html += '<li>' + olMatch[1] + '</li>\n';
-        continue;
-      }
-      closeList();
-      if (line.trim() === '') {
-        html += '</p><p>';
-        continue;
-      }
-      html += line + '\n';
-    }
-    closeList();
-
-    if (html.slice(-9) === '</p><p>') html = html.slice(0, -9);
-    if (html.indexOf('<p>') === -1 && html.indexOf('<h') === -1 && html.indexOf('<pre') === -1 &&
-        html.indexOf('<ul') === -1 && html.indexOf('<ol') === -1 && html.indexOf('<hr') === -1 &&
-        html.indexOf('<blockquote') === -1) {
-      html = '<p>' + html + '</p>';
-    } else if (html.indexOf('<p>') === -1 && html.trim()) {
-      html = '<p>' + html + '</p>';
-    }
-    return html;
-  }
-
-  // ============================================
-  // Token 估算
-  // ============================================
-
-  function estimateTokens(text) {
-    if (!text) return 0;
-    var cjk = (text.match(/[一-鿿㐀-䶿豈-﫿]/g) || []).length;
-    return Math.ceil(cjk * 0.65 + (text.length - cjk) * 0.25);
-  }
-
-  function updateTokenCount() {
-    var el = document.getElementById('ai-token-count');
-    if (!el) return;
-    var total = 0;
-    for (var i = 0; i < _messages.length; i++) {
-      total += estimateTokens(_messages[i].content || '');
-    }
-    el.textContent = '~' + total + ' tokens';
-  }
 
   // ============================================
   // 公共 API
@@ -130,24 +20,22 @@ var AIPanel = (function() {
 
   function open() {
     if (_overlay) { _overlay.style.display = 'flex'; return; }
-    I18N.ready.then(function() {
-      createPanel();
-      loadHistory();
-    });
+    createPanel();
+    loadHistory();
   }
 
   function close() {
-    if (_overlay) _overlay.style.display = 'none';
-    // 关闭时若仍在流式请求: 停止状态并移除监听, 防止 reopen 后 _isStreaming 残留卡死输入
-    if (_isStreaming) stopStreaming();
-    if (window.electronAPI && window.electronAPI.ai) window.electronAPI.ai.removeListeners();
+    if (_overlay) { _overlay.style.display = 'none'; }
+    if (window.electronAPI && window.electronAPI.ai) {
+      window.electronAPI.ai.removeListeners();
+    }
   }
 
   function setFileContext(filePath) {
     _currentFileContext = filePath || '';
     var ctxEl = document.getElementById('ai-context-file');
     if (ctxEl) {
-      ctxEl.textContent = _currentFileContext ? I18N.t('ai.currentFile', {name: _currentFileContext.split(/[\\/]/).pop()}) : I18N.t('ai.noContextFile');
+      ctxEl.textContent = _currentFileContext ? '当前文件: ' + _currentFileContext.split(/[\\/]/).pop() : '无上下文文件';
     }
   }
 
@@ -164,36 +52,26 @@ var AIPanel = (function() {
 <div id="ai-panel" style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:12px;width:92%;max-width:860px;height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">\
   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--color-border);flex-shrink:0;">\
     <div style="display:flex;align-items:center;gap:10px;">\
-      <span style="font-size:16px;font-weight:700;background:linear-gradient(135deg,color-mix(in srgb, var(--color-primary) 72%, #ffffff),var(--color-primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">' + I18N.t('ai.title') + '</span>\
-      <select id="ai-model-select" style="padding:2px 6px;font-size:11px;background:var(--color-bg-tertiary);border:1px solid var(--color-border);border-radius:4px;color:var(--color-text-secondary);outline:none;cursor:pointer;">\
-        <option value="">' + I18N.t('ai.followSettings') + '</option>\
-        <option value="gpt-4o">GPT-4o</option>\
-        <option value="gpt-4o-mini">GPT-4o Mini</option>\
-        <option value="gpt-4-turbo">GPT-4 Turbo</option>\
-        <option value="deepseek-chat">DeepSeek Chat</option>\
-        <option value="deepseek-reasoner">DeepSeek Reasoner</option>\
-        <option value="qwen2.5-coder">Qwen 2.5 Coder</option>\
-        <option value="custom">' + I18N.t('ai.customModel') + '</option>\
-      </select>\
+      <span style="font-size:16px;font-weight:700;background:linear-gradient(135deg,#00c8ff,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">AI 制作</span>\
       <span id="ai-status" style="font-size:11px;color:var(--color-text-tertiary);"></span>\
     </div>\
     <div style="display:flex;align-items:center;gap:6px;">\
-      <button id="ai-btn-settings" class="ai-head-btn" data-tip="' + I18N.t('ai.settings') + '">⚙️</button>\
-      <button id="ai-btn-clear" class="ai-head-btn" data-tip="' + I18N.t('ai.clearChat') + '">🗑️</button>\
-      <button id="ai-btn-close" class="ai-head-btn" style="font-size:18px;" data-tip="' + I18N.t('common.close') + '">✕</button>\
+      <button id="ai-btn-settings" title="设置" style="background:none;border:none;color:var(--color-text-secondary);cursor:pointer;font-size:15px;padding:4px 8px;border-radius:4px;">⚙️</button>\
+      <button id="ai-btn-clear" title="清除对话" style="background:none;border:none;color:var(--color-text-secondary);cursor:pointer;font-size:15px;padding:4px 8px;border-radius:4px;">🗑️</button>\
+      <button id="ai-btn-close" title="关闭" style="background:none;border:none;color:var(--color-text-secondary);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:4px;">✕</button>\
     </div>\
   </div>\
   <div id="ai-context-bar" style="display:flex;align-items:center;padding:6px 16px;border-bottom:1px solid var(--color-border);background:var(--color-bg-tertiary);flex-shrink:0;font-size:11px;color:var(--color-text-tertiary);gap:12px;">\
-    <span id="ai-context-file">' + I18N.t('ai.noContextFile') + '</span>\
+    <span id="ai-context-file">无上下文文件</span>\
     <span id="ai-token-count" style="margin-left:auto;"></span>\
   </div>\
   <div id="ai-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0;"></div>\
   <div id="ai-file-ops" style="flex-shrink:0;max-height:200px;overflow-y:auto;border-top:1px solid var(--color-border);padding:8px 16px;display:none;"></div>\
   <div style="flex-shrink:0;padding:12px 16px;border-top:1px solid var(--color-border);">\
     <div style="display:flex;gap:8px;align-items:flex-end;">\
-      <textarea id="ai-input" placeholder="' + I18N.t('ai.inputPlaceholder') + '" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-bg-tertiary);color:var(--color-text-primary);font-size:13px;resize:none;min-height:40px;max-height:120px;font-family:inherit;outline:none;" rows="2"></textarea>\
-      <button id="ai-btn-send" class="btn-accent" style="padding:10px 20px;font-size:14px;font-weight:600;">' + I18N.t('ai.send') + '</button>\
-      <button id="ai-btn-stop" class="btn-danger" style="padding:10px 16px;font-size:13px;display:none;">' + I18N.t('ai.stop') + '</button>\
+      <textarea id="ai-input" placeholder="输入你的需求... (Enter 发送, Shift+Enter 换行)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-bg-tertiary);color:var(--color-text-primary);font-size:13px;resize:none;min-height:40px;max-height:120px;font-family:inherit;outline:none;" rows="2"></textarea>\
+      <button id="ai-btn-send" style="padding:10px 20px;background:linear-gradient(135deg,#00c8ff,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">发送</button>\
+      <button id="ai-btn-stop" style="padding:10px 16px;background:var(--color-error);border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;display:none;white-space:nowrap;">停止</button>\
     </div>\
   </div>\
 </div>';
@@ -201,27 +79,13 @@ var AIPanel = (function() {
     document.body.appendChild(_overlay);
     bindEvents();
 
-    try {
-      var cfgRaw = localStorage.getItem('editorConfig');
-      if (cfgRaw) {
-        var cfg = JSON.parse(cfgRaw);
-        var modelSelect = document.getElementById('ai-model-select');
-        var currentModel = cfg.ai && cfg.ai.model;
-        if (modelSelect && currentModel) {
-          var found = false;
-          for (var oi = 0; oi < modelSelect.options.length; oi++) {
-            if (modelSelect.options[oi].value === currentModel) {
-              modelSelect.selectedIndex = oi;
-              found = true; break;
-            }
-          }
-          if (!found && currentModel) modelSelect.value = 'custom';
-        }
-      }
-    } catch(e) {}
-
+    // 更新上下文文件信息
     setFileContext(_currentFileContext);
+
+    // 从磁盘加载提示词
     loadPromptsFromDisk();
+
+    // 恢复上次对话
     var saved = loadMessages();
     renderMessages(saved);
   }
@@ -234,23 +98,32 @@ var AIPanel = (function() {
     document.getElementById('ai-btn-close').onclick = close;
     document.getElementById('ai-btn-clear').onclick = clearConversation;
     document.getElementById('ai-btn-settings').onclick = function() {
-      try { var w = window.open('settings.html', '_blank'); } catch(e) {}
+      if (window.electronAPI && window.electronAPI.openExternal) {
+        // 打开设置窗口
+        try {
+          var settingsWin = window.open('settings.html', '_blank');
+        } catch(e) {}
+      }
     };
 
     var input = document.getElementById('ai-input');
     var sendBtn = document.getElementById('ai-btn-send');
     var stopBtn = document.getElementById('ai-btn-stop');
 
+    var _aiResizeTimer = null;
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
-      setTimeout(function() {
+      // 自适应高度
+      clearTimeout(_aiResizeTimer);
+      _aiResizeTimer = setTimeout(function() {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 120) + 'px';
       }, 0);
     });
+
     input.addEventListener('input', function() {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
@@ -259,18 +132,7 @@ var AIPanel = (function() {
     sendBtn.onclick = sendMessage;
     stopBtn.onclick = stopStreaming;
 
-    document.getElementById('ai-model-select').onchange = function() {
-      try {
-        var cfgRaw = localStorage.getItem('editorConfig');
-        if (cfgRaw) {
-          var cfg = JSON.parse(cfgRaw);
-          if (!cfg.ai) cfg.ai = {};
-          cfg.ai.model = this.value || 'gpt-4o';
-          localStorage.setItem('editorConfig', JSON.stringify(cfg));
-        }
-      } catch(e) {}
-    };
-
+    // 点击外部关闭
     _overlay.addEventListener('click', function(e) {
       if (e.target === _overlay) close();
     });
@@ -283,7 +145,9 @@ var AIPanel = (function() {
   function loadPromptsFromDisk() {
     if (window.electronAPI && window.electronAPI.ai && window.electronAPI.ai.loadPrompts) {
       window.electronAPI.ai.loadPrompts().then(function(result) {
-        if (result.success) _promptCache = result.prompts || {};
+        if (result.success) {
+          _promptCache = result.prompts || {};
+        }
       }).catch(function(err) {
         console.warn('[AI] 加载提示词失败:', err);
       });
@@ -291,10 +155,19 @@ var AIPanel = (function() {
   }
 
   function resolvePrompt(aiConfig) {
-    if (aiConfig.systemPrompt === 'custom' && aiConfig.customPrompt) return aiConfig.customPrompt;
+    // 自定义提示词优先
+    if (aiConfig.systemPrompt === 'custom' && aiConfig.customPrompt) {
+      return aiConfig.customPrompt;
+    }
+
+    // 从缓存中查找
     var promptName = aiConfig.systemPrompt || 'default';
     var prompt = _promptCache[promptName];
-    if (prompt && prompt.content) return prompt.content;
+    if (prompt && prompt.content) {
+      return prompt.content;
+    }
+
+    // fallback: 极简默认提示词
     return '你是一个 Minecraft 插件开发助手。当需要创建、编辑或删除文件时，请使用以下格式标记文件操作：\n\n```file:create 相对路径/文件名\n文件内容\n```\n\n```file:edit 相对路径/文件名\n---ORIGINAL---\n需要替换的原始内容\n---UPDATED---\n替换后的新内容\n```\n\n```file:delete 相对路径/文件名\n```';
   }
 
@@ -302,7 +175,7 @@ var AIPanel = (function() {
   // 发送消息
   // ============================================
 
-  async function getAIConfig() {
+  function getAIConfig() {
     try {
       var raw = localStorage.getItem('editorConfig');
       if (!raw) return null;
@@ -310,31 +183,19 @@ var AIPanel = (function() {
       var ai = config.ai || {};
       var keys = ai.keys || [];
       if (keys.length === 0) return null;
-
-      var modelSelect = document.getElementById('ai-model-select');
-      var model = (modelSelect && modelSelect.value) || ai.model || 'gpt-4o';
+      var model = ai.model || 'gpt-4o';
       if (model === 'custom') model = ai.customModel || 'gpt-4o';
-      if (model === '') model = ai.model || 'gpt-4o';
-
       var endpoint = ai.endpoint || 'https://api.openai.com/v1/chat/completions';
+      // 使用第一个密钥
       var apiKey = keys[0];
+
+      // 获取系统提示词
       var systemPrompt = resolvePrompt(ai);
 
-      var contextParts = [];
+      // 添加上下文信息
       if (_currentFileContext) {
-        contextParts.push('当前正在编辑的文件: ' + _currentFileContext);
-        try {
-          if (window.electronAPI && window.electronAPI.readFile) {
-            var result = await window.electronAPI.readFile(_currentFileContext);
-            if (result && result.success && result.content) {
-              var content = result.content;
-              if (content.length > 30000) content = content.substring(0, 30000) + '\n\n... [文件过大，已截断]';
-              contextParts.push('当前文件内容:\n```\n' + content + '\n```');
-            }
-          }
-        } catch(e) {}
+        systemPrompt += '\n\n当前用户正在编辑的文件: ' + _currentFileContext;
       }
-      if (contextParts.length > 0) systemPrompt += '\n\n' + contextParts.join('\n\n');
 
       return {
         endpoint: endpoint,
@@ -347,175 +208,142 @@ var AIPanel = (function() {
     } catch(e) { return null; }
   }
 
-  async function sendMessage() {
+  function sendMessage() {
     if (_isStreaming) return;
+    _isStreaming = true;
     var input = document.getElementById('ai-input');
     var text = input.value.trim();
-    if (!text) return;
-    _lastUserMessage = text;
+    if (!text) { _isStreaming = false; return; }
 
-    var config = await getAIConfig();
-    if (!config) { addSystemMessage(I18N.t('ai.needApiKey')); return; }
+    // 检查配置
+    var config = getAIConfig();
+    if (!config) {
+      addSystemMessage('请先在设置中配置 API 密钥。');
+      _isStreaming = false;
+      return;
+    }
 
+    // 添加用户消息
     addUserMessage(text);
     input.value = '';
     input.style.height = 'auto';
+
+    // 开始 AI 响应
     startAIResponse(config, text);
   }
 
   function startAIResponse(config, userText) {
-    var gen = ++_genSeq;
-    _isStreaming = true;
-    setStatus(I18N.t('ai.thinking'));
+    setStatus('思考中...');
     setSendingState(true);
 
+    // 构建消息列表
     var messages = [];
+    // 系统提示词
     messages.push({ role: 'system', content: config.systemPrompt });
+    // 对话历史（取最近20条）
     var history = _messages.slice(-20);
     for (var i = 0; i < history.length; i++) {
       var m = history[i];
+      // 跳过系统消息
       if (m.type === 'system') continue;
       messages.push({ role: m.role, content: m.content });
     }
+    // 当前消息
     messages.push({ role: 'user', content: userText });
 
+    // 创建 AI 消息占位
     var msgEl = addAIMessage('');
-    _lastAIMessageEl = msgEl;
 
+    // 设置监听
     if (window.electronAPI && window.electronAPI.ai) {
       window.electronAPI.ai.removeListeners();
 
       window.electronAPI.ai.onChunk(function(chunk) {
-        if (gen !== _genSeq) return; // 旧请求残余 chunk 丢弃
         var contentEl = msgEl.querySelector('.ai-msg-content');
         if (contentEl) {
           var text = contentEl.textContent + chunk;
           contentEl.textContent = text;
+          // 尝试解析文件操作
           parseFileOps(text, contentEl);
         }
         scrollToBottom();
       });
 
       window.electronAPI.ai.onDone(function(content) {
-        if (gen !== _genSeq) return;
         _isStreaming = false;
-        setStatus(I18N.t('status.ready'));
+        setStatus('就绪');
         setSendingState(false);
-
+        // 保存到历史
         _messages.push({ role: 'assistant', content: content, id: Date.now() });
         saveMessages();
-
+        // 最终解析文件操作
         var contentEl = msgEl.querySelector('.ai-msg-content');
-        if (contentEl) {
-          contentEl.innerHTML = renderMarkdown(content);
-          if (typeof Prism !== 'undefined') {
-            try { Prism.highlightAllUnder(msgEl); } catch(e) {}
-          }
-        }
-
-        var opsEl = msgEl.querySelector('.ai-msg-ops');
-        if (opsEl) {
-          opsEl.innerHTML = '<button class="ai-btn-regenerate cv-btn-secondary" style="padding:3px 10px;font-size:11px;">🔄 ' + escHtml(I18N.t('ai.regenerate')) + '</button>';
-          opsEl.querySelector('.ai-btn-regenerate').onclick = regenerateLastResponse;
-        }
-
-        parseFileOps(content, contentEl || msgEl);
+        if (contentEl) parseFileOps(content, contentEl);
+        // 渲染文件操作
         renderFileOps();
-        updateTokenCount();
         window.electronAPI.ai.removeListeners();
       });
 
       window.electronAPI.ai.onError(function(errMsg) {
-        if (gen !== _genSeq) return;
         _isStreaming = false;
-        setStatus(I18N.t('ai.error'));
+        setStatus('错误');
         setSendingState(false);
         var contentEl = msgEl.querySelector('.ai-msg-content');
-        if (contentEl) contentEl.innerHTML = '<span style="color:var(--color-error);">⚠️ ' + escHtml(localizeErr(errMsg)) + '</span>';
+        if (contentEl) contentEl.textContent = '⚠️ ' + errMsg;
         window.electronAPI.ai.removeListeners();
       });
 
+      // 发送请求
       window.electronAPI.ai.chat(config, messages).catch(function(err) {
-        if (gen !== _genSeq) return;
         console.error('[AI] 请求失败:', err);
         _isStreaming = false;
-        setStatus(I18N.t('ai.error'));
+        setStatus('错误');
         setSendingState(false);
         var contentEl = msgEl.querySelector('.ai-msg-content');
-        if (contentEl) contentEl.innerHTML = '<span style="color:var(--color-error);">⚠️ ' + escHtml(localizeErr(err)) + '</span>';
+        if (contentEl) contentEl.textContent = '⚠️ 请求失败: ' + err.message;
         window.electronAPI.ai.removeListeners();
       });
     } else {
-      msgEl.querySelector('.ai-msg-content').textContent = '⚠️ ' + I18N.t('ai.apiUnavailable');
+      msgEl.querySelector('.ai-msg-content').textContent = '⚠️ AI 功能不可用（electronAPI未加载）';
       _isStreaming = false;
-      setStatus(I18N.t('ai.error'));
+      setStatus('错误');
       setSendingState(false);
     }
   }
 
   function stopStreaming() {
     _isStreaming = false;
-    _genSeq++; // 作废在途请求, 其后到达的 chunk/回调全部忽略
-    setStatus(I18N.t('ai.stopped'));
+    setStatus('已停止');
     setSendingState(false);
-    if (window.electronAPI && window.electronAPI.ai) window.electronAPI.ai.removeListeners();
-  }
-
-  // ============================================
-  // 重新生成
-  // ============================================
-
-  function regenerateLastResponse() {
-    if (_isStreaming || !_lastUserMessage) return;
-    if (_messages.length > 0 && _messages[_messages.length - 1].role === 'assistant') {
-      _messages.pop();
-      saveMessages();
+    if (window.electronAPI && window.electronAPI.ai) {
+      window.electronAPI.ai.removeListeners();
     }
-    if (_lastAIMessageEl && _lastAIMessageEl.parentNode) _lastAIMessageEl.remove();
-    _lastAIMessageEl = null;
-    _fileOps = [];
-    renderFileOps();
-
-    getAIConfig().then(function(config) {
-      if (!config) { addSystemMessage(I18N.t('ai.needApiKey')); return; }
-      startAIResponse(config, _lastUserMessage);
-    });
   }
 
   // ============================================
   // 文件操作解析
   // ============================================
 
-  // AI 输出的路径不可信: 拒绝绝对路径/盘符/.. 穿越/空路径, 防止写出当前文件目录之外
-  function isValidOpPath(p) {
-    if (typeof p !== 'string' || !p) return false;
-    if (p.indexOf('\\') !== -1) return false;
-    if (p.indexOf('..') !== -1) return false;
-    if (p.charAt(0) === '/') return false;
-    if (/^[a-zA-Z]:/.test(p) || p.indexOf(':') !== -1) return false;
-    return true;
-  }
-
-  function parseFileOps(text) {
+  function parseFileOps(text, contentEl) {
     _fileOps = [];
-    var re, match;
 
-    re = /```file:create\s+(\S+)\s*\n([\s\S]*?)```/g;
-    while ((match = re.exec(text)) !== null) {
-      var cp = match[1].trim();
-      if (isValidOpPath(cp)) _fileOps.push({ type: 'create', path: cp, content: match[2].trim(), accepted: null });
+    // 匹配 create 操作
+    var createRegex = /```file:create\s+(\S+)\s*\n([\s\S]*?)```/g;
+    var match;
+    while ((match = createRegex.exec(text)) !== null) {
+      _fileOps.push({ type: 'create', path: match[1].trim(), content: match[2].trim(), accepted: null });
     }
 
-    re = /```file:edit\s+(\S+)\s*\n---ORIGINAL---\s*\n([\s\S]*?)---UPDATED---\s*\n([\s\S]*?)```/g;
-    while ((match = re.exec(text)) !== null) {
-      var ep = match[1].trim();
-      if (isValidOpPath(ep) && match[2].trim()) _fileOps.push({ type: 'edit', path: ep, original: match[2].trim(), content: match[3].trim(), accepted: null });
+    // 匹配 edit 操作
+    var editRegex = /```file:edit\s+(\S+)\s*\n---ORIGINAL---\s*\n([\s\S]*?)---UPDATED---\s*\n([\s\S]*?)```/g;
+    while ((match = editRegex.exec(text)) !== null) {
+      _fileOps.push({ type: 'edit', path: match[1].trim(), original: match[2].trim(), content: match[3].trim(), accepted: null });
     }
 
-    re = /```file:delete\s+(\S+)\s*```/g;
-    while ((match = re.exec(text)) !== null) {
-      var dp = match[1].trim();
-      if (isValidOpPath(dp)) _fileOps.push({ type: 'delete', path: dp, accepted: null });
+    // 匹配 delete 操作
+    var deleteRegex = /```file:delete\s+(\S+)\s*```/g;
+    while ((match = deleteRegex.exec(text)) !== null) {
+      _fileOps.push({ type: 'delete', path: match[1].trim(), accepted: null });
     }
 
     renderFileOps();
@@ -524,17 +352,23 @@ var AIPanel = (function() {
   function renderFileOps() {
     var container = document.getElementById('ai-file-ops');
     if (!container) return;
+
     var pending = _fileOps.filter(function(op) { return op.accepted === null; });
-    if (pending.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+    if (pending.length === 0) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
 
     container.style.display = 'block';
-    var html = '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;font-weight:600;">📁 ' + escHtml(I18N.t('ai.pendingOps', {count: pending.length})) + '</div>';
+    var html = '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;font-weight:600;">📁 待确认的文件操作 (' + pending.length + ')</div>';
 
     for (var i = 0; i < pending.length; i++) {
       var op = pending[i];
-      var typeLabel = op.type === 'create' ? I18N.t('ai.opCreate') : op.type === 'edit' ? I18N.t('ai.opEdit') : I18N.t('ai.opDelete');
+      var typeLabel = op.type === 'create' ? '创建' : op.type === 'edit' ? '编辑' : '删除';
       var typeColor = op.type === 'create' ? 'var(--color-success)' : op.type === 'edit' ? 'var(--color-warning)' : 'var(--color-error)';
       var fileName = op.path.split('/').pop();
+
       html += '\
 <div class="ai-file-op" data-idx="' + i + '" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;margin-bottom:4px;background:var(--color-bg-tertiary);border-radius:6px;border-left:3px solid ' + typeColor + ';">\
   <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">\
@@ -543,14 +377,16 @@ var AIPanel = (function() {
     <span style="font-size:10px;color:var(--color-text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(op.path) + '</span>\
   </div>\
   <div style="display:flex;gap:4px;flex-shrink:0;">\
-    <button class="ai-op-view cv-btn-secondary" data-idx="' + i + '" style="padding:3px 8px;font-size:11px;">' + escHtml(I18N.t('ai.view')) + '</button>\
-    <button class="ai-op-accept btn-success" data-idx="' + i + '" style="padding:3px 10px;font-size:11px;">' + escHtml(I18N.t('ai.accept')) + '</button>\
-    <button class="ai-op-reject btn-danger" data-idx="' + i + '" style="padding:3px 10px;font-size:11px;">' + escHtml(I18N.t('ai.reject')) + '</button>\
+    <button class="ai-op-view" data-idx="' + i + '" style="padding:3px 8px;font-size:11px;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:4px;color:var(--color-text-secondary);cursor:pointer;">查看</button>\
+    <button class="ai-op-accept" data-idx="' + i + '" style="padding:3px 10px;font-size:11px;background:var(--color-success);border:none;border-radius:4px;color:#fff;cursor:pointer;">✓ 确认</button>\
+    <button class="ai-op-reject" data-idx="' + i + '" style="padding:3px 10px;font-size:11px;background:var(--color-error);border:none;border-radius:4px;color:#fff;cursor:pointer;">✕ 拒绝</button>\
   </div>\
 </div>';
     }
+
     container.innerHTML = html;
 
+    // 绑定事件
     container.querySelectorAll('.ai-op-view').forEach(function(btn) {
       btn.onclick = function() { viewFileOp(parseInt(this.dataset.idx)); };
     });
@@ -568,23 +404,23 @@ var AIPanel = (function() {
     var op = ops[idx];
     var modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:200002;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
-    var typeLabel = op.type === 'create' ? I18N.t('ai.opCreate') : op.type === 'edit' ? I18N.t('ai.opEdit') : I18N.t('ai.opDelete');
-    var contentHtml = '';
+    var typeLabel = op.type === 'create' ? '创建' : op.type === 'edit' ? '编辑' : '删除';
+    var content = '';
     if (op.type === 'create') {
-      contentHtml = '<pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;">' + escHtml(op.content) + '</pre>';
+      content = '<pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;">' + escHtml(op.content) + '</pre>';
     } else if (op.type === 'edit') {
-      contentHtml = '<div style="font-size:12px;margin-bottom:6px;color:var(--color-text-secondary);">' + escHtml(I18N.t('ai.original')) + ':</div><pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;border-left:3px solid var(--color-error);">' + escHtml(op.original) + '</pre><div style="font-size:12px;margin:8px 0 6px;color:var(--color-text-secondary);">' + escHtml(I18N.t('ai.updated')) + ':</div><pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;border-left:3px solid var(--color-success);">' + escHtml(op.content) + '</pre>';
+      content = '<div style="font-size:12px;margin-bottom:6px;color:var(--color-text-secondary);">原始内容:</div><pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;border-left:3px solid var(--color-error);">' + escHtml(op.original) + '</pre><div style="font-size:12px;margin:8px 0 6px;color:var(--color-text-secondary);">修改后:</div><pre style="background:var(--color-bg-primary);padding:12px;border-radius:6px;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;border-left:3px solid var(--color-success);">' + escHtml(op.content) + '</pre>';
     } else {
-      contentHtml = '<div style="font-size:13px;color:var(--color-text-tertiary);padding:20px;text-align:center;">' + escHtml(I18N.t('ai.willDelete')) + '</div>';
+      content = '<div style="font-size:13px;color:var(--color-text-tertiary);padding:20px;text-align:center;">此文件将被删除</div>';
     }
     modal.innerHTML = '\
 <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">\
   <h3 style="margin:0 0 4px;font-size:15px;">' + typeLabel + ': ' + escHtml(op.path) + '</h3>\
-  ' + contentHtml + '\
+  ' + content + '\
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">\
-    <button class="ai-op-accept btn-success" data-idx="' + idx + '" style="padding:6px 16px;font-size:12px;">' + escHtml(I18N.t('ai.accept')) + '</button>\
-    <button class="ai-op-reject btn-danger" data-idx="' + idx + '" style="padding:6px 16px;font-size:12px;">' + escHtml(I18N.t('ai.reject')) + '</button>\
-    <button class="ai-op-close cv-btn-secondary" style="padding:6px 16px;font-size:12px;">' + escHtml(I18N.t('common.close')) + '</button>\
+    <button class="ai-op-accept" data-idx="' + idx + '" style="padding:6px 16px;font-size:12px;background:var(--color-success);border:none;border-radius:4px;color:#fff;cursor:pointer;">✓ 确认</button>\
+    <button class="ai-op-reject" data-idx="' + idx + '" style="padding:6px 16px;font-size:12px;background:var(--color-error);border:none;border-radius:4px;color:#fff;cursor:pointer;">✕ 拒绝</button>\
+    <button class="ai-op-close" style="padding:6px 16px;font-size:12px;background:var(--color-bg-tertiary);border:1px solid var(--color-border);border-radius:4px;color:var(--color-text-secondary);cursor:pointer;">关闭</button>\
   </div>\
 </div>';
     document.body.appendChild(modal);
@@ -597,8 +433,9 @@ var AIPanel = (function() {
   function acceptFileOp(idx) {
     var ops = _fileOps.filter(function(op) { return op.accepted === null; });
     if (idx < 0 || idx >= ops.length) return;
-    ops[idx].accepted = true;
-    executeFileOp(ops[idx]);
+    var op = ops[idx];
+    op.accepted = true;
+    executeFileOp(op);
     renderFileOps();
   }
 
@@ -610,38 +447,45 @@ var AIPanel = (function() {
   }
 
   function executeFileOp(op) {
-    if (!window.electronAPI) { addSystemMessage(I18N.t('ai.opFailedNoApi')); return; }
+    if (!window.electronAPI) {
+      addSystemMessage('❌ 文件操作失败: electronAPI 不可用');
+      return;
+    }
+
     var sepIdx = _currentFileContext ? Math.max(_currentFileContext.lastIndexOf('\\'), _currentFileContext.lastIndexOf('/')) : -1;
     var basePath = sepIdx >= 0 ? _currentFileContext.substring(0, sepIdx) : '';
-    if (!basePath) { addSystemMessage(I18N.t('ai.openFileFirst')); return; }
-    var fullPath = basePath.replace(/\\/g, '/') + '/' + op.path;
+    // 如果没有当前文件路径，使用项目目录
+    if (!basePath) {
+      addSystemMessage('⚠️ 请先打开一个文件以确定项目目录');
+      return;
+    }
+
+    var fullPath = basePath + '/' + op.path;
 
     if (op.type === 'create') {
-      window.electronAPI.writeFile(fullPath, op.content).then(function(r) {
-        addSystemMessage(r.success ? I18N.t('ai.created', {path: op.path}) : I18N.t('ai.createFailed', {msg: r.error || I18N.t('error.unknown')}));
-      });
+      window.electronAPI.writeFile(fullPath, op.content).then(function(result) {
+        if (result.success) {
+          addSystemMessage('✅ 已创建: ' + op.path);
+        } else {
+          addSystemMessage('❌ 创建失败: ' + (result.error || '未知错误'));
+        }
+      }).catch(function(err) { addSystemMessage('❌ 创建文件异常: ' + err.message); });
     } else if (op.type === 'edit') {
-      // edit 语义: 读取当前文件, 把 ORIGINAL 片段替换为 UPDATED 内容
-      window.electronAPI.readFile(fullPath).then(function(r) {
-        if (!r.success || typeof r.content !== 'string') {
-          addSystemMessage(I18N.t('ai.editFailed', {msg: r.error || I18N.t('error.unknown')}));
-          return;
+      window.electronAPI.writeFile(fullPath, op.content).then(function(result) {
+        if (result.success) {
+          addSystemMessage('✅ 已编辑: ' + op.path);
+        } else {
+          addSystemMessage('❌ 编辑失败: ' + (result.error || '未知错误'));
         }
-        var orig = op.original;
-        var cur = r.content;
-        if (cur.indexOf(orig) === -1) {
-          addSystemMessage(I18N.t('ai.editOriginalNotFound', {path: op.path}));
-          return;
-        }
-        var updated = cur.split(orig).join(op.content);
-        window.electronAPI.writeFile(fullPath, updated).then(function(wr) {
-          addSystemMessage(wr.success ? I18N.t('ai.edited', {path: op.path}) : I18N.t('ai.editFailed', {msg: wr.error || I18N.t('error.unknown')}));
-        });
-      });
+      }).catch(function(err) { addSystemMessage('❌ 编辑文件异常: ' + err.message); });
     } else if (op.type === 'delete') {
-      window.electronAPI.deleteFile(fullPath).then(function(r) {
-        addSystemMessage(r.success ? I18N.t('ai.deleted', {path: op.path}) : I18N.t('ai.deleteFailed', {msg: r.error || I18N.t('error.unknown')}));
-      });
+      window.electronAPI.deleteFile(fullPath).then(function(result) {
+        if (result.success) {
+          addSystemMessage('✅ 已删除: ' + op.path);
+        } else {
+          addSystemMessage('❌ 删除失败: ' + (result.error || '未知错误'));
+        }
+      }).catch(function(err) { addSystemMessage('❌ 删除文件异常: ' + err.message); });
     }
   }
 
@@ -664,7 +508,7 @@ var AIPanel = (function() {
     var container = document.getElementById('ai-messages');
     var div = document.createElement('div');
     div.className = 'ai-msg ai-msg-ai';
-    div.innerHTML = '<div class="ai-msg-avatar" style="background:linear-gradient(135deg,color-mix(in srgb, var(--color-primary) 72%, #ffffff),var(--color-primary));flex-shrink:0;">AI</div><div class="ai-msg-bubble" style="background:var(--color-bg-primary);border:1px solid var(--color-border);"><div class="ai-msg-content">' + escHtml(text) + '</div><div class="ai-msg-ops" style="margin-top:6px;display:flex;gap:6px;"></div></div>';
+    div.innerHTML = '<div class="ai-msg-avatar" style="background:linear-gradient(135deg,#00c8ff,#7c3aed);flex-shrink:0;">AI</div><div class="ai-msg-bubble" style="background:var(--color-bg-primary);border:1px solid var(--color-border);"><div class="ai-msg-content">' + (text || '') + '</div><div class="ai-msg-ops" style="margin-top:8px;"></div></div>';
     container.appendChild(div);
     scrollToBottom();
     return div;
@@ -690,7 +534,7 @@ var AIPanel = (function() {
     if (!container) return;
     container.innerHTML = '';
     if (!messages || messages.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--color-text-tertiary);font-size:14px;">💡 ' + escHtml(I18N.t('ai.emptyHint')) + '</div>';
+      container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--color-text-tertiary);font-size:14px;">💡 输入你的需求，AI 将帮助你编写和修改代码</div>';
       return;
     }
     for (var i = 0; i < messages.length; i++) {
@@ -703,11 +547,8 @@ var AIPanel = (function() {
       } else if (m.role === 'assistant') {
         var div = document.createElement('div');
         div.className = 'ai-msg ai-msg-ai';
-        div.innerHTML = '<div class="ai-msg-avatar" style="background:linear-gradient(135deg,color-mix(in srgb, var(--color-primary) 72%, #ffffff),var(--color-primary));flex-shrink:0;">AI</div><div class="ai-msg-bubble" style="background:var(--color-bg-primary);border:1px solid var(--color-border);"><div class="ai-msg-content">' + renderMarkdown(m.content) + '</div></div>';
+        div.innerHTML = '<div class="ai-msg-avatar" style="background:linear-gradient(135deg,#00c8ff,#7c3aed);flex-shrink:0;">AI</div><div class="ai-msg-bubble" style="background:var(--color-bg-primary);border:1px solid var(--color-border);"><div class="ai-msg-content">' + escHtml(m.content) + '</div></div>';
         container.appendChild(div);
-        if (typeof Prism !== 'undefined') {
-          try { Prism.highlightAllUnder(div); } catch(e) {}
-        }
       } else if (m.type === 'system') {
         var div = document.createElement('div');
         div.style.cssText = 'text-align:center;font-size:12px;color:var(--color-text-tertiary);padding:4px 0;';
@@ -715,7 +556,6 @@ var AIPanel = (function() {
         container.appendChild(div);
       }
     }
-    updateTokenCount();
     scrollToBottom();
   }
 
@@ -724,35 +564,35 @@ var AIPanel = (function() {
   // ============================================
 
   function saveMessages() {
-    try { localStorage.setItem('ai_chat_history', JSON.stringify(_messages.slice(-50))); } catch(e) {}
+    try {
+      var toSave = _messages.slice(-50);
+      localStorage.setItem('ai_chat_history', JSON.stringify(toSave));
+    } catch(e) {}
   }
 
   function loadMessages() {
     try {
       var raw = localStorage.getItem('ai_chat_history');
-      if (raw) { _messages = JSON.parse(raw); return _messages; }
+      if (raw) {
+        _messages = JSON.parse(raw);
+        return _messages;
+      }
     } catch(e) {}
     return [];
   }
 
-  function loadHistory() { renderMessages(_messages || []); }
-
-  function clearConversation() {
-    UI.confirm({ message: I18N.t('ai.clearConfirm') }).then(function(ok) {
-      if (!ok) return;
-      doClearConversation();
-    });
+  function loadHistory() {
+    renderMessages(_messages || []);
   }
 
-  function doClearConversation() {
+  function clearConversation() {
+    if (!confirm('确定清除所有对话历史？')) return;
     _messages = [];
-    _lastUserMessage = '';
-    _lastAIMessageEl = null;
     localStorage.removeItem('ai_chat_history');
     renderMessages([]);
     _fileOps = [];
     renderFileOps();
-    addSystemMessage(I18N.t('ai.cleared'));
+    addSystemMessage('对话已清除');
   }
 
   // ============================================
@@ -776,27 +616,6 @@ var AIPanel = (function() {
 
   function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  // 本地化主进程传来的错误: 支持 {key, params, fallback} 对象或包裹 JSON 的字符串
-  function localizeErr(err) {
-    var obj = null;
-    if (err && typeof err === 'object' && !(err instanceof Error)) {
-      obj = err;
-    } else if (typeof err === 'string') {
-      var m = err.match(/\{[\s\S]*\}$/);
-      if (m) { try { obj = JSON.parse(m[0]); } catch(e) {} }
-    } else if (err instanceof Error) {
-      var m2 = err.message.match(/\{[\s\S]*\}$/);
-      if (m2) { try { obj = JSON.parse(m2[0]); } catch(e) {} }
-    }
-    if (obj) {
-      if (obj.key) return I18N.t(obj.key, obj.params || {});
-      if (obj.fallback) return obj.fallback;
-      if (obj.message) return obj.message;
-      if (obj.error) return obj.error;
-    }
-    return String(err || '');
   }
 
   // ============================================

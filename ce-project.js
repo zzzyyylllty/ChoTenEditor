@@ -44,6 +44,9 @@ async function resolveProjectRoot(filePath) {
   let pluginRoot = null;
 
   for (let i = 0; i < MAX_LEVELS; i++) {
+    // NOTE: Sequential async reads (readdir, readHead) across iterations are not atomic;
+    // the filesystem could change between calls, producing inconsistent results.
+    // This is acceptable for CE project root detection as it's a best-effort heuristic.
     let names = null;
     try { names = await fs.promises.readdir(dir); } catch (e) { break; }
 

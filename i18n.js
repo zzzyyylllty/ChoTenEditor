@@ -56,7 +56,7 @@
       key = el.getAttribute('data-i18n-placeholder');
       if (key) el.setAttribute('placeholder', t(key));
       key = el.getAttribute('data-i18n-title');
-      if (key) el.setAttribute('data-tip', t(key));
+      if (key) el.setAttribute('title', t(key));
     }
     document.documentElement.lang = current === 'zh_cn' ? 'zh-CN' : 'en';
     var titleKey = (document.body && document.body.getAttribute('data-title-key'));
@@ -70,7 +70,8 @@
       .then(function (text) {
         var parsed = jsyaml.load(text);
         dicts[lang] = (parsed && typeof parsed === 'object') ? parsed : {};
-      });
+      })
+      .catch(function(err) { console.warn('I18N load failed:', err); return {}; });
   }
 
   function init(lang) {
@@ -79,8 +80,7 @@
     if (lang !== 'zh_cn') chain = chain.then(function () { return load('zh_cn'); });
     chain = chain.then(function () { return load(lang); });
     return chain.then(function () {
-      // 加载期间可能又调用了 setLang (current 已指向新语言): 过期 init 不得用未就绪字典刷新 DOM
-      if (current === lang) applyDOM();
+      applyDOM();
       return current;
     });
   }
